@@ -250,14 +250,14 @@
       "executable": false,
       "lines": 10,
       "path": "SKILL.md",
-      "size_bytes": 174,
+      "size_bytes": 164,
       "type": "markdown"
     },
     {
       "executable": true,
       "lines": 13,
       "path": "scripts/agent.py",
-      "size_bytes": 404,
+      "size_bytes": 391,
       "type": "python"
     }
   ],

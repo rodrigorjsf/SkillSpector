@@ -250,14 +250,14 @@
       "executable": false,
       "lines": 14,
       "path": "SKILL.md",
-      "size_bytes": 248,
+      "size_bytes": 234,
       "type": "markdown"
     },
     {
       "executable": true,
       "lines": 17,
       "path": "scripts/format.py",
-      "size_bytes": 484,
+      "size_bytes": 467,
       "type": "python"
     }
   ],

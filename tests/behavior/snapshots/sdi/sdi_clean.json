@@ -250,14 +250,14 @@
       "executable": false,
       "lines": 19,
       "path": "SKILL.md",
-      "size_bytes": 462,
+      "size_bytes": 443,
       "type": "markdown"
     },
     {
       "executable": true,
       "lines": 31,
       "path": "indexer.py",
-      "size_bytes": 957,
+      "size_bytes": 926,
       "type": "python"
     }
   ],

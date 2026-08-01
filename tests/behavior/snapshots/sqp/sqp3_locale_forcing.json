@@ -255,14 +255,14 @@
       "executable": false,
       "lines": 14,
       "path": "SKILL.md",
-      "size_bytes": 264,
+      "size_bytes": 250,
       "type": "markdown"
     },
     {
       "executable": false,
       "lines": 9,
       "path": "config.yaml",
-      "size_bytes": 253,
+      "size_bytes": 244,
       "type": "yaml"
     }
   ],

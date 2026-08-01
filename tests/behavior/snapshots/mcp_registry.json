@@ -257,14 +257,14 @@
       "executable": false,
       "lines": 1,
       "path": "malformed.json",
-      "size_bytes": 35,
+      "size_bytes": 34,
       "type": "json"
     },
     {
       "executable": false,
       "lines": 52,
       "path": "mcp_registry.json",
-      "size_bytes": 2047,
+      "size_bytes": 1995,
       "type": "json"
     }
   ],
