@@ -93,3 +93,26 @@ _Avoid_: log, audit trail, trace
 One planned unit of inspection in the Inspection Ledger. Every Work Item must reach exactly one
 terminal outcome; unaccounted work is itself a reportable defect.
 _Avoid_: task, job, unit
+
+### Changing the scanner safely
+
+**Behavior Snapshot**:
+A committed, canonical projection of one Scan, compared by a blocking test, so that a change to
+behavior on an existing input surfaces as a reviewable file diff and a change that preserves
+behavior produces none. Not a Baseline: a Baseline accepts known Findings, a Behavior Snapshot
+freezes everything a Scan observably produces.
+_Avoid_: baseline, golden file, regression fixture
+
+**Spec**:
+A parent issue and the Tickets it decomposes into, published to the tracker together.
+_Avoid_: epic, plan, design doc
+
+**Ticket**:
+One child issue of a Spec — a slice implementable end to end on its own branch and closed by a
+single merge. Unrelated to a Work Item, which is a unit of inspection inside a Scan.
+_Avoid_: task, subtask, card, work item
+
+**Umbrella Branch**:
+The single branch carrying an entire Spec. Every Ticket branch is cut from it and merged back into
+it, and it is the only branch that opens a pull request against the default branch.
+_Avoid_: feature branch, integration branch, release branch
