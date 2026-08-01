@@ -10,8 +10,10 @@ the probe scripts are throwaway and are not committed.
 `tests/fixtures/`. That is not the scan unit: `sdi/`, `sqp/`, and `ssd/` are families whose skills live
 one level down. Counting skills, there are **23 directories bearing a `SKILL.md`**, plus
 `mcp_registry/` which bears none — **24 leaf scan targets**. The three family parents were additionally
-scanned as targets in their own right (§7), for **27 total**. Sizes in §5 are for the 24 leaves; #8
-inherits that number, not 11.
+scanned as targets in their own right (§7), for **27 total**. Sizes in §5 are for the 24 leaves.
+
+**Decided:** the corpus for the gate is the **24 leaves**. The three family parents stay out — they
+are fixture-layout containers, not Skills. #8 inherits 24, not 11.
 
 ---
 
@@ -167,7 +169,16 @@ are **byte-identical in full** (2–3 exact duplicates of a 3–4 element list, 
 repeated "Analyzer was disabled" notice). Interchangeable elements cannot produce a diff whichever
 order they take.
 
-## 5. Size — the full projection is too large to review
+## 5. Size
+
+> **Correction.** This section originally measured *whole graph state minus four excluded keys* and
+> concluded the projection was unreviewable. That is not the projection anyone proposed. Issue #4
+> specifies an **allow-list** of state keys, which is far smaller. The measurement below is retained
+> because it bounds the worst case and it is what the reduction analysis was run against, but the
+> conclusion drawn from it was wrong and is retracted in §5.1. **The breadth decision is not
+> reopened.**
+
+### 5.0 Whole state minus exclusions — the upper bound, not the proposal
 
 `json.dumps(projection, indent=2, sort_keys=True)`, identifiers normalized, after excluding
 `model_config`, `report_body`, `skill_path`, and `temp_dir_for_cleanup`:
@@ -202,9 +213,6 @@ order they take.
 
 The three family parents, if ever scanned as targets, are far larger still — `sdi` alone is 4141
 lines (156 KB), `sqp` 3630, `ssd` 1895. They are not part of the 24 and #8 should not add them; see §7.
-
-**This answers the open question with a yes: the full-state projection is unreviewable.** A single
-fixture is 800–1900 lines; the corpus is ~29k lines and ~950 KB. That is not a diff a reviewer reads.
 
 Where the weight sits, for `mcp_poisoned_tool`:
 
@@ -243,23 +251,53 @@ Two redundancies make part of this free:
 it is defensible **only if** something else covers the SARIF mapping; it is the artifact consumers
 actually receive.
 
-## 6. Recommendation carried into #7
+### 5.1 The allow-list projection — what #4 actually specifies
 
-1. **Normalize, don't exclude, `finding_id`.** Ordinal rewrite preserving cross-reference links,
-   applied **after** the sort, with the sort key computed on pre-normalization content that excludes
-   `finding_id`. Every sort key ends with the element's full canonical serialization (minus the
-   identifier) as a tie-breaker, which §4 verifies makes it total.
-2. **Exclude with stated reason:** `model_config` (environment-dependent), `report_body` (wall clock
-   + absolute path), `skill_path` (absolute path), `temp_dir_for_cleanup` (absolute path),
-   `file_cache` (fixture contents; assert key set only).
-3. **Sort every list** per §4, even though nothing was observed unsorted.
-4. **Adopt variant C as the snapshot body** (~719 lines worst case, ~9.6k for the full corpus) and
-   cover `sarif_report`, `inspection_ledger`, and `analyzer_status_events` with targeted assertions —
-   counts, per-analyzer status, and rule-id sets — rather than by verbatim snapshot. This keeps the
-   reviewable diff an order of magnitude smaller while leaving no key entirely unwatched. Variant D
-   drops `analysis_completeness`, which is the completeness contract itself; do not go that far.
-5. The breadth decision is **reopened by measurement**, as #6 anticipated. It is not reopened as
-   "fewer fixtures" — it is reopened as "narrower projection, same 24 fixtures."
+Issue #4's *Projection contents* names eight state keys. Measured, identifiers normalized:
+
+| Projection | Per fixture | Corpus (24) |
+|---|---|---|
+| #4 allow-list as written (8 keys) | 275–489 lines | 7 908 |
+| **As decided — 9 keys, `finding_id` dropped, SARIF minus `tool.driver.version`** | **323–859 lines** | **11 079** |
+| ~~Whole state minus 4 exclusions (§5.0)~~ | ~~800–1904~~ | ~~28 992~~ |
+
+A 300–900 line JSON file with a semantic sort order is an ordinary golden file, and a behavior change
+touches a handful of lines inside it. **User story 27 of #4 — "a snapshot small enough to read in a
+pull request" — is satisfied by the specified projection.** The size question does not reopen the
+breadth decision; it confirms it.
+
+Where the second row's extra ~3 200 lines go: `sarif_report`, included by decision so that the
+Finding→SARIF mapping is not left unguarded. See §6.
+
+## 6. Decisions carried into #7
+
+These were settled after this spike, in the session that reviewed it. Recorded in
+`docs/adr/0003-behavior-snapshot-projection.md`; repeated here so the measurement and the decision it
+produced sit together.
+
+1. **Drop `finding_id` from the projection entirely** — do not normalize it. It is an opaque
+   `uuid4()`, so it is not behavior, and in the allow-list it is referenced by nothing else:
+   `effective_finding_ids`, `inspection_ledger`, and SARIF `properties.findingId` are all outside the
+   projection or stripped. With the field gone the projection has no nondeterminism by construction,
+   and the whole sort→normalize pipeline collapses to a sort. Ordinal normalization was measured to
+   work (§3) and was rejected as machinery with nothing left to do.
+2. **Include `sarif_report`, minus `tool.driver.version`** and minus `results[].properties.findingId`.
+   The exclusion reason #4 gives — "reintroduces the timestamp" — is false: SARIF in state carries no
+   clock and no absolute path. It carries the scanner version, which is the one field a release bump
+   would churn, and stripping just that field closes a coverage limit #8 had accepted for a reason
+   that no longer holds. Cost: +3 200 lines corpus-wide.
+3. **Nine projected keys:** `findings`, `risk_score`, `risk_severity`, `risk_recommendation`,
+   `component_metadata`, `has_executable_scripts`, `manifest`, `analysis_completeness`,
+   `sarif_report`.
+4. **Excluded, with reason:** `model_config` (environment-dependent), `report_body` (wall clock +
+   absolute path), `skill_path` (absolute path), `temp_dir_for_cleanup` (absolute path).
+   `file_cache` is outside the allow-list; had it been in, it would be excluded for echoing fixture
+   file contents verbatim into the snapshot. `filtered_findings` is outside it too, and is byte-identical
+   to `findings` in all 24 fixtures because no fixture exercises suppression.
+5. **Sort every list** by a named key plus the element's full canonical serialization as the final
+   tie-breaker — the named part keeps the golden file readable by file and line, the serialization
+   makes the order total. Verified total in §4.
+6. **The breadth decision stands.** It is not reopened. See the correction in §5.
 
 ## 7. Two facts discovered along the way
 
@@ -281,9 +319,10 @@ with no skill manifest scans as one clean-manifest skill rather than reporting t
 to scan. `sdi` and `sqp` make it sharper — a manifest-less directory can still return a MEDIUM risk
 score of 48 while claiming an empty manifest.
 
-`mcp_registry` is one of the 24 and should be snapshotted as-is: it is current behavior and the
-gate's job is to hold it still. The three family parents are containers, not skills, and should stay
-out of the corpus. The failure mode itself is worth its own issue.
+`mcp_registry` is one of the 24 and is snapshotted as-is: it is current behavior and the gate's job
+is to hold it still. The three family parents are containers, not Skills, and stay out of the corpus.
+The failure mode itself is tracked as its own issue — fixing it is a deliberate behavior change that
+regenerates snapshots, which is exactly the workflow the gate exists to make visible.
 
 ### `tests/integration/` tests do **not** run in `make test-unit`
 
