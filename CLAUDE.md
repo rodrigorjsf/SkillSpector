@@ -11,11 +11,10 @@ LangGraph pipeline that scans `SKILL.md` skill directories for vulnerabilities a
 
 ## Code search
 
-Order of preference: **`codegraph_explore` MCP tool → `codegraph explore` CLI → grep/find.** This repo is indexed (`.codegraph/`).
+Order of preference: **`codegraph_explore` MCP tool → `codegraph explore` CLI → grep/find.** This repo is indexed (`.codegraph/`); the MCP tool is often not exposed, the CLI always works.
 
-- **Always prefer the MCP tool.** Same engine and byte-identical output to the CLI, but the result lands in context in Read-equivalent form with no shell round-trip, no quoting of the query, and no truncation guesswork. **Fall back to the CLI whenever the MCP server is not exposed** — it often isn't, and it always works.
-- Either form takes symbol names or a plain question, and returns verbatim line-numbered source plus a **blast radius**: every caller and which tests cover each symbol. That coverage signal is what grep cannot give you and what tells you whether a change is safe.
-- Responses are large, and `maxFiles` is a blunt cap — it truncates by file without re-ranking, so a low value can drop a file the blast radius just named. Narrow the query rather than the cap.
+- Both take symbol names or a plain question, and return verbatim line-numbered source plus a **blast radius**: every caller and which tests cover each symbol. That coverage signal is what grep cannot give you and what tells you whether a change is safe.
+- `maxFiles` truncates by file without re-ranking, so a low cap can drop a file the blast radius just named. Narrow the query rather than the cap.
 - Use grep for non-code text (markdown, YAML, logs) and literal string matching.
 
 ## Commits
@@ -31,20 +30,16 @@ Order of preference: **`codegraph_explore` MCP tool → `codegraph explore` CLI 
 - This repo is a fork of NVIDIA/SkillSpector and still merges upstream. Prefer new files in new paths; where an existing file must change, keep the diff append-only.
 - Active goal: extend scanning to LangChain4j and Deep Agents skills. **Existing behavior on existing inputs must not change** — new analyzers are gated, never unconditionally wired.
 
-## Context
-
-- `contrib/batch_scan/` — batch scanner with its own runners, excluded from `make test`.
-
 ## Agent skills
 
-Issues are tracked in GitHub Issues. See `docs/agents/issue-tracker.md`.
-
-Triage labels follow the canonical five roles. See `docs/agents/triage-labels.md`.
-
-Domain docs use single-context layout: `CONTEXT.md` at repo root + `docs/adr/`. See `docs/agents/domain.md`.
+- Issues are tracked in GitHub Issues — `docs/agents/issue-tracker.md`
+- Triage labels follow the canonical five roles — `docs/agents/triage-labels.md`
+- Domain-doc and ADR conventions — `docs/agents/domain.md`
 
 ## References
 
+- Domain glossary — use these terms, not their synonyms — `CONTEXT.md`
 - Architecture, node and provider walkthroughs, env vars — `docs/DEVELOPMENT.md`
 - Extending the scanner to LangChain4j and Deep Agents skills — `docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md`
 - Captured upstream framework docs — `docs/references/README.md`
+- Batch scanner, own runners, excluded from `make test` — `contrib/batch_scan/CLAUDE.md`
