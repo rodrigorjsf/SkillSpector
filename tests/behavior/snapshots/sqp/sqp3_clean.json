@@ -1,0 +1,330 @@
+{
+  "analysis_completeness": {
+    "analyzer_statuses": [
+      {
+        "analyzer_id": "behavioral_ast",
+        "completed": 0,
+        "failed": 0,
+        "message": "No files matched this analyzer's applicability contract.",
+        "planned_work": 0,
+        "reason_code": "no_applicable_files",
+        "skipped": 0,
+        "status": "not_applicable",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "behavioral_taint_tracking",
+        "completed": 0,
+        "failed": 0,
+        "message": "No files matched this analyzer's applicability contract.",
+        "planned_work": 0,
+        "reason_code": "no_applicable_files",
+        "skipped": 0,
+        "status": "not_applicable",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "mcp_least_privilege",
+        "completed": 0,
+        "failed": 0,
+        "message": "No files matched this analyzer's applicability contract.",
+        "planned_work": 0,
+        "reason_code": "no_applicable_files",
+        "skipped": 0,
+        "status": "not_applicable",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "mcp_rug_pull",
+        "completed": 1,
+        "failed": 0,
+        "planned_work": 1,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "mcp_tool_poisoning",
+        "completed": 1,
+        "failed": 0,
+        "planned_work": 1,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "meta_analyzer",
+        "completed": 0,
+        "failed": 0,
+        "message": "No files matched this analyzer's applicability contract.",
+        "planned_work": 0,
+        "reason_code": "no_applicable_files",
+        "skipped": 0,
+        "status": "not_applicable",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "semantic_developer_intent",
+        "completed": 0,
+        "failed": 0,
+        "message": "Analyzer was disabled by the requested configuration.",
+        "planned_work": 0,
+        "reason_code": "disabled_by_configuration",
+        "skipped": 0,
+        "status": "disabled",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "semantic_quality_policy",
+        "completed": 0,
+        "failed": 0,
+        "message": "Analyzer was disabled by the requested configuration.",
+        "planned_work": 0,
+        "reason_code": "disabled_by_configuration",
+        "skipped": 0,
+        "status": "disabled",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "semantic_security_discovery",
+        "completed": 0,
+        "failed": 0,
+        "message": "Analyzer was disabled by the requested configuration.",
+        "planned_work": 0,
+        "reason_code": "disabled_by_configuration",
+        "skipped": 0,
+        "status": "disabled",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_agent_snooping",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_anti_refusal",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_data_exfiltration",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_excessive_agency",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_harmful_content",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_memory_poisoning",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_output_handling",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_privilege_escalation",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_prompt_injection",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_rogue_agent",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_ssrf",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_supply_chain",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_system_prompt_leakage",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_tool_misuse",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_yara",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      }
+    ],
+    "coverage_percent": 100.0,
+    "entirely_uninspected_files": 0,
+    "execution_successful": true,
+    "findings_after_filtering": 0,
+    "findings_before_filtering": 0,
+    "fully_inspected_files": 2,
+    "is_complete": false,
+    "ledger_exceptions": [],
+    "limitations": [
+      "Analyzer was disabled by the requested configuration.",
+      "Analyzer was disabled by the requested configuration.",
+      "Analyzer was disabled by the requested configuration."
+    ],
+    "partially_inspected_files": 0,
+    "scanned_components": 2,
+    "scope_exclusions": [],
+    "total_components": 2
+  },
+  "component_metadata": [
+    {
+      "executable": false,
+      "lines": 22,
+      "path": "SKILL.md",
+      "size_bytes": 667,
+      "type": "markdown"
+    },
+    {
+      "executable": false,
+      "lines": 7,
+      "path": "config.yaml",
+      "size_bytes": 238,
+      "type": "yaml"
+    }
+  ],
+  "findings": [],
+  "has_executable_scripts": false,
+  "manifest": {
+    "allowed-tools": [],
+    "description": "Generate regulatory compliance reports for Japanese financial institutions",
+    "name": "jp-compliance-reporter",
+    "parameters": [],
+    "permissions": [],
+    "triggers": []
+  },
+  "risk_recommendation": "SAFE",
+  "risk_score": 0,
+  "risk_severity": "LOW",
+  "sarif_report": {
+    "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.4.json",
+    "runs": [
+      {
+        "invocations": [
+          {
+            "executionSuccessful": true,
+            "toolExecutionNotifications": [
+              {
+                "level": "warning",
+                "message": {
+                  "text": "Analyzer was disabled by the requested configuration."
+                },
+                "properties": {
+                  "kind": "inspection_limitation"
+                }
+              },
+              {
+                "level": "warning",
+                "message": {
+                  "text": "Analyzer was disabled by the requested configuration."
+                },
+                "properties": {
+                  "kind": "inspection_limitation"
+                }
+              },
+              {
+                "level": "warning",
+                "message": {
+                  "text": "Analyzer was disabled by the requested configuration."
+                },
+                "properties": {
+                  "kind": "inspection_limitation"
+                }
+              }
+            ]
+          }
+        ],
+        "results": [],
+        "tool": {
+          "driver": {
+            "name": "skillspector"
+          }
+        }
+      }
+    ],
+    "version": "2.1.0"
+  }
+}

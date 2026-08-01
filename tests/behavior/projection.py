@@ -248,15 +248,62 @@ _BEHAVIOR_DIR = Path(__file__).resolve().parent
 SNAPSHOT_DIR = _BEHAVIOR_DIR / "snapshots"
 FIXTURES_DIR = _BEHAVIOR_DIR.parent / "fixtures"
 
-# The Skills under the gate. #8 grows this to the 24 leaf scan targets; #7
-# establishes the machinery on one. The snapshot layout mirrors the fixture one.
-CORPUS: Mapping[str, Path] = {
-    "malicious_skill": FIXTURES_DIR / "malicious_skill",
-}
+# The scan targets under the gate: every leaf fixture directory, named by its
+# path relative to ``tests/fixtures`` so the snapshot layout mirrors the fixture
+# one (``sdi/sdi1_mismatch`` -> ``snapshots/sdi/sdi1_mismatch.json``).
+#
+# A leaf is a directory that is itself a scan target. Twenty-three bear a
+# ``SKILL.md``; ``mcp_registry`` bears none and is included anyway, because it is
+# scanned in practice and the gate's job is to hold current behavior still --
+# including the anonymous-Skill result #11 tracks changing.
+#
+# ``sdi/``, ``sqp/`` and ``ssd/`` are excluded: they are fixture-layout
+# containers holding a family of Skills, not Skills themselves.
+CORPUS_NAMES: tuple[str, ...] = (
+    "malicious_skill",
+    "mcp_clean_skill",
+    "mcp_mismatched_skill",
+    "mcp_overprivileged_skill",
+    "mcp_poisoned_tool",
+    "mcp_registry",
+    "mcp_underdeclared_skill",
+    "safe_skill",
+    "sdi/sdi1_mismatch",
+    "sdi/sdi2_inappropriate",
+    "sdi/sdi3_scope_creep",
+    "sdi/sdi4_divergence",
+    "sdi/sdi_clean",
+    "sqp/sqp1_clean",
+    "sqp/sqp1_vague_triggers",
+    "sqp/sqp2_clean",
+    "sqp/sqp2_missing_warnings",
+    "sqp/sqp3_clean",
+    "sqp/sqp3_locale_forcing",
+    "ssd/ssd1_semantic_injection",
+    "ssd/ssd2_novel_phrasing",
+    "ssd/ssd3_nl_exfiltration",
+    "ssd/ssd4_narrative_deception",
+    "ssd/ssd_clean",
+)
+
+# The fixture family parents, excluded from the corpus by the rule above. Named
+# rather than merely omitted so the exclusion is assertable.
+FAMILY_PARENTS: tuple[str, ...] = ("sdi", "sqp", "ssd")
+
+CORPUS: Mapping[str, Path] = {name: FIXTURES_DIR / name for name in CORPUS_NAMES}
+
+# The fixture whose measured shape the shape-specific tests are written against:
+# the most projected surface in one target, and the only one measured to hold a
+# colliding named sort key.
+REFERENCE_FIXTURE = "malicious_skill"
 
 
 def snapshot_path(name: str) -> Path:
-    """Return the committed snapshot file for one corpus entry."""
+    """Return the committed snapshot file for one corpus entry.
+
+    The name may carry a ``/``, which nests the snapshot exactly as the fixture
+    is nested.
+    """
     return SNAPSHOT_DIR / f"{name}.json"
 
 
