@@ -106,9 +106,9 @@ declines is caught, while a change to what it would have found is not.
   key has still never ordered anything. Widening the corpus did not close this. Its shape was
   checked against `InspectionLedgerException` (`src/skillspector/inspection_ledger.py`) rather than
   against data — every field it reads is a `str` or an `int | None`.
-- **The gate costs three interpreter spawns plus 26 in-process `graph.invoke` calls** — one per
-  fixture, plus two on `malicious_skill` for the consecutive-run and pre-strip checks — for about
-  seven seconds of `make test-unit` across all 24. The out-of-process determinism checks did **not**
+- **The gate costs three interpreter spawns plus 49 in-process `graph.invoke` calls** — two per
+  fixture, for the gate itself and the consecutive-run check, plus one on `malicious_skill` for the
+  pre-strip control — for about eight seconds of `make test-unit`. The out-of-process checks did **not**
   scale with the corpus: `regenerate.py --emit-all` projects the whole corpus per spawn, so three
   child interpreters cover 24 fixtures against two hash seeds and two providers.
 - Every list is sorted, including nested lists with no named key registered; those fall back to the
