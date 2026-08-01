@@ -1,7 +1,3 @@
-# The behavior snapshots record each fixture component's size_bytes, so a
-# fixture's byte count is part of the frozen behavior. Under a global
-# core.autocrlf=true the checkout carries CRLF, inflating every size_bytes by
-# one byte per line — snapshots regenerated on such a checkout then disagree
-# with any LF checkout, and continuous integration fails the whole corpus.
-# Pin the working copy to LF so the recorded sizes are checkout-independent.
+# A fixture's byte count is part of the frozen Behavior Snapshot, so its line
+# endings must not depend on the checkout. See tests/behavior/COVERAGE_LIMITS.md.
 * text=auto eol=lf
