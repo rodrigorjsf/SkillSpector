@@ -172,6 +172,17 @@ def _sarif_result_key(result: Any) -> tuple[Any, ...]:
     )
 
 
+def _sarif_notification_key(notification: Any) -> tuple[Any, ...]:
+    """``(level, message)``, where SARIF's message is ``{"text": ...}``."""
+    if not isinstance(notification, dict):
+        return ()
+    message = notification.get("message") or {}
+    return _named(
+        notification.get("level"),
+        message.get("text") if isinstance(message, dict) else message,
+    )
+
+
 def _field_key(*names: str) -> Callable[[Any], tuple[Any, ...]]:
     def key(element: Any) -> tuple[Any, ...]:
         if not isinstance(element, dict):
@@ -181,6 +192,11 @@ def _field_key(*names: str) -> Callable[[Any], tuple[Any, ...]]:
     return key
 
 
+# One ledger exception's identity, shared by the two lists that hold them.
+_ledger_exception_key = _field_key(
+    "phase", "reason_code", "path", "start_line", "end_line", "message"
+)
+
 # Named sort keys, addressed by the path notation used in the #6 measurements.
 # A list with no entry here is ordered by its canonical serialization alone,
 # which is already total; the named key exists to keep the file readable.
@@ -189,17 +205,11 @@ NAMED_SORT_KEYS: Mapping[str, Callable[[Any], tuple[Any, ...]]] = {
     "$.component_metadata": _field_key("path"),
     "$.manifest.parameters": _field_key("name"),
     "$.analysis_completeness.analyzer_statuses": _field_key("analyzer_id"),
-    "$.analysis_completeness.ledger_exceptions": _field_key(
-        "phase", "reason_code", "path", "start_line", "end_line", "message"
-    ),
-    "$.analysis_completeness.scope_exclusions": _field_key(
-        "phase", "reason_code", "path", "start_line", "end_line", "message"
-    ),
+    "$.analysis_completeness.ledger_exceptions": _ledger_exception_key,
+    "$.analysis_completeness.scope_exclusions": _ledger_exception_key,
     "$.sarif_report.runs[].results": _sarif_result_key,
     "$.sarif_report.runs[].tool.driver.rules": _field_key("id"),
-    "$.sarif_report.runs[].invocations[].toolExecutionNotifications": _field_key(
-        "level", "message"
-    ),
+    "$.sarif_report.runs[].invocations[].toolExecutionNotifications": _sarif_notification_key,
 }
 
 
@@ -260,15 +270,20 @@ def load_snapshot(name: str) -> dict[str, Any]:
     return json.loads(snapshot_path(name).read_text(encoding="utf-8"))
 
 
-def scan(skill_path: Path | str) -> dict[str, Any]:
-    """Scan one Skill and return its Behavior Snapshot projection.
+def scan_state(skill_path: Path | str) -> Mapping[str, Any]:
+    """Run one Scan and return the raw state, unprojected.
 
-    The single entry point shared by the snapshot test and the regeneration
-    target, so the two can never drift into comparing different things.
-    ``use_llm`` is pinned False: an ambient API key must not be able to change
-    what the gate holds still.
+    The single place the graph is invoked, so the gate, the regeneration target
+    and any test reasoning about pre-projection state can never drift into
+    scanning differently. ``use_llm`` is pinned False here rather than read from
+    the environment: an ambient API key must not change what the gate holds
+    still.
     """
     from skillspector.graph import graph
 
-    state = graph.invoke({"skill_path": str(skill_path), "use_llm": False})
-    return project_scan_state(state)
+    return graph.invoke({"skill_path": str(skill_path), "use_llm": False})
+
+
+def scan(skill_path: Path | str) -> dict[str, Any]:
+    """Scan one Skill and return its Behavior Snapshot projection."""
+    return project_scan_state(scan_state(skill_path))
