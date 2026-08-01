@@ -19,15 +19,14 @@ Regeneration is always deliberate and always its own commit. It lives here, in a
 separate entry point, rather than as a branch inside the test: no environment
 variable and no test run may rewrite a golden file.
 
-``--emit NAME`` prints one projection instead of writing it, and ``--emit-all``
-prints the whole corpus, both together with the model configuration the run
-resolved. The determinism tests use them to compare projections produced by
-*separate processes*, which is the only way to see ordering derived from hash
-seeds or from the import-time provider resolution.
+``--emit-all`` prints every projection instead of writing it, together with the
+model configuration the run resolved. The determinism tests use it to compare
+projections produced by *separate processes*, which is the only way to see
+ordering derived from hash seeds or from the import-time provider resolution.
 
-``--emit-all`` exists so that widening the corpus does not multiply interpreter
-spawns: the whole corpus is compared across hash seeds and providers by three
-child processes in total, not three per fixture.
+It emits the whole corpus in one go so that widening the corpus does not
+multiply interpreter spawns: all 24 fixtures are compared across hash seeds and
+providers by three child processes in total, not three per fixture.
 """
 
 from __future__ import annotations
@@ -45,11 +44,11 @@ from tests.behavior.projection import (
 )
 
 
-def _emit(names: list[str]) -> int:
+def _emit_all() -> int:
     from skillspector.constants import build_model_config
 
     payload = {
-        "projections": {name: scan(CORPUS[name]) for name in names},
+        "projections": {name: scan(CORPUS[name]) for name in sorted(CORPUS)},
         "model_config": build_model_config(),
     }
     sys.stdout.write(json.dumps(payload))
@@ -59,11 +58,6 @@ def _emit(names: list[str]) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--emit",
-        metavar="NAME",
-        help="print one projection as JSON on stdout instead of writing snapshots",
-    )
-    parser.add_argument(
         "--emit-all",
         action="store_true",
         help="print every corpus projection as JSON on stdout instead of writing snapshots",
@@ -71,9 +65,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.emit_all:
-        return _emit(sorted(CORPUS))
-    if args.emit:
-        return _emit([args.emit])
+        return _emit_all()
 
     SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
     for name, skill_path in sorted(CORPUS.items()):

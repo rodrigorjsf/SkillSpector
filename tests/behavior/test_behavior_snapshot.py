@@ -36,7 +36,7 @@ import json
 import os
 import subprocess
 import sys
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -53,9 +53,21 @@ CORPUS_PARAMS = pytest.mark.parametrize("fixture", proj.CORPUS_NAMES, ids=proj.C
 
 
 @pytest.fixture(scope="module")
-def scans() -> dict[str, dict[str, Any]]:
-    """One live Scan per corpus entry, shared by every test in the module."""
-    return {name: proj.scan(path) for name, path in proj.CORPUS.items()}
+def scan_once() -> Callable[[str], dict[str, Any]]:
+    """Return a memoized "Scan this fixture once" callable.
+
+    Scanning lazily, one fixture at a time, is what keeps a failure attributable:
+    eagerly building all 24 would surface an error scanning the seventeenth
+    fixture inside whichever parametrization happened to run first.
+    """
+    scanned: dict[str, dict[str, Any]] = {}
+
+    def scan(name: str) -> dict[str, Any]:
+        if name not in scanned:
+            scanned[name] = proj.scan(proj.CORPUS[name])
+        return scanned[name]
+
+    return scan
 
 
 # --------------------------------------------------------------------------- #
@@ -64,13 +76,15 @@ def scans() -> dict[str, dict[str, Any]]:
 
 
 @CORPUS_PARAMS
-def test_scan_matches_committed_snapshot(fixture: str, scans: dict[str, dict[str, Any]]) -> None:
+def test_scan_matches_committed_snapshot(
+    fixture: str, scan_once: Callable[[str], dict[str, Any]]
+) -> None:
     """The Scan's projection equals the committed snapshot, for every fixture.
 
     Reads through ``load_snapshot``, which is what makes the deleted- and
     corrupt-snapshot tests below cover the gate rather than a helper beside it.
     """
-    assert scans[fixture] == proj.load_snapshot(fixture)
+    assert scan_once(fixture) == proj.load_snapshot(fixture)
 
 
 @CORPUS_PARAMS
@@ -143,8 +157,12 @@ def test_the_corpus_is_exactly_the_leaf_fixture_directories() -> None:
     assert set(proj.CORPUS_NAMES) == _fixture_leaves()
 
 
-def test_the_corpus_holds_the_measured_twenty_four_targets() -> None:
-    """The count is asserted so a silent shrink cannot masquerade as a pass."""
+def test_the_corpus_matches_the_measured_target_count() -> None:
+    """The count is asserted so a silent shrink cannot masquerade as a pass.
+
+    The literal lives here and nowhere else in the tests: growing the corpus
+    means changing this one number, deliberately, alongside the new snapshot.
+    """
     assert len(proj.CORPUS_NAMES) == 24
     assert len(set(proj.CORPUS_NAMES)) == 24
 
@@ -319,10 +337,19 @@ def test_the_unexercised_sort_keys_are_still_unexercised() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_two_consecutive_runs_produce_identical_projections() -> None:
-    """Two Scans of one Skill in one process project byte-identically."""
-    first = proj.serialize(proj.scan(proj.CORPUS[FIXTURE]))
-    second = proj.serialize(proj.scan(proj.CORPUS[FIXTURE]))
+@CORPUS_PARAMS
+def test_two_consecutive_runs_produce_identical_projections(
+    fixture: str, scan_once: Callable[[str], dict[str, Any]]
+) -> None:
+    """Two Scans of one Skill in one process project byte-identically.
+
+    The first run is the memoized one the gate already compared against the
+    committed file; the second is fresh. Comparing the serializations rather
+    than the dictionaries is deliberate -- byte-identity is the property the
+    committed file depends on, and it is strictly stronger than equality.
+    """
+    first = proj.serialize(scan_once(fixture))
+    second = proj.serialize(proj.scan(proj.CORPUS[fixture]))
     assert first == second
 
 
