@@ -24,6 +24,27 @@ Order of preference: **`codegraph_explore` MCP tool → `codegraph explore` CLI 
 - **Conventional Commits, strictly** — `type(scope): subject`, imperative mood, no trailing period. Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `build`, `ci`. Breaking changes use `!` after the scope and a `BREAKING CHANGE:` footer.
 - Every commit needs a `Signed-off-by:` trailer — use `git commit -s`. CI's DCO job walks each commit in the PR range and fails without it.
 
+## Spec execution workflow
+
+Applies whenever a Spec — a parent issue plus its child Tickets, as published by `/to-spec` — is
+being implemented. Every Ticket is implemented through the `/implement` skill, never ad hoc.
+
+1. **Cut the Umbrella Branch first.** Before the first Ticket, `git fetch origin` and branch the
+   whole Spec off an up-to-date `main` (this repo's default branch — there is no `master`). Name it
+   for the feature, not for a Ticket.
+2. **One branch per Ticket, cut from the Umbrella Branch** — never from `main`. It implements that
+   Ticket completely.
+3. **Close out each Ticket on merge.** Open a PR from the Ticket branch **into the Umbrella Branch**,
+   merge it, and delete the branch local and remote — `delete_branch_on_merge` is off on this repo,
+   so nothing is cleaned up for you. Then edit the Ticket issue: tick its acceptance-criteria
+   checkboxes, and comment whatever the Ticket did not anticipate — a rejected approach, a discovered
+   constraint, a deferred follow-up.
+4. **Close out the Spec.** When every Ticket is merged into the Umbrella Branch, update the parent
+   issue, then open a PR from the Umbrella Branch into `main`. **A human merges that PR — an agent
+   never does.**
+
+The Umbrella Branch is the only branch that targets `main`. A Ticket branch never does.
+
 ## Critical Constraints
 
 - New source files need the SPDX + Apache-2.0 header block (copy from any neighbour). Convention only — nothing enforces it.
