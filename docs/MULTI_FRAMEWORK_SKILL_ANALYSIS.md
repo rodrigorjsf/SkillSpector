@@ -436,13 +436,27 @@ commit that changes it. It is specified in
   `tests/integration/test_graph.py:29`. The CLI is rejected as a seam precisely because
   `_format_json` reintroduces `source` and `scanned_at`; projecting from graph state drops
   them by construction, since the formatter is what injects them.
-- **A projection of state, not raw state.** `build_context` returns `"model_config"` into
-  state; it is environment-dependent and is excluded. The projection is canonically sorted so
-  that incidental ordering is not load-bearing.
+- **A projection of state, not raw state.** Nine keys are projected — `findings`,
+  `risk_score`, `risk_severity`, `risk_recommendation`, `component_metadata`,
+  `has_executable_scripts`, `manifest`, `analysis_completeness`, `sarif_report`. Four are
+  excluded with a stated reason each: `model_config` (environment-dependent),
+  `report_body` (wall clock + absolute path), `skill_path`, `temp_dir_for_cleanup`. Two fields
+  are stripped from inside it: `findings[].finding_id`, a `uuid4()` that is the only measured
+  source of nondeterminism in state, and `sarif_report..tool.driver.version`, because a release
+  bump is not a behavior change. Every list is sorted by a named key plus the element's full
+  canonical serialization as the tie-breaker. Decided and justified in
+  [ADR 0003](adr/0003-behavior-snapshot-projection.md); measured in
+  [`behavior-snapshot-projection-findings.md`](behavior-snapshot-projection-findings.md).
 - **Breadth: maximal.** All three behavior-affecting changes [§3.4](#34-supporting-changes)
   fears — `component_metadata[].type`, `has_executable_scripts`, the ledger's
   `EXCLUDED_DIRECTORY` events — live *outside* findings and risk score. A snapshot narrowed to
-  those two would catch none of them.
+  those two would catch none of them. Measurement confirmed the breadth is affordable: the
+  specified projection is 323–859 lines per fixture and 11 079 across the corpus, well inside
+  what a reviewer reads.
+- **Corpus: 24 leaf directories.** Every fixture directory bearing a `SKILL.md` (23), plus
+  `tests/fixtures/mcp_registry`, which bears none and scans as an anonymous Skill. The three
+  family parents — `sdi/`, `sqp/`, `ssd/` — are fixture-layout containers, not Skills, and are
+  not scan targets.
 - **Blocking, inside `make test-unit`**, with a `make update-snapshots` to regenerate. The
   friction is the feature: it forces a behavior change to be declared as a reviewable commit.
   The counter-example is already in this repo — `mypy` is configured and invoked by nothing.
