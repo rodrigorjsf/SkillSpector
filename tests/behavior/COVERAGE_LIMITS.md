@@ -9,6 +9,20 @@ This file records the other side: what a green gate does **not** prove. Every li
 accepted deliberately. A limit that stops being acceptable is closed by widening the projection and
 regenerating every snapshot — not by filtering something quietly.
 
+## What a green gate does prove — the demonstrated red
+
+A gate that has never failed is evidence of nothing, and a perturbation chosen for convenience proves
+only that the test *can* fail. The demonstration therefore used a change class the gate exists for:
+removing `".py"` from `_EXECUTABLE_EXTENSIONS` (`src/skillspector/nodes/build_context.py:68`), one of
+the two changes §3.4 of the design document defers as behavior-affecting.
+
+One edit moved three projected surfaces — `has_executable_scripts`, `component_metadata[].executable`
+and the Risk Score multiplier that depends on the flag — and failed **exactly the 13 fixtures** where
+`has_executable_scripts` is true, in both the in-process and the out-of-process gate (26 failures,
+208 passed). The other 11 stayed green. `malicious_skill` went 93 → 77 with 6 → 5 Findings;
+`mcp_overprivileged_skill` went 12 → 0 with 5 → 0. The change was then reverted and the working tree
+confirmed clean. Full per-fixture numbers are in the #8 close-out comment.
+
 ## Corpus
 
 - **All 24 leaf scan targets**, one committed snapshot each, laid out to mirror `tests/fixtures/`
