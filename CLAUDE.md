@@ -9,6 +9,12 @@ LangGraph pipeline that scans `SKILL.md` skill directories for vulnerabilities a
 - `mypy` is configured in `pyproject.toml` but invoked by nothing — not `make lint`, not CI, not pre-commit. Ruff is the only enforced check.
 - `pytest` `addopts` deselects the `integration` and `provider` markers, so a bare `pytest` silently skips them. Use `make test-integration` / `make test-provider [openai|anthropic|nv_build]`.
 
+## Code search
+
+- **Search code with CodeGraph first**, before grep/find or reading files: `codegraph explore "<symbols or question>"`. The `codegraph_explore` MCP tool takes the same query when exposed; the CLI always works. This repo is indexed (`.codegraph/`).
+- It accepts symbol names or a plain question, and returns verbatim line-numbered source plus a **blast radius** — every caller and which tests cover each symbol. That coverage signal is the part grep cannot give you, and it is what tells you whether a change is safe.
+- Fall back to grep for non-code text (markdown, YAML, logs) and for literal string matching where the symbol graph does not help.
+
 ## Commits
 
 - **Atomic** — one scope of change per commit. Never mix unrelated scopes; split instead.
