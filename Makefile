@@ -45,6 +45,7 @@ help:
 	@echo "  make build          - Build the package"
 	@echo "  make docker-build   - Build the Docker image"
 	@echo "  make docker-smoke   - Build and smoke test the Docker image"
+	@echo "  make snapshots      - Regenerate the committed behavior snapshots"
 
 install:
 	@if [ -n "$(UV)" ]; then uv sync; else pip install -e .; fi
@@ -152,3 +153,10 @@ docker-build:
 # Build and smoke test the Docker image
 docker-smoke: docker-build
 	tests/docker/smoke.sh
+
+.PHONY: snapshots
+
+# Rewrite the committed behavior snapshots. Always deliberate, always its own
+# commit: the snapshot test never regenerates on its own.
+snapshots:
+	python -m tests.behavior.regenerate
