@@ -77,3 +77,5 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - `tests/integration/conftest.py` auto-marks by path; never put a unit test there.
 - Fish shell: activate does not persist between calls — invoke `.venv/bin/python` directly.
 - CI only triggers on `main`-targeting PRs; empty `gh pr checks` is not a pass.
+- `make` needs `export PATH="$PWD/.venv/bin:$PATH"`; sourcing `activate.fish` fails in Bash.
+- Empty `git diff` plus `M` status means `core.autocrlf`, not a real change.
