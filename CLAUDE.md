@@ -43,3 +43,9 @@ Order of preference: **`codegraph_explore` MCP tool → `codegraph explore` CLI 
 - Extending the scanner to LangChain4j and Deep Agents skills — `docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md`
 - Captured upstream framework docs — `docs/references/README.md`
 - Batch scanner, own runners, excluded from `make test` — `contrib/batch_scan/CLAUDE.md`
+
+## Applied Learning
+
+When something fails repeatedly, when User has to re-explain, or when a workaround is found for a platform/tool limitation, add a one-line bullet here. Keep each bullet under 15 words. No explanations. Only add things that will save time in future sessions.
+
+- `gh issue view` fails with a projectCards GraphQL error; use `--json`.
