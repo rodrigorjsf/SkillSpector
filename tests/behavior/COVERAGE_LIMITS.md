@@ -64,6 +64,15 @@ declines is caught, while a change to what it would have found is not.
   Line counts therefore do not match the `to_dict`-shaped tables in the #6 findings document.
 - A projected key absent from the returned state is absent from the snapshot rather than recorded as
   `null`. A key that stops being emitted is a behavior change and shows as a diff either way.
+- **Two registered sort keys are unexercised.** `analysis_completeness.ledger_exceptions` and
+  `scope_exclusions` are both empty for `malicious_skill`, so their named key has never ordered
+  anything. Its shape was checked against `InspectionLedgerException`
+  (`src/skillspector/inspection_ledger.py`) rather than against data — every field it reads is a
+  `str` or an `int | None`. #8 is the first corpus that can populate them.
+- **The gate costs three interpreter spawns plus four in-process `graph.invoke` calls**, about five
+  seconds of `make test-unit` for one fixture. Three of those runs are the out-of-process
+  determinism checks, which do not need repeating per fixture; #8 should scale the per-fixture part
+  only.
 - Every list is sorted, including nested lists with no named key registered; those fall back to the
   canonical serialization alone, which is total. So **list order is never guarded** — a change that
   only reorders a list is invisible here. #6 measured order to be stable anyway; the sort exists so
