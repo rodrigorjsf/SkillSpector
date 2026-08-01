@@ -310,8 +310,8 @@ misleading enough to fix, and it is the one report-side change this design needs
   count is visible without reading the whole report.
 
 Both changes are additive and reachable only when `--spec-checks` is not `off`, so the
-[§4 gate](#4-the-unchanged-behavior-gate) still holds: with the flag absent, the diff is
-empty.
+[§4 gate](#4-the-unchanged-behavior-gate) still holds: with the flag absent, the behavior
+snapshot is unchanged.
 
 #### Baseline interaction — decided
 
@@ -430,7 +430,7 @@ already makes impossible.
 The gate is instead a **committed golden snapshot plus a test that regenerates and compares
 it**. Git supplies the "before" for free, and the snapshot is reviewable in the diff of the
 commit that changes it. It is specified in
-[issue #4](https://github.com/rodrigorjsf/SkillSpector/issues/4) and sliced into issues #6–#9.
+[issue #4](https://github.com/rodrigorjsf/SkillSpector/issues/4) and sliced into issues #5–#9.
 
 - **Seam: `graph.invoke`** — the highest existing seam below the CLI, with prior art at
   `tests/integration/test_graph.py:29`. The CLI is rejected as a seam precisely because

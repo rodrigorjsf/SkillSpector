@@ -30,9 +30,10 @@ does not conflict with this decision: that case has planned work.
 
 ## Consequences
 
-`docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md` §3.1 asserts the opposite — that gated Analyzers "still run
-through `guard_analyzer_node` and emit ledger status events". That is incorrect as written:
-`guard_analyzer_node` only synthesizes events when the Analyzer *raises*. §3.1 needs correcting.
+`docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md` §3.1 asserted the opposite — that gated Analyzers "still run
+through `guard_analyzer_node` and emit ledger status events". That was incorrect as written:
+`guard_analyzer_node` only synthesizes events when the Analyzer *raises*. §3.1 was corrected in the
+same change that landed this record, and now points here.
 
 The gate is now a convention with no enforcement. A Framework Analyzer that returns a status event by
 habit silently breaks the behavior snapshot for every fixture, and the failure surfaces as an
