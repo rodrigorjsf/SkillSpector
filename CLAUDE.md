@@ -49,3 +49,5 @@ Order of preference: **`codegraph_explore` MCP tool → `codegraph explore` CLI 
 When something fails repeatedly, when User has to re-explain, or when a workaround is found for a platform/tool limitation, add a one-line bullet here. Keep each bullet under 15 words. No explanations. Only add things that will save time in future sessions.
 
 - `gh issue view` fails with a projectCards GraphQL error; use `--json`.
+- `tests/integration/conftest.py` auto-marks by path; never put a unit test there.
+- Fish shell: activate does not persist between calls — invoke `.venv/bin/python` directly.
