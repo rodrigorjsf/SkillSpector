@@ -35,6 +35,14 @@ Order of preference: **`codegraph_explore` MCP tool → `codegraph explore` CLI 
 
 - `contrib/batch_scan/` — batch scanner with its own runners, excluded from `make test`.
 
+## Agent skills
+
+Issues are tracked in GitHub Issues. See `docs/agents/issue-tracker.md`.
+
+Triage labels follow the canonical five roles. See `docs/agents/triage-labels.md`.
+
+Domain docs use single-context layout: `CONTEXT.md` at repo root + `docs/adr/`. See `docs/agents/domain.md`.
+
 ## References
 
 - Architecture, node and provider walkthroughs, env vars — `docs/DEVELOPMENT.md`
