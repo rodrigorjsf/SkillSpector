@@ -130,10 +130,21 @@ infrastructure rather than requiring new machinery.
 
 `graph.py:53` fans out **every** id in `ANALYZER_NODE_IDS` from `build_context`
 unconditionally. Appending framework analyzers therefore executes them on every existing
-scan. Even when they produce no findings they still run through `guard_analyzer_node`
-(`src/skillspector/inspection_ledger.py:773`) and emit ledger status events that
-`finalize_inspection_ledger` can surface as `ledger_exceptions` in terminal and markdown
-output (`src/skillspector/nodes/report.py:441`, `:741`).
+scan. What makes gating viable is that an analyzer returning `{"findings": []}` is
+**entirely invisible**: `guard_analyzer_node` (`src/skillspector/inspection_ledger.py:773`)
+only synthesizes ledger and status events when the analyzer *raises*. A gated analyzer that
+declines by returning no findings emits **nothing** — no ledger event, no analyzer status —
+so nothing reaches `analysis_completeness` or the `ledger_exceptions` that
+`finalize_inspection_ledger` surfaces in terminal and markdown output
+(`src/skillspector/nodes/report.py:441`, `:741`).
+
+That silence is deliberate, and it is recorded in
+[ADR 0002](adr/0002-gated-analyzers-decline-silently.md) rather than left implicit — it reads
+like a violation of the Inspection Ledger's purpose. The reconciliation is the definition of
+Work Item as a *planned* unit of inspection: an analyzer whose framework gate does not open
+plans none, so there is no unaccounted work. The gate is a convention with no enforcement;
+the behavior snapshot in [§4](#4-the-unchanged-behavior-gate) is what catches an analyzer
+that emits a status event by habit.
 
 So the rule is **additive *and* gated**, never unconditionally wired:
 
@@ -370,9 +381,16 @@ today:
 
 | Fact | Evidence | Consequence |
 |------|----------|-------------|
-| `detect_skills` iterates immediate children only | `multi_skill.py:71` (`iterdir()`) | `src/main/resources/skills/*/SKILL.md` sits at depth 4 and is never found. **A production Java repo scans as zero skills.** |
+| `detect_skills` is not on the ordinary scan path, and sees immediate children only | `cli.py:327`, `:343` — reached only under `--recursive` or to print a warning; `multi_skill.py:71` (`iterdir()`) | An ordinary scan of a Java repo does **not** produce zero skills. `build_context` walks the whole tree unbounded (`build_context.py:96`) and parses the manifest only at the root (`:259`), so the repo scans as **one giant anonymous skill with an empty manifest** — every file in it treated as one skill's payload |
 | `_SKIP_DIRS` has no JVM build directories | `build_context.py:46` — `{.git, __pycache__, node_modules, .venv, venv, .tox, .pytest_cache}` | A post-`mvn package` tree walks all of `target/`, including compiled classes and any fat JAR |
 | A local directory input has no ingest cap | `input_handler.py:152` returns the path directly; only `MAX_FILE_CHARS = 1_000_000` per file applies (`static_runner.py:60`) | Repo size is unbounded at ingest; the per-file cap does not bound the walk |
+
+The first row is worse than a missing feature and worse than the "zero skills" reading it
+replaces. Zero skills would at least be a visibly empty result. What actually happens is a
+report that looks complete: one anonymous skill whose manifest is empty, whose components are
+the entire repository including `target/`, and whose risk score is computed over that mixture.
+Every per-skill signal — name, description, `allowed-tools` — is absent not because the repo
+lacks skills but because the root has no `SKILL.md`.
 
 Required work:
 
@@ -399,27 +417,42 @@ accepting known findings.
 
 "Current behavior must not change" becomes a command that either passes or fails.
 
-**Before any change**, capture a baseline across the existing fixture corpus:
+The obvious mechanism — capture `skillspector scan --format json` output into `/tmp/ss-before`
+before a change, re-capture into `/tmp/ss-after` after it, and require `diff -ru` to be empty
+— **cannot pass**, and is recorded here as rejected so it is not reached for again.
+`_format_json` injects `"source"` (the absolute resolved input path) and `"scanned_at"`
+(`datetime.now(UTC).isoformat()`) into every report — `src/skillspector/nodes/report.py:664-665`,
+with the same two fields again at `:776` and `:481`. The diff is therefore non-empty on every
+file on every run with zero code changed. It has two further defects: it is invisible to CI,
+and it requires a human to capture "before" *before* editing, which a dirty working tree
+already makes impossible.
 
-```bash
-for f in tests/fixtures/*/; do
-  skillspector scan "$f" --format json --no-llm \
-    -o "/tmp/ss-before/$(basename "$f").json"
-done
-```
+The gate is instead a **committed golden snapshot plus a test that regenerates and compares
+it**. Git supplies the "before" for free, and the snapshot is reviewable in the diff of the
+commit that changes it. It is specified in
+[issue #4](https://github.com/rodrigorjsf/SkillSpector/issues/4) and sliced into issues #6–#9.
 
-**After each phase**, re-capture into `/tmp/ss-after/` and diff:
+- **Seam: `graph.invoke`** — the highest existing seam below the CLI, with prior art at
+  `tests/integration/test_graph.py:29`. The CLI is rejected as a seam precisely because
+  `_format_json` reintroduces `source` and `scanned_at`; projecting from graph state drops
+  them by construction, since the formatter is what injects them.
+- **A projection of state, not raw state.** `build_context` returns `"model_config"` into
+  state; it is environment-dependent and is excluded. The projection is canonically sorted so
+  that incidental ordering is not load-bearing.
+- **Breadth: maximal.** All three behavior-affecting changes [§3.4](#34-supporting-changes)
+  fears — `component_metadata[].type`, `has_executable_scripts`, the ledger's
+  `EXCLUDED_DIRECTORY` events — live *outside* findings and risk score. A snapshot narrowed to
+  those two would catch none of them.
+- **Blocking, inside `make test-unit`**, with a `make update-snapshots` to regenerate. The
+  friction is the feature: it forces a behavior change to be declared as a reviewable commit.
+  The counter-example is already in this repo — `mypy` is configured and invoked by nothing.
 
-```bash
-diff -ru /tmp/ss-before /tmp/ss-after
-```
-
-`--no-llm` is load-bearing: the semantic analyzers are non-deterministic, so a diff that
-includes them proves nothing.
+`--no-llm` remains load-bearing: the semantic analyzers are non-deterministic, so a snapshot
+that includes them proves nothing.
 
 Acceptance for any phase claiming to be behavior-preserving:
 
-1. `diff -ru /tmp/ss-before /tmp/ss-after` is **empty**.
+1. The snapshot test is green **with no snapshot file modified** in the same change.
 2. `make test-unit` green.
 3. `make lint` and `make format-check` green.
 4. `ruff` is the only linter CI runs — `mypy` is configured (`pyproject.toml:94`) but
@@ -436,8 +469,8 @@ Two traps worth stating explicitly:
   works — assert on its findings directly.
 
 Fixtures for the new frameworks go in new directories (`tests/fixtures/langchain4j_skill/`,
-`tests/fixtures/deepagents_skill/`) so the before/after diff over existing fixtures stays
-meaningful.
+`tests/fixtures/deepagents_skill/`) so the snapshot over the existing fixture corpus stays
+meaningful — a new fixture adds a snapshot entry, it does not change an existing one.
 
 ## 5. Phasing
 
@@ -542,12 +575,18 @@ Recorded so the reasoning is not relitigated. Each links to where it is implemen
 
 ## 9. Recommended next step
 
-Phase 5 as a standalone prototype, before any analyzer work: build
-`tests/fixtures/langchain4j_skill/` with a minimal `pom.xml` declaring
-`dev.langchain4j:langchain4j-skills`, a `src/main/resources/skills/<name>/SKILL.md`, and one
-Java class exercising `Skill.builder()`, `@Tool`, and a non-literal `.content(…)`.
+**Make the behavior gate executable**, before any analyzer work.
+[§4](#4-the-unchanged-behavior-gate) describes a snapshot mechanism that does not exist yet,
+and until it does, every phase in [§5](#5-phasing) carries an acceptance criterion that nobody
+can demonstrate. That work is specified in
+[issue #4](https://github.com/rodrigorjsf/SkillSpector/issues/4) and sliced into issues #5–#9:
+correct this document, prototype the projection's determinism and size, land a one-fixture
+snapshot in `make test-unit`, extend it to the full corpus with a demonstrated red, and verify
+it runs in CI.
 
-It is cheap, it is pure test data so it cannot affect behavior, and it makes the rest
-falsifiable: run today's `skillspector scan` against it and the §3.7 claim that a production
-Java repo scans as zero skills either reproduces or does not. Every later phase then has
-something to assert against.
+Phase 5 was the previous recommendation here, on the grounds that a LangChain4j fixture would
+make the [§3.7](#37-repository-level-discovery-cicd) claim falsifiable. **That purpose is
+discharged.** The claim was settled by reading the source instead, and the real failure mode —
+one giant anonymous skill, not zero skills — is recorded in §3.7. What remains of phase 5 is
+test data for phase 6, which is blocked on the phase-4 tree-sitter dependency decision. It
+keeps its place in the phasing and loses its priority.
