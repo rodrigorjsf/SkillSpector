@@ -11,13 +11,36 @@ regenerating every snapshot — not by filtering something quietly.
 
 ## Corpus
 
-- **One fixture.** `malicious_skill` only. It exercises the most projected surface in a single target
-  — 6 Findings, `has_executable_scripts` true, a populated Manifest, a CRITICAL Risk Score of 93 —
-  and it is the one fixture measured to contain a colliding named sort key, so it is what keeps the
-  tie-breaker covered. Issue #8 grows the corpus to the 24 leaf scan targets. Until then a behavior
-  change that touches no rule `malicious_skill` triggers passes the gate unseen.
+- **All 24 leaf scan targets**, one committed snapshot each, laid out to mirror `tests/fixtures/`
+  (`snapshots/sdi/sdi1_mismatch.json`). Measured at 11 079 lines total, 323–859 per fixture. 23 of
+  the 24 bear a `SKILL.md`; `mcp_registry` bears none and is in the corpus anyway, because it is a
+  scan target in practice.
 - **The three fixture family parents (`sdi/`, `sqp/`, `ssd/`) are out of the corpus** and will stay
-  out: they are fixture-layout containers, not Skills.
+  out: they are fixture-layout containers, not Skills. Scanned as targets they behave as anonymous
+  Skills — `sdi` and `sqp` at Risk Score 48 with an empty Manifest (#11).
+- The corpus is checked against the fixture tree on every run, so a fixture added without a snapshot
+  fails rather than joining silently.
+- **The gate proves preservation over this fixture corpus, not over arbitrary user input.** What the
+  corpus does not contain, it cannot guard. It holds 23 markdown, 13 Python, 2 YAML and 2 JSON files
+  and nothing else — notably **no JVM source file**, which means adding JVM extensions to the
+  file-type map genuinely cannot change any existing fixture. §3.4 of the design document overstates
+  the risk for those specific extensions.
+
+## Change classes the corpus cannot see
+
+- **Skip-directory changes are unguarded.** No fixture contains a skippable directory, so
+  `analysis_completeness.scope_exclusions` is empty in all 24 and a change to the skip set cannot
+  move any snapshot. A test asserts the emptiness, so the day a fixture populates it, this limit is
+  revisited rather than quietly becoming false.
+- **Suppression is unguarded.** `suppressed_findings` is empty in every fixture and
+  `filtered_findings` is byte-identical to `findings` throughout, so no fixture exercises a Baseline.
+- **The anonymous-Skill failure mode is frozen, not fixed.** `mcp_registry`'s snapshot records a
+  directory with no `SKILL.md` scanning as one Skill with an empty Manifest and a Risk Score of 0.
+  That is current behavior and the gate holds it still; #11 tracks changing it, and will land as a
+  visible diff on this snapshot.
+- **SARIF is no longer a coverage limit.** It was previously listed here as unguarded on the grounds
+  that it is derived and reintroduces the timestamp; the timestamp claim was measured false, and
+  `sarif_report` is in the projection minus `tool.driver.version` (ADR 0003).
 
 ## State the projection excludes
 
@@ -64,15 +87,16 @@ declines is caught, while a change to what it would have found is not.
   Line counts therefore do not match the `to_dict`-shaped tables in the #6 findings document.
 - A projected key absent from the returned state is absent from the snapshot rather than recorded as
   `null`. A key that stops being emitted is a behavior change and shows as a diff either way.
-- **Two registered sort keys are unexercised.** `analysis_completeness.ledger_exceptions` and
-  `scope_exclusions` are both empty for `malicious_skill`, so their named key has never ordered
-  anything. Its shape was checked against `InspectionLedgerException`
-  (`src/skillspector/inspection_ledger.py`) rather than against data — every field it reads is a
-  `str` or an `int | None`. #8 is the first corpus that can populate them.
-- **The gate costs three interpreter spawns plus four in-process `graph.invoke` calls**, about five
-  seconds of `make test-unit` for one fixture. Three of those runs are the out-of-process
-  determinism checks, which do not need repeating per fixture; #8 should scale the per-fixture part
-  only.
+- **Two registered sort keys are still unexercised.** `analysis_completeness.ledger_exceptions` and
+  `scope_exclusions` are empty in **all 24** fixtures, not just in `malicious_skill`, so their named
+  key has still never ordered anything. Widening the corpus did not close this. Its shape was
+  checked against `InspectionLedgerException` (`src/skillspector/inspection_ledger.py`) rather than
+  against data — every field it reads is a `str` or an `int | None`.
+- **The gate costs three interpreter spawns plus 26 in-process `graph.invoke` calls** — one per
+  fixture, plus two on `malicious_skill` for the consecutive-run and pre-strip checks — for about
+  seven seconds of `make test-unit` across all 24. The out-of-process determinism checks did **not**
+  scale with the corpus: `regenerate.py --emit-all` projects the whole corpus per spawn, so three
+  child interpreters cover 24 fixtures against two hash seeds and two providers.
 - Every list is sorted, including nested lists with no named key registered; those fall back to the
   canonical serialization alone, which is total. So **list order is never guarded** — a change that
   only reorders a list is invisible here. #6 measured order to be stable anyway; the sort exists so

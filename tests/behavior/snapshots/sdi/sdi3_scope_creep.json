@@ -1,0 +1,502 @@
+{
+  "analysis_completeness": {
+    "analyzer_statuses": [
+      {
+        "analyzer_id": "behavioral_ast",
+        "completed": 1,
+        "failed": 0,
+        "planned_work": 1,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "behavioral_taint_tracking",
+        "completed": 1,
+        "failed": 0,
+        "planned_work": 1,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "mcp_least_privilege",
+        "completed": 1,
+        "failed": 0,
+        "planned_work": 1,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "mcp_rug_pull",
+        "completed": 1,
+        "failed": 0,
+        "planned_work": 1,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "mcp_tool_poisoning",
+        "completed": 1,
+        "failed": 0,
+        "planned_work": 1,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "meta_analyzer",
+        "completed": 0,
+        "failed": 0,
+        "message": "Analyzer was disabled by the requested configuration.",
+        "planned_work": 0,
+        "reason_code": "disabled_by_configuration",
+        "skipped": 0,
+        "status": "disabled",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "semantic_developer_intent",
+        "completed": 0,
+        "failed": 0,
+        "message": "Analyzer was disabled by the requested configuration.",
+        "planned_work": 0,
+        "reason_code": "disabled_by_configuration",
+        "skipped": 0,
+        "status": "disabled",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "semantic_quality_policy",
+        "completed": 0,
+        "failed": 0,
+        "message": "Analyzer was disabled by the requested configuration.",
+        "planned_work": 0,
+        "reason_code": "disabled_by_configuration",
+        "skipped": 0,
+        "status": "disabled",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "semantic_security_discovery",
+        "completed": 0,
+        "failed": 0,
+        "message": "Analyzer was disabled by the requested configuration.",
+        "planned_work": 0,
+        "reason_code": "disabled_by_configuration",
+        "skipped": 0,
+        "status": "disabled",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_agent_snooping",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_anti_refusal",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_data_exfiltration",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_excessive_agency",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_harmful_content",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_memory_poisoning",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_output_handling",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_privilege_escalation",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_prompt_injection",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_rogue_agent",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_ssrf",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_supply_chain",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_system_prompt_leakage",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_tool_misuse",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_yara",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      }
+    ],
+    "coverage_percent": 100.0,
+    "entirely_uninspected_files": 0,
+    "execution_successful": true,
+    "findings_after_filtering": 3,
+    "findings_before_filtering": 3,
+    "fully_inspected_files": 2,
+    "is_complete": false,
+    "ledger_exceptions": [],
+    "limitations": [
+      "Analyzer was disabled by the requested configuration.",
+      "Analyzer was disabled by the requested configuration.",
+      "Analyzer was disabled by the requested configuration.",
+      "Analyzer was disabled by the requested configuration."
+    ],
+    "partially_inspected_files": 0,
+    "scanned_components": 2,
+    "scope_exclusions": [],
+    "total_components": 2
+  },
+  "component_metadata": [
+    {
+      "executable": false,
+      "lines": 17,
+      "path": "SKILL.md",
+      "size_bytes": 313,
+      "type": "markdown"
+    },
+    {
+      "executable": true,
+      "lines": 31,
+      "path": "config_reader.py",
+      "size_bytes": 872,
+      "type": "python"
+    }
+  ],
+  "findings": [
+    {
+      "category": "MCP Least Privilege",
+      "code_snippet": null,
+      "confidence": 0.65,
+      "context": null,
+      "end_line": null,
+      "explanation": "Declared permissions with no matching code capability may indicate removed functionality or pre-staging for future abuse.",
+      "file": "SKILL.md",
+      "finding": null,
+      "intent": null,
+      "matched_text": null,
+      "message": "Permission 'read:files' is declared but no corresponding code capability (file_read) was detected.",
+      "pattern": null,
+      "remediation": "Remove the 'read:files' permission if the corresponding capability is no longer used.",
+      "rule_id": "LP4",
+      "severity": "LOW",
+      "start_line": 1,
+      "tags": [
+        "ASI02"
+      ]
+    },
+    {
+      "category": "MCP Least Privilege",
+      "code_snippet": null,
+      "confidence": 0.75,
+      "context": null,
+      "end_line": null,
+      "explanation": "The skill uses 'file_write' capability that is not listed in its permissions. This may indicate deceptive intent or missing permission declarations.",
+      "file": "config_reader.py",
+      "finding": null,
+      "intent": null,
+      "matched_text": null,
+      "message": "Code capability 'file_write' detected in config_reader.py but not covered by declared permissions.",
+      "pattern": null,
+      "remediation": "Add the 'file_write' permission to SKILL.md, or remove the code that requires it.",
+      "rule_id": "LP1",
+      "severity": "HIGH",
+      "start_line": 1,
+      "tags": [
+        "ASI02"
+      ]
+    },
+    {
+      "category": "MCP Least Privilege",
+      "code_snippet": null,
+      "confidence": 0.75,
+      "context": null,
+      "end_line": null,
+      "explanation": "The skill uses 'shell' capability that is not listed in its permissions. This may indicate deceptive intent or missing permission declarations.",
+      "file": "config_reader.py",
+      "finding": null,
+      "intent": null,
+      "matched_text": null,
+      "message": "Code capability 'shell' detected in config_reader.py but not covered by declared permissions.",
+      "pattern": null,
+      "remediation": "Add the 'shell' permission to SKILL.md, or remove the code that requires it.",
+      "rule_id": "LP1",
+      "severity": "HIGH",
+      "start_line": 1,
+      "tags": [
+        "ASI02"
+      ]
+    }
+  ],
+  "has_executable_scripts": true,
+  "manifest": {
+    "allowed-tools": [],
+    "description": "Reads and displays configuration files",
+    "name": "config-reader",
+    "parameters": [],
+    "permissions": [
+      "read:files"
+    ],
+    "triggers": []
+  },
+  "risk_recommendation": "CAUTION",
+  "risk_score": 27,
+  "risk_severity": "MEDIUM",
+  "sarif_report": {
+    "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.4.json",
+    "runs": [
+      {
+        "invocations": [
+          {
+            "executionSuccessful": true,
+            "toolExecutionNotifications": [
+              {
+                "level": "warning",
+                "message": {
+                  "text": "Analyzer was disabled by the requested configuration."
+                },
+                "properties": {
+                  "kind": "inspection_limitation"
+                }
+              },
+              {
+                "level": "warning",
+                "message": {
+                  "text": "Analyzer was disabled by the requested configuration."
+                },
+                "properties": {
+                  "kind": "inspection_limitation"
+                }
+              },
+              {
+                "level": "warning",
+                "message": {
+                  "text": "Analyzer was disabled by the requested configuration."
+                },
+                "properties": {
+                  "kind": "inspection_limitation"
+                }
+              },
+              {
+                "level": "warning",
+                "message": {
+                  "text": "Analyzer was disabled by the requested configuration."
+                },
+                "properties": {
+                  "kind": "inspection_limitation"
+                }
+              }
+            ]
+          }
+        ],
+        "results": [
+          {
+            "level": "note",
+            "locations": [
+              {
+                "physicalLocation": {
+                  "artifactLocation": {
+                    "uri": "SKILL.md"
+                  },
+                  "region": {
+                    "startLine": 1
+                  }
+                }
+              }
+            ],
+            "message": {
+              "text": "Permission 'read:files' is declared but no corresponding code capability (file_read) was detected."
+            },
+            "properties": {
+              "category": "MCP Least Privilege",
+              "confidence": 0.65,
+              "explanation": "Declared permissions with no matching code capability may indicate removed functionality or pre-staging for future abuse.",
+              "remediation": "Remove the 'read:files' permission if the corresponding capability is no longer used.",
+              "severity": "LOW",
+              "tags": [
+                "ASI02"
+              ]
+            },
+            "ruleId": "LP4"
+          },
+          {
+            "level": "error",
+            "locations": [
+              {
+                "physicalLocation": {
+                  "artifactLocation": {
+                    "uri": "config_reader.py"
+                  },
+                  "region": {
+                    "startLine": 1
+                  }
+                }
+              }
+            ],
+            "message": {
+              "text": "Code capability 'file_write' detected in config_reader.py but not covered by declared permissions."
+            },
+            "properties": {
+              "category": "MCP Least Privilege",
+              "confidence": 0.75,
+              "explanation": "The skill uses 'file_write' capability that is not listed in its permissions. This may indicate deceptive intent or missing permission declarations.",
+              "remediation": "Add the 'file_write' permission to SKILL.md, or remove the code that requires it.",
+              "severity": "HIGH",
+              "tags": [
+                "ASI02"
+              ]
+            },
+            "ruleId": "LP1"
+          },
+          {
+            "level": "error",
+            "locations": [
+              {
+                "physicalLocation": {
+                  "artifactLocation": {
+                    "uri": "config_reader.py"
+                  },
+                  "region": {
+                    "startLine": 1
+                  }
+                }
+              }
+            ],
+            "message": {
+              "text": "Code capability 'shell' detected in config_reader.py but not covered by declared permissions."
+            },
+            "properties": {
+              "category": "MCP Least Privilege",
+              "confidence": 0.75,
+              "explanation": "The skill uses 'shell' capability that is not listed in its permissions. This may indicate deceptive intent or missing permission declarations.",
+              "remediation": "Add the 'shell' permission to SKILL.md, or remove the code that requires it.",
+              "severity": "HIGH",
+              "tags": [
+                "ASI02"
+              ]
+            },
+            "ruleId": "LP1"
+          }
+        ],
+        "tool": {
+          "driver": {
+            "name": "skillspector",
+            "rules": [
+              {
+                "id": "LP1",
+                "shortDescription": {
+                  "text": "Code capability 'file_write' detected in config_reader.py but not covered by declared permissions."
+                }
+              },
+              {
+                "id": "LP4",
+                "shortDescription": {
+                  "text": "Permission 'read:files' is declared but no corresponding code capability (file_read) was detected."
+                }
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "version": "2.1.0"
+  }
+}

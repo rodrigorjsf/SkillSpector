@@ -1,0 +1,6 @@
+# Behavior Snapshots are written with "\n" by tests/behavior/regenerate.py, and
+# "make snapshots" must leave the tree clean when nothing changed. Under a
+# global core.autocrlf=true the checkout would carry CRLF, so every regeneration
+# would report the whole corpus as modified with an empty diff. Pin the working
+# copy to LF so the gate's cleanliness signal stays trustworthy.
+*.json text eol=lf
