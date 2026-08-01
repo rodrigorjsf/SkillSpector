@@ -8,6 +8,7 @@ LangGraph pipeline that scans `SKILL.md` skill directories for vulnerabilities a
 - Test: `make test-unit` · Lint: `make lint` and `make format-check`.
 - `mypy` is configured in `pyproject.toml` but invoked by nothing — not `make lint`, not CI, not pre-commit. Ruff is the only enforced check.
 - `pytest` `addopts` deselects the `integration` and `provider` markers, so a bare `pytest` silently skips them. Use `make test-integration` / `make test-provider [openai|anthropic|nv_build]`.
+- On fish, venv activation does not survive between non-interactive commands. Two autoloaded functions in `~/.config/fish/functions/` avoid it entirely — `sspy <args>` runs `.venv/bin/python`, and `sspytest [paths]` runs the unit selection (`pytest -m "not integration and not provider"`). Examples: `sspy -c 'import skillspector'`, `sspytest tests/unit -q`. They are user-local, not checked in; `sspy` exits 127 with the setup command if the venv is missing.
 
 ## Code search
 
@@ -43,3 +44,11 @@ Order of preference: **`codegraph_explore` MCP tool → `codegraph explore` CLI 
 - Extending the scanner to LangChain4j and Deep Agents skills — `docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md`
 - Captured upstream framework docs — `docs/references/README.md`
 - Batch scanner, own runners, excluded from `make test` — `contrib/batch_scan/CLAUDE.md`
+
+## Applied Learning
+
+When something fails repeatedly, when User has to re-explain, or when a workaround is found for a platform/tool limitation, add a one-line bullet here. Keep each bullet under 15 words. No explanations. Only add things that will save time in future sessions.
+
+- `gh issue view` fails with a projectCards GraphQL error; use `--json`.
+- `tests/integration/conftest.py` auto-marks by path; never put a unit test there.
+- Fish shell: activate does not persist between calls — invoke `.venv/bin/python` directly.
