@@ -76,3 +76,4 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - `gh issue view` fails with a projectCards GraphQL error; use `--json`.
 - `tests/integration/conftest.py` auto-marks by path; never put a unit test there.
 - Fish shell: activate does not persist between calls — invoke `.venv/bin/python` directly.
+- CI only triggers on `main`-targeting PRs; empty `gh pr checks` is not a pass.
