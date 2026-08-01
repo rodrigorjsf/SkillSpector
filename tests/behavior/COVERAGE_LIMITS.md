@@ -111,6 +111,12 @@ declines is caught, while a change to what it would have found is not.
   pre-strip control — for about eight seconds of `make test-unit`. The out-of-process checks did **not**
   scale with the corpus: `regenerate.py --emit-all` projects the whole corpus per spawn, so three
   child interpreters cover 24 fixtures against two hash seeds and two providers.
+- **A fixture's line endings are part of the frozen behavior.** The projection carries each
+  component's `size_bytes`, so a checkout that rewrites `\n` to `\r\n` inflates every recorded size
+  by one byte per line. `tests/fixtures/.gitattributes` pins the corpus to LF for exactly this
+  reason. Without it the gate passes on a CRLF development checkout and fails all 24 fixtures in
+  continuous integration — the state #9 found on the first real workflow run. Any fixture added
+  outside `tests/fixtures/` needs its own pin.
 - Every list is sorted, including nested lists with no named key registered; those fall back to the
   canonical serialization alone, which is total. So **list order is never guarded** — a change that
   only reorders a list is invisible here. #6 measured order to be stable anyway; the sort exists so
