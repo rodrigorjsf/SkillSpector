@@ -1,0 +1,316 @@
+# Behavior-snapshot projection: measured findings
+
+**Issue:** #6 (prototype spike under #4) · **Date:** 2026-08-01 · **Status:** measurement complete
+
+This records what a Scan's graph-state projection actually looks like when executed, so that #7
+designs the snapshot test against evidence rather than expectation. No production code was changed;
+the probe scripts are throwaway and are not committed.
+
+**Note on the corpus unit.** Earlier planning counted the corpus as **11 top-level directories** under
+`tests/fixtures/`. That is not the scan unit: `sdi/`, `sqp/`, and `ssd/` are families whose skills live
+one level down. Counting skills, there are **23 directories bearing a `SKILL.md`**, plus
+`mcp_registry/` which bears none — **24 leaf scan targets**. The three family parents were additionally
+scanned as targets in their own right (§7), for **27 total**. Sizes in §5 are for the 24 leaves; #8
+inherits that number, not 11.
+
+---
+
+## 1. Toolchain — the commands that worked
+
+```bash
+uv venv .venv          # selected CPython 3.13.13, NOT the ambient 3.14.6
+uv sync --all-extras   # == `make install-dev`; installs the project plus dev extras
+.venv/bin/python -m pytest -m "not integration and not provider" tests/
+```
+
+- `pyproject.toml:11` pins `requires-python = ">=3.12,<3.15"`. The ambient interpreter is 3.14.6,
+  which satisfies that range, but `uv venv` selected 3.13.13 on its own. No pin was needed.
+- **Result of the first test run in this fork's life:** `1704 passed, 12 skipped, 34 deselected,
+  4 xfailed` in 97s. Three `PytestUnknownMarkWarning` for `pytest.mark.timeout`
+  (`tests/nodes/analyzers/test_mp2_regex_backtracking.py:71,84,97`) — the marker is not registered
+  in `pyproject.toml` and `pytest-timeout` is absent, so those three timeouts do not apply. Pre-existing,
+  unrelated to this spike, not fixed here.
+- Shell note: this environment is fish and shell state does not persist between tool calls. Invoke
+  `.venv/bin/python` by absolute path rather than relying on `activate`.
+
+## 2. Credential-free execution — answered, yes
+
+Every measurement below ran under `env -i` (an **empty** environment except `PATH` and `HOME`), so no
+API key of any kind was reachable. The ambient environment was also checked first and carried no
+`*_API_KEY`, no provider variable, and no `SKILLSPECTOR_*` variable.
+
+- `import skillspector` succeeds.
+- All 27 scan targets complete through `graph.invoke(..., use_llm=False)`; zero exceptions.
+- `skillspector.constants` import-time validation raises only under
+  `SKILLSPECTOR_STRICT_MODEL_VALIDATION=true`, which was never set. Confirmed by execution, not
+  by reading.
+
+## 3. Determinism — one source of variance, and it is not ordering
+
+Each fixture was scanned twice in one process, and the whole suite was additionally re-run in a
+**second process** under `PYTHONHASHSEED=1` (vs `0`) to expose any set-derived ordering that a
+same-process comparison structurally cannot see.
+
+**Raw comparison — five state keys differ, in 14 of 24 fixtures** (the 14 that produce at least one
+Finding): `findings`, `filtered_findings`, `effective_finding_ids`, `inspection_ledger`,
+`sarif_report`. Identical results intra-process and cross-process.
+
+**Cause — `finding_id` is a fresh `uuid4()` per Finding.** `src/skillspector/models.py:65-67`:
+
+```python
+def _new_finding_id() -> str:
+    """Return an opaque, run-unique identity for one logical finding."""
+    return f"finding-{uuid4().hex}"
+```
+
+The identifier is *documented* as run-unique. It is not derived from content, so it changes every run
+by design.
+
+**After normalizing those identifiers, every projection is byte-identical** — all 24 fixtures, both
+intra-process and cross-process, `PYTHONHASHSEED` 0 vs 1:
+
+> All identical after normalization: True (failures: [])
+
+Normalization used: rewrite each `finding-<32 hex>` to `finding-NNN`, numbered by order of first
+appearance. That preserves the referential links between a Finding and the ledger/SARIF entries that
+cite it, which a blanket redaction would destroy.
+
+**The pipeline is sort → normalize, in that order, and it was verified in that order.** Sorting
+changes which Finding appears first, so ordinals assigned before sorting would not survive it. The
+sort key is therefore computed on pre-normalization data and must never include `finding_id` — that
+would sort by the very thing being normalized away. Re-running the whole equivalence test as
+sort-then-normalize, with the §4 keys applied, over all **27 targets × 2 processes × 2 runs**:
+
+> identical after sort+normalize: True (failures: [])
+
+**List order was never a source of variance.** `rule_id` sequences, `analyzer_status_events` order,
+and SARIF `results` order were identical across every pair compared. Concurrency in the analyzer
+fan-out does not leak into state ordering.
+
+### The five paths that carry a run-unique identifier
+
+```
+$.findings[].finding_id
+$.filtered_findings[].finding_id
+$.effective_finding_ids[]
+$.inspection_ledger[].emitted_finding_ids[]
+$.sarif_report.runs[].results[].properties.findingId
+```
+
+`$.inspection_ledger[].input_finding_ids` exists in the model but was empty in every fixture; it
+holds the same identifier type and must be normalized too.
+
+### Machine-specific strings
+
+Serialized every state key and searched for the repo root and `/home/`. Only two keys leak the host
+path, and both are already excluded: `report_body` and `skill_path`. Nothing else in state embeds an
+absolute path — finding `file` values and SARIF `physicalLocation` URIs are all skill-relative.
+
+## 4. Proposed canonical sort — required even though order proved stable
+
+Relying on an incidentally-stable order is how a suite becomes flaky a year later. Every list in the
+projection gets an explicit key. Sorts must be **total** (ties broken to a unique key) or they
+reintroduce the nondeterminism they exist to remove.
+
+| Path | Max len | Sort key |
+|---|---|---|
+| `$.findings`, `$.filtered_findings` | 9 | `(file, start_line, end_line, rule_id, message)` |
+| `$.findings[].tags` | 2 | the string |
+| `$.effective_finding_ids` | 9 | normalized ordinal — i.e. sorted by the referenced Finding's key above |
+| `$.inspection_ledger` | 35 | `(phase, analyzer_id, record_type, path, start_line, end_line, work_id)` |
+| `$.inspection_ledger[].emitted_finding_ids` | 5 | normalized ordinal |
+| `$.analyzer_status_events` | 24 | `(analyzer_id, status, message)` |
+| `$.analyzer_status_events[].planned_work` | 2 | `(path, start_line, end_line, work_id)` |
+| `$.analysis_completeness.analyzer_statuses` | 24 | `analyzer_id` |
+| `$.analysis_completeness.limitations` | 4 | the string — **note duplicates**, see below |
+| `$.components` | 2 | the string (already sorted by the producer) |
+| `$.component_metadata` | 2 | `path` |
+| `$.manifest.permissions`, `$.manifest.triggers` | 5 / 3 | the string |
+| `$.manifest.parameters` | 1 | `name` |
+| `$.sarif_report.runs[].results` | 9 | same key as `$.findings` |
+| `$.sarif_report.runs[].results[].properties.tags` | 2 | the string |
+| `$.sarif_report.runs[].tool.driver.rules` | 7 | `id` |
+| `$.sarif_report.runs[].invocations[].toolExecutionNotifications` | 4 | `(level, message)` |
+
+`limitations` contains repeated identical strings (`"Analyzer was disabled by the requested
+configuration."` × 3 for a `use_llm=False` scan). Sort it, do not deduplicate — the count is
+behavior.
+
+### Totality of these keys — checked, not assumed
+
+A sort key that ties leaves the tied elements in whatever order the producer emitted them, which is
+exactly the nondeterminism the sort exists to remove. Every key above was checked for duplicates
+across all 27 targets:
+
+| Path | Verdict |
+|---|---|
+| `$.inspection_ledger` (maxlen 161) | unique |
+| `$.analyzer_status_events` (maxlen 24) | unique |
+| `$.analysis_completeness.analyzer_statuses` | unique |
+| `$.component_metadata` | unique |
+| `$.sarif_report..tool.driver.rules` | unique |
+| `$.findings`, `$.filtered_findings` | **collides** — 2 duplicate keys in `malicious_skill` |
+| `$.sarif_report..results` | **collides** — same two |
+| `$.sarif_report..invocations[].toolExecutionNotifications` | **collides** — 2–3 per fixture, everywhere |
+
+The findings collision is real: two Findings share
+`("scripts/helper.py", 21, null, "E1", "External Transmission")` because the proposed key omits the
+fields that distinguish them (`matched_text`, `code_snippet`, `confidence`, …).
+
+**Resolution — append the element's full canonical serialization as the final tie-breaker**, with
+`finding_id` (and SARIF's `properties.findingId`) excluded from that serialization. Verified: with
+that tie-break, no two Findings and no two SARIF results are indistinguishable in any fixture, so
+the key becomes total.
+
+The `toolExecutionNotifications` collisions are a different case and need no fix: the tied elements
+are **byte-identical in full** (2–3 exact duplicates of a 3–4 element list, in all 27 targets — the
+repeated "Analyzer was disabled" notice). Interchangeable elements cannot produce a diff whichever
+order they take.
+
+## 5. Size — the full projection is too large to review
+
+`json.dumps(projection, indent=2, sort_keys=True)`, identifiers normalized, after excluding
+`model_config`, `report_body`, `skill_path`, and `temp_dir_for_cleanup`:
+
+| Fixture | Lines | Bytes |
+|---|---:|---:|
+| mcp_poisoned_tool | 1904 | 68863 |
+| mcp_underdeclared_skill | 1649 | 61237 |
+| malicious_skill | 1638 | 59749 |
+| mcp_mismatched_skill | 1556 | 52686 |
+| mcp_overprivileged_skill | 1541 | 48387 |
+| sdi2_inappropriate | 1476 | 50498 |
+| sdi1_mismatch | 1467 | 50881 |
+| sqp2_clean | 1396 | 46537 |
+| sdi3_scope_creep | 1383 | 43617 |
+| mcp_clean_skill | 1320 | 44310 |
+| sdi_clean | 1314 | 43441 |
+| sqp2_missing_warnings | 1309 | 42264 |
+| sdi4_divergence | 1302 | 40221 |
+| sqp3_clean | 1079 | 32916 |
+| sqp3_locale_forcing | 1079 | 32442 |
+| mcp_registry | 1057 | 34018 |
+| ssd4_narrative_deception | 903 | 27369 |
+| sqp1_clean | 804 | 23778 |
+| safe_skill | 803 | 23444 |
+| ssd1_semantic_injection | 803 | 23798 |
+| ssd2_novel_phrasing | 803 | 23928 |
+| ssd3_nl_exfiltration | 803 | 23879 |
+| ssd_clean | 803 | 23758 |
+| sqp1_vague_triggers | 800 | 23245 |
+| **Total (24 leaves)** | **28992** | **945266** |
+
+The three family parents, if ever scanned as targets, are far larger still — `sdi` alone is 4141
+lines (156 KB), `sqp` 3630, `ssd` 1895. They are not part of the 24 and #8 should not add them; see §7.
+
+**This answers the open question with a yes: the full-state projection is unreviewable.** A single
+fixture is 800–1900 lines; the corpus is ~29k lines and ~950 KB. That is not a diff a reviewer reads.
+
+Where the weight sits, for `mcp_poisoned_tool`:
+
+| Key | Lines | Bytes |
+|---|---:|---:|
+| `sarif_report` | 389 | 14807 |
+| `inspection_ledger` | 436 | 13218 |
+| `findings` | 204 | 10000 |
+| `filtered_findings` | 204 | 10000 |
+| `analyzer_status_events` | 360 | 9940 |
+| `analysis_completeness` | 246 | 5981 |
+| `file_cache` | 4 | 703 |
+| everything else | ~60 | ~1200 |
+
+### Reduction candidates, measured
+
+| Variant | Excludes | Corpus lines | Largest fixture |
+|---|---|---:|---:|
+| A — full state | — | 28992 | 1904 |
+| B | `sarif_report` | 25689 | 1515 |
+| C | `sarif_report`, `inspection_ledger`, `analyzer_status_events` | 9574 | 719 |
+| D | C plus `analysis_completeness`, `filtered_findings`, `file_cache` | 2294 | 265 |
+
+Two redundancies make part of this free:
+
+- **`findings` and `filtered_findings` are byte-identical in all 24 fixtures.** No fixture exercises
+  suppression (`suppressed_findings` is empty everywhere). Snapshotting both doubles the largest
+  section to detect nothing. Recommend keeping `findings` and asserting `filtered_findings ==
+  findings` structurally, so the day they diverge is a visible test failure rather than a silent
+  doubling.
+- **`file_cache` echoes fixture file contents into the snapshot.** It is a verbatim copy of files
+  already in the repo next to the test. Recommend excluding it and asserting only its key set —
+  which files were read is behavior; their contents are the fixture.
+
+`sarif_report` is a projection of `findings` plus rule metadata, so it is largely derived. Excluding
+it is defensible **only if** something else covers the SARIF mapping; it is the artifact consumers
+actually receive.
+
+## 6. Recommendation carried into #7
+
+1. **Normalize, don't exclude, `finding_id`.** Ordinal rewrite preserving cross-reference links,
+   applied **after** the sort, with the sort key computed on pre-normalization content that excludes
+   `finding_id`. Every sort key ends with the element's full canonical serialization (minus the
+   identifier) as a tie-breaker, which §4 verifies makes it total.
+2. **Exclude with stated reason:** `model_config` (environment-dependent), `report_body` (wall clock
+   + absolute path), `skill_path` (absolute path), `temp_dir_for_cleanup` (absolute path),
+   `file_cache` (fixture contents; assert key set only).
+3. **Sort every list** per §4, even though nothing was observed unsorted.
+4. **Adopt variant C as the snapshot body** (~719 lines worst case, ~9.6k for the full corpus) and
+   cover `sarif_report`, `inspection_ledger`, and `analyzer_status_events` with targeted assertions —
+   counts, per-analyzer status, and rule-id sets — rather than by verbatim snapshot. This keeps the
+   reviewable diff an order of magnitude smaller while leaving no key entirely unwatched. Variant D
+   drops `analysis_completeness`, which is the completeness contract itself; do not go that far.
+5. The breadth decision is **reopened by measurement**, as #6 anticipated. It is not reopened as
+   "fewer fixtures" — it is reopened as "narrower projection, same 24 fixtures."
+
+## 7. Two facts discovered along the way
+
+### Four fixture directories have no `SKILL.md` and scan as anonymous skills
+
+`tests/fixtures/mcp_registry` bears no `SKILL.md`, and neither do the three family parents. Scanning
+any of them does not fail:
+
+| Target | `manifest` | components | findings | risk |
+|---|---|---:|---:|---:|
+| `mcp_registry` | `{}` | 2 | 0 | 0 |
+| `sdi` | `{}` | 10 | 8 | 48 |
+| `sqp` | `{}` | 10 | 3 | 48 |
+| `ssd` | `{}` | 5 | 0 | 0 |
+
+This is the same anonymous-skill failure mode already recorded for a Java repo in
+`docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md` §3.7, reproduced here on *existing* fixtures: a directory
+with no skill manifest scans as one clean-manifest skill rather than reporting that there was nothing
+to scan. `sdi` and `sqp` make it sharper — a manifest-less directory can still return a MEDIUM risk
+score of 48 while claiming an empty manifest.
+
+`mcp_registry` is one of the 24 and should be snapshotted as-is: it is current behavior and the
+gate's job is to hold it still. The three family parents are containers, not skills, and should stay
+out of the corpus. The failure mode itself is worth its own issue.
+
+### `tests/integration/` tests do **not** run in `make test-unit`
+
+An earlier handoff asserted they do, on the grounds that those files carry no marker. They carry no
+*inline* marker, but `tests/integration/conftest.py:21-24` applies one automatically:
+
+```python
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    for item in items:
+        if "integration" in str(item.fspath):
+            item.add_marker(pytest.mark.integration)
+```
+
+With `addopts = "-m 'not integration and not provider'"` (`pyproject.toml:112`) they are deselected —
+confirmed by the `34 deselected` in §1.
+
+**Consequence for #7:** the constraint is on the *path*, not the marker. The guard is a substring test
+over the full file path, so a snapshot test must not have `integration` anywhere in its path. Placing
+it under `tests/integration/` and leaving it unmarked produces a test that never runs.
+
+---
+
+## Reproduction
+
+Throwaway scripts lived in the session scratchpad and are intentionally not committed. The method:
+scan each target twice per process via `graph.invoke({"skill_path": ..., "output_format": "json",
+"use_llm": False})`; coerce the returned state to JSON; drop the four excluded keys; sort every list
+per §4; rewrite `finding-<hex>` to ordinals; compare with `json.dumps(..., indent=2,
+sort_keys=True)`. Repeat the whole suite in a second process under a different `PYTHONHASHSEED` and
+compare across processes. Totality was checked by counting duplicate sort keys per list per target.
