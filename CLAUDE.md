@@ -43,7 +43,10 @@ being implemented. Every Ticket is implemented through the `/implement` skill, n
    issue, then open a PR from the Umbrella Branch into `main`. **A human merges that PR — an agent
    never does.**
 
-The Umbrella Branch is the only branch that targets `main`. A Ticket branch never does.
+Within a Spec, the Umbrella Branch is the only branch that targets `main` — a Ticket branch never
+does. **Outside a Spec** this workflow does not apply: standalone work such as a documentation
+correction or a one-off fix branches from `main`, opens a PR against `main`, and is merged by
+whoever the user says. Do not manufacture an Umbrella Branch for a single PR.
 
 ## Critical Constraints
 
