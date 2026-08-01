@@ -11,9 +11,12 @@ LangGraph pipeline that scans `SKILL.md` skill directories for vulnerabilities a
 
 ## Code search
 
-- **Search code with CodeGraph first**, before grep/find or reading files: `codegraph explore "<symbols or question>"`. The `codegraph_explore` MCP tool takes the same query when exposed; the CLI always works. This repo is indexed (`.codegraph/`).
-- It accepts symbol names or a plain question, and returns verbatim line-numbered source plus a **blast radius** — every caller and which tests cover each symbol. That coverage signal is the part grep cannot give you, and it is what tells you whether a change is safe.
-- Fall back to grep for non-code text (markdown, YAML, logs) and for literal string matching where the symbol graph does not help.
+Order of preference: **`codegraph_explore` MCP tool → `codegraph explore` CLI → grep/find.** This repo is indexed (`.codegraph/`).
+
+- **Always prefer the MCP tool.** Same engine and byte-identical output to the CLI, but the result lands in context in Read-equivalent form with no shell round-trip, no quoting of the query, and no truncation guesswork. **Fall back to the CLI whenever the MCP server is not exposed** — it often isn't, and it always works.
+- Either form takes symbol names or a plain question, and returns verbatim line-numbered source plus a **blast radius**: every caller and which tests cover each symbol. That coverage signal is what grep cannot give you and what tells you whether a change is safe.
+- Responses are large, and `maxFiles` is a blunt cap — it truncates by file without re-ranking, so a low value can drop a file the blast radius just named. Narrow the query rather than the cap.
+- Use grep for non-code text (markdown, YAML, logs) and literal string matching.
 
 ## Commits
 
