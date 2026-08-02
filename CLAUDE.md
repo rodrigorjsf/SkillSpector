@@ -12,9 +12,9 @@ LangGraph pipeline that scans `SKILL.md` skill directories for vulnerabilities a
 
 ## Code search
 
-Order of preference: **`codegraph_explore` MCP tool → `codegraph explore` CLI → grep/find.** This repo is indexed (`.codegraph/`); the MCP tool is often not exposed, the CLI always works.
+This repo is indexed (`.codegraph/`), so CodeGraph applies to every code lookup here.
 
-- Both take symbol names or a plain question, and return verbatim line-numbered source plus a **blast radius**: every caller and which tests cover each symbol. That coverage signal is what grep cannot give you and what tells you whether a change is safe.
+- The MCP tool and the CLI both take symbol names or a plain question, and return verbatim line-numbered source plus a **blast radius**: every caller and which tests cover each symbol. That coverage signal is what grep cannot give you and what tells you whether a change is safe.
 - `maxFiles` truncates by file without re-ranking, so a low cap can drop a file the blast radius just named. Narrow the query rather than the cap.
 - Use grep for non-code text (markdown, YAML, logs) and literal string matching.
 
@@ -115,11 +115,7 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 
 - `gh issue view` fails with a projectCards GraphQL error; use `--json`.
 - `gh pr edit` hits the same error; PATCH the body via `gh api` instead.
-- `tests/integration/conftest.py` auto-marks by path; never put a unit test there.
-- Fish shell: activate does not persist between calls — invoke `.venv/bin/python` directly.
 - CI only triggers on `main`-targeting PRs; empty `gh pr checks` is not a pass.
-- Poll a PR's `state` with its checks; a merged PR ignores later pushes.
-- `gh pr checks` reports the PR's `headRefOid`; confirm it equals what you pushed.
 - `make` needs `export PATH="$PWD/.venv/bin:$PATH"`; sourcing `activate.fish` fails in Bash.
 - Empty `git diff` plus `M` status means `core.autocrlf`, not a real change.
 - Fork Actions need the Actions-tab enable button clicked once; only a human can.
@@ -133,3 +129,4 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - Faking an absent module needs `delattr` on the package, not just `sys.modules`.
 - New fixtures also need a `DETECTION_FIXTURES` row in `test_framework_detection.py`.
 - After shipping, grep docs for text still claiming the feature is unbuilt.
+- Truncated subagent result: resume it with `SendMessage`, never re-run it.
