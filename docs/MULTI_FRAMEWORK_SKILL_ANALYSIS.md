@@ -532,17 +532,21 @@ Ordered by value-to-risk. Each phase is independently shippable and independentl
 | **1** | `detect_framework` + `framework` state key. No analyzer reads it yet. Unit tests assert correct detection on new fixtures and `"agent_skills"` on every existing fixture | Yes |
 | **2** | `framework_deepagents` analyzer, gated. Cheapest — reuses Python AST | Yes, via gate |
 | **3** | `structure_agent_skills_spec` behind `--spec-checks` (default `off`), plus the advisory-section rendering in [§3.5](#35-spec-conformance-rules-and-scoring) | Yes, via opt-in |
-| **4** | **Dependency decision:** accept `tree-sitter` + `tree-sitter-java` ([§3.6](#36-java-parsing-and-definition-path-coverage)). Nothing ships — this is a gate on phases 5–6 | N/A |
-| **5** | LangChain4j fixture: minimal `pom.xml` + `src/main/resources/skills/` + a `Skill.builder()` class under `tests/fixtures/langchain4j_skill/`. Prerequisite for any phase-6 assertion | Yes — test data only |
-| **6** | `framework_langchain4j` analyzer, gated. Tree-sitter over `.java`, full definition-path coverage per [§3.6](#36-java-parsing-and-definition-path-coverage), including `L4J-UNRESOLVED` | Yes, via gate |
-| **7** | Repository-level discovery for CI/CD ([§3.7](#37-repository-level-discovery-cicd)): deep `SKILL.md` search + JVM build-dir exclusion, behind `--repo-scan` | Yes, via flag — **not** if applied unconditionally |
+| **4** | ~~**Dependency decision:** accept `tree-sitter` + `tree-sitter-java`~~ **Done** (#23) — accepted in [ADR 0001](adr/0001-tree-sitter-for-java-parsing.md), both ship `cp39-abi3` wheels | N/A |
+| **5** | ~~LangChain4j fixture~~ **Done** (#28, extended by #30 and #31) — `tests/fixtures/langchain4j_shell_skill/` | Yes — test data only |
+| **6** | ~~`framework_langchain4j` analyzer, gated~~ **Done** (#28, #30, #31) — all five L4J rules; every pre-existing Behavior Snapshot byte-identical | Yes, via gate |
+| **7** | ~~Repository-level discovery for CI/CD~~ **Done** (#29) — `src/skillspector/repository_scan.py` behind `--repo-scan`, JVM build-dir exclusion on that path only | Yes, via flag — **not** if applied unconditionally |
 | **8** | Maven/OSV, `.jar` ingest, `_FILE_TYPES` / `_EXECUTABLE_EXTENSIONS` additions | Mixed — the last two are behavior-affecting; ship separately |
 
 Phases 1–3 deliver Deep Agents support and spec conformance without touching a single
-existing code path. Phase 4 is a decision, not code: tree-sitter adds a runtime dependency to
-a deliberately tight list, and phases 5–6 cannot proceed to the standard §3.6 describes until
-it is accepted. Phase 8's last two items are the only scheduled work that trades the
+existing code path. Phase 4 was a decision, not code: tree-sitter adds a runtime dependency to
+a deliberately tight list, and phases 5–6 could not proceed to the standard §3.6 describes until
+it was accepted. Phase 8's last two items are the only scheduled work that trades the
 constraint for correctness.
+
+**Phases 4–7 shipped together** as the LangChain4j-in-CI increment rather than one at a time —
+[ADR 0004](adr/0004-langchain4j-before-deepagents.md) records why the Java track went first and why
+the analyzer and the Repository Scan were paired. Phases 2, 3 and 8 remain.
 
 ### Known deviation: `allowed-tools` separator
 
@@ -633,21 +637,45 @@ record of what was open.
 
 ## 9. Recommended next step
 
-**Start the LangChain4j-in-CI increment** — the full `framework_langchain4j` analyzer
-([§3.6](#36-java-parsing-and-definition-path-coverage)) paired with `--repo-scan` repository
-discovery ([§3.7](#37-repository-level-discovery-cicd)), shipped as one deliverable. Its
-prerequisites are ADR 0001 (tree-sitter, now `accepted`) and the phase-5 LangChain4j fixture.
+**Start phase 2 — the `framework_deepagents` analyzer.** It is the cheapest remaining analyzer,
+reusing the Python AST machinery the repository already has, and it is the last Framework named in
+[§3.2](#32-framework-detection) with no analyzer behind it. Spec conformance (phase 3) follows.
 
-This **overrides §5's value-to-risk order**, which recommended phase 2 (`framework_deepagents`)
-first as the cheapest. [ADR 0004](adr/0004-langchain4j-before-deepagents.md) schedules the Java
-track ahead of Deep Agents on risk grounds: `ShellSkills` — unsandboxed arbitrary command
-execution — is the highest-severity signal in the design, and covering the gravest risk first
-outranks minimising effort-to-first-value. §5 stands unchanged as the value-to-risk analysis of
-record; the ADR carries the execution-order override and the trade-offs behind it (thin-slice vs
-full Analyzer, the repo-scan pairing, source-tree-only input, discovery roots). Deep Agents
-(phase 2) and spec conformance (phase 3) follow this increment.
+The **LangChain4j-in-CI increment is done.** Issue #23, sliced into #28–#31, landed phases 4–7 as
+one deliverable: `tree-sitter` accepted as a dependency, a LangChain4j application fixture, the
+gated `framework_langchain4j` analyzer carrying all five L4J rules, and the Repository Scan behind
+`--repo-scan`.
 
-Phase 2 was the previous recommendation here. It is **deprioritised, not dropped** — see ADR 0004.
+| Rule | Fires on | Severity |
+|------|----------|----------|
+| `L4J-SHELL` | `ShellSkills` wiring, or a declared `langchain4j-experimental-skills-shell` dependency | HIGH |
+| `L4J-UNRESOLVED` | A Skill's content, name, description or loader path built at runtime | MEDIUM |
+| `L4J-TOOL-DESC` | A `@Tool` description that instructs rather than describes | MEDIUM |
+| `L4J-MCP-FILTER` | `McpToolProvider` built without `.toolFilter(...)` | MEDIUM |
+| `L4J-WORKDIR` | `RunShellCommandToolConfig` built without `workingDirectory` | MEDIUM |
+
+Resolvable Skill content — a text block, a literal, a same-unit constant — is handed to the
+existing content analyzers and relocated onto the Java file and line it came from. What cannot be
+resolved is reported rather than chased, which is the §3.6 boundary made visible.
+
+Two things are worth carrying forward rather than leaving in the closed issues:
+
+- **The analyzer declines twice, and only the first decline is authorised.** The Framework gate is
+  [ADR 0002](adr/0002-gated-analyzers-decline-silently.md). The second — a LangChain4j tree with no
+  Java and no shell declaration — is the case that ADR *deferred* rather than approved, because it
+  does have planned work. It stays silent today because emitting `not_applicable` would change
+  `langchain4j_detection`'s Behavior Snapshot. Reopening it means regenerating that snapshot
+  deliberately.
+- **`--recursive` and `--repo-scan` now overlap.** They answer similar questions with different
+  discovery depth, different `--baseline` support and different combined output. Consolidating them
+  is worth doing and was out of scope while `--recursive` has committed behavior this increment
+  promised not to change.
+
+This increment **overrode §5's value-to-risk order**, which recommended phase 2 first as the
+cheapest. [ADR 0004](adr/0004-langchain4j-before-deepagents.md) scheduled the Java track ahead of
+Deep Agents on risk grounds: `ShellSkills` — unsandboxed arbitrary command execution — is the
+highest-severity signal in the design, and covering the gravest risk first outranked minimising
+effort-to-first-value. §5 stands unchanged as the value-to-risk analysis of record.
 
 Phase 1 was the recommendation before that. **That is done.** Issue #21 landed
 [`src/skillspector/framework.py`](../src/skillspector/framework.py) and the `framework` state key,
