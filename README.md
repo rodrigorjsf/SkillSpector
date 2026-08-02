@@ -192,6 +192,78 @@ See the [contrib guide](contrib/batch_scan/docs/) for details.
 > contribute a more universal backend (Ollama, vLLM, or a different provider),
 > PRs are very welcome.
 
+### Scanning a Whole Repository
+
+Pointing SkillSpector at a repository root without `--repo-scan` does not fail visibly — it
+succeeds wrongly. A repository root holds no `SKILL.md`, so the entire tree is scanned as **one
+anonymous skill with an empty manifest**: its components span everything, including `target/`, and
+the risk score is computed over that mixture. The report looks complete and is not.
+
+`--repo-scan` finds every skill inside the repository and scans each on its own:
+
+```bash
+skillspector scan . --repo-scan --no-llm --format sarif --output skillspector.sarif
+```
+
+Skills are found under these directory patterns, each matched as a **path suffix at any depth** — so
+a multi-module repository declaring the same layout twice yields both, with no configuration:
+
+| Pattern | Typical layout |
+|---|---|
+| `skills/` | Agent Skills convention |
+| `src/main/resources/skills/` | Maven / Gradle resources, used by LangChain4j's classpath loader |
+| `.deepagents/skills/` | Deep Agents |
+| `.agents/skills/` | Agent Skills, hidden-directory form |
+
+JVM build directories — `target`, `build`, `.gradle`, `.mvn`, `out` — are skipped, so a scan after
+`mvn package` does not read compiled output. This applies **only** with `--repo-scan`; an ordinary
+scan is byte-for-byte unchanged. For a layout the patterns miss, replace them:
+
+```bash
+skillspector scan . --repo-scan --repo-scan-root playbooks --repo-scan-root ops/skills
+```
+
+`--baseline`, the SARIF output and the exit code all work as they do for a single skill. SARIF
+locations are rewritten to be relative to the repository root, so GitHub code scanning resolves them
+against the checked-out tree.
+
+#### Example CI configuration
+
+```yaml
+name: Skill security scan
+on: [pull_request]
+
+permissions:
+  contents: read
+  security-events: write   # required to upload the SARIF
+
+jobs:
+  skillspector:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv tool install git+https://github.com/NVIDIA/skillspector.git
+
+      # Exit code 1 above the risk threshold, 2 on a scan error.
+      # `continue-on-error` lets the SARIF upload run even on a failing scan.
+      - name: Scan every skill in the repository
+        id: scan
+        continue-on-error: true
+        run: skillspector scan . --repo-scan --no-llm --format sarif --output skillspector.sarif
+
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: skillspector.sarif
+
+      - name: Fail the build on a risky skill
+        if: steps.scan.outcome == 'failure'
+        run: exit 1
+```
+
+Add `--baseline skillspector-baseline.yaml` once known findings are accepted, so re-scans surface
+only new ones.
+
 ### Suppressing False Positives (baseline)
 
 Suppress known/accepted findings so the risk score reflects only un-triaged
@@ -611,6 +683,8 @@ Options:
   --yara-rules-dir PATH                        Extra YARA rules directory
   -b, --baseline PATH                          Suppress findings listed in a baseline
   --show-suppressed                            List baseline-suppressed findings
+  --repo-scan                                  Find every skill in a repository, scan each
+  --repo-scan-root TEXT                        Replace the discovery roots (repeatable)
   -V, --verbose                                Show detailed progress
   --help                                       Show this message and exit
 

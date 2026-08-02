@@ -154,6 +154,7 @@ There are no conditional edges: after `resolve_input` → `build_context`, all a
 | `suppression.py` | Baseline / false-positive suppression: `Baseline`, `SuppressionRule`, `load_baseline`, `partition_findings`, `finding_fingerprint`, `build_baseline_dict`; exact v2 fingerprints require the scanner version and source `file_cache` (see [SUPPRESSION.md](SUPPRESSION.md)) |
 | `__init__.py` | Package version (from pyproject.toml via `importlib.metadata`) |
 | `sarif_models.py` | SARIF 2.1.0 Pydantic models and `validate_sarif_report()` |
+| `repository_scan.py` | Repository Scan discovery: finds every skill in a repository under conventional roots, matched as a path suffix at any depth. Reached only via `--repo-scan`; skips JVM build directories, which the ordinary walk must keep reading |
 | **nodes/** | |
 | `build_context.py` | Build-context node |
 | `llm_analyzer_base.py` | Base LLM analyzer with per-file/per-chunk batching (`LLMAnalyzerBase`, `LLMMetaAnalyzer`, `Batch`) |
