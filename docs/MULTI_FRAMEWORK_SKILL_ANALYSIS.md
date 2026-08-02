@@ -613,20 +613,42 @@ Recorded so the reasoning is not relitigated. Each links to where it is implemen
 
 ## 8. Open questions
 
+Both are now resolved by [ADR 0004](adr/0004-langchain4j-before-deepagents.md); kept here as the
+record of what was open.
+
 1. **`.jar` ingest scope.** A JAR is a zip, but usually holds compiled classes, not source.
    Reading `src/main/resources/skills/` out of one is useful; reading `.class` files is not.
    Worth confirming the deployment shape — is the CLI ever pointed at a built artifact rather
    than a source tree? — before building it (phase 8).
+   **Resolved: source tree only.** In CI the target is the checked-out source, so `.jar` ingest
+   stays deferred to phase 8.
 2. **`--repo-scan` discovery roots.** [§3.7](#37-repository-level-discovery-cicd) proposes
    `skills/`, `src/main/resources/skills/`, `.deepagents/skills/`, `.agents/skills/`. A
    monorepo with several modules would need per-module roots. Whether to make the root list
    configurable or infer it from `pom.xml` / `pyproject.toml` locations is unresolved.
+   **Resolved: fixed conventional patterns matched as a suffix at any depth** (so monorepo
+   modules are found without configuration) **plus a `--repo-scan-root` override flag.** Inferring
+   roots from build-file locations was rejected as machinery ahead of need.
 
 ## 9. Recommended next step
 
-**Start phase 2** — the gated `framework_deepagents` analyzer, the first reader of the key.
+**Start the LangChain4j-in-CI increment** — the full `framework_langchain4j` analyzer
+([§3.6](#36-java-parsing-and-definition-path-coverage)) paired with `--repo-scan` repository
+discovery ([§3.7](#37-repository-level-discovery-cicd)), shipped as one deliverable. Its
+prerequisites are ADR 0001 (tree-sitter, now `accepted`) and the phase-5 LangChain4j fixture.
 
-Phase 1 was the previous recommendation here. **That is done.** Issue #21 landed
+This **overrides §5's value-to-risk order**, which recommended phase 2 (`framework_deepagents`)
+first as the cheapest. [ADR 0004](adr/0004-langchain4j-before-deepagents.md) schedules the Java
+track ahead of Deep Agents on risk grounds: `ShellSkills` — unsandboxed arbitrary command
+execution — is the highest-severity signal in the design, and covering the gravest risk first
+outranks minimising effort-to-first-value. §5 stands unchanged as the value-to-risk analysis of
+record; the ADR carries the execution-order override and the trade-offs behind it (thin-slice vs
+full Analyzer, the repo-scan pairing, source-tree-only input, discovery roots). Deep Agents
+(phase 2) and spec conformance (phase 3) follow this increment.
+
+Phase 2 was the previous recommendation here. It is **deprioritised, not dropped** — see ADR 0004.
+
+Phase 1 was the recommendation before that. **That is done.** Issue #21 landed
 [`src/skillspector/framework.py`](../src/skillspector/framework.py) and the `framework` state key,
 set by `build_context` and read by nothing, with detection asserted `agent_skills` on every input
 scanned before it existed. The key is projected into the Behavior Snapshot and omitted at
@@ -646,5 +668,6 @@ Phase 5 was the previous recommendation here, on the grounds that a LangChain4j 
 make the [§3.7](#37-repository-level-discovery-cicd) claim falsifiable. **That purpose is
 discharged.** The claim was settled by reading the source instead, and the real failure mode —
 one giant anonymous skill, not zero skills — is recorded in §3.7. What remains of phase 5 is
-test data for phase 6, which is blocked on the phase-4 tree-sitter dependency decision. It
-keeps its place in the phasing and loses its priority.
+test data for phase 6. With ADR 0004 scheduling the Java track first and ADR 0001 accepted, the
+phase-4 gate that blocked it is closed: phase 5 is now the immediate prerequisite for the
+LangChain4j-in-CI increment above.
