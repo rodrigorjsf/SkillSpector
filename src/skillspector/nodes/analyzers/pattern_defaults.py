@@ -141,6 +141,7 @@ DEFAULT_EXPLANATIONS: dict[str, str] = {
     "SSRF3": "Request target host is built from a dynamic or untrusted value. If the host is attacker-influenced, this enables SSRF to arbitrary internal or metadata endpoints.",
     # LangChain4j Framework
     "L4J-SHELL": "The application reaches LangChain4j shell mode, which hands the model a single run_shell_command tool executing in the host process. Upstream documents it as running without sandboxing, containerization, or privilege restriction, so a prompt-injected model runs arbitrary commands on the host.",
+    "L4J-UNRESOLVED": "A Java-defined Skill carries text that is not statically resolvable -- content, a name, a description, or a loader path built at runtime. The instruction surface the model reads exists in no scanned file, so no content rule examined it. This is reported rather than skipped: silence here would let the report read as clean on the one surface never inspected.",
 }
 
 # Rule ID -> category (for report output)
@@ -221,6 +222,7 @@ RULE_ID_TO_CATEGORY: dict[str, str] = {
     "SSRF3": PatternCategory.SERVER_SIDE_REQUEST_FORGERY.value,
     # LangChain4j Framework
     "L4J-SHELL": PatternCategory.LANGCHAIN4J_FRAMEWORK.value,
+    "L4J-UNRESOLVED": PatternCategory.LANGCHAIN4J_FRAMEWORK.value,
 }
 
 # Rule ID -> pattern display name (for report output)
@@ -301,6 +303,7 @@ PATTERN_NAMES: dict[str, str] = {
     "SSRF3": "Dynamic Request Target",
     # LangChain4j Framework
     "L4J-SHELL": "Unsandboxed Shell Mode",
+    "L4J-UNRESOLVED": "Unresolvable Skill Content",
 }
 
 # Pattern-specific remediations (how to fix the issue)
@@ -400,6 +403,7 @@ DEFAULT_REMEDIATIONS: dict[str, str] = {
     "SSRF3": "Do not build request URLs from untrusted input. Validate the host against an allowlist and reject internal/metadata addresses before issuing the request.",
     # LangChain4j Framework
     "L4J-SHELL": "Prefer tool mode (Skills.from(...)) so the model reaches only the tools the Skill declares. Where shell mode is genuinely required, confine the process to a container or a restricted user and set RunShellCommandToolConfig.workingDirectory rather than inheriting the JVM's.",
+    "L4J-UNRESOLVED": "Move the text into a literal, a text block, or a same-file constant so the scanner can read what the model reads. Where it genuinely has to come from a database or a remote call, review that source separately -- no static scan can see it.",
 }
 
 
