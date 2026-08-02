@@ -129,3 +129,4 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - Faking an absent module needs `delattr` on the package, not just `sys.modules`.
 - New fixtures also need a `DETECTION_FIXTURES` row in `test_framework_detection.py`.
 - After shipping, grep docs for text still claiming the feature is unbuilt.
+- Truncated subagent result: resume it with `SendMessage`, never re-run it.
