@@ -82,10 +82,15 @@ whoever the user says. Do not manufacture an Umbrella Branch for a single PR.
 When something fails repeatedly, when User has to re-explain, or when a workaround is found for a platform/tool limitation, add a one-line bullet here. Keep each bullet under 15 words. No explanations. Only add things that will save time in future sessions.
 
 - `gh issue view` fails with a projectCards GraphQL error; use `--json`.
+- `gh pr edit` hits the same error; PATCH the body via `gh api` instead.
 - `tests/integration/conftest.py` auto-marks by path; never put a unit test there.
 - Fish shell: activate does not persist between calls — invoke `.venv/bin/python` directly.
 - CI only triggers on `main`-targeting PRs; empty `gh pr checks` is not a pass.
+- Poll a PR's `state` with its checks; a merged PR ignores later pushes.
+- `gh pr checks` reports the PR's `headRefOid`; confirm it equals what you pushed.
 - `make` needs `export PATH="$PWD/.venv/bin:$PATH"`; sourcing `activate.fish` fails in Bash.
 - Empty `git diff` plus `M` status means `core.autocrlf`, not a real change.
 - Fork Actions need the Actions-tab enable button clicked once; only a human can.
 - Pin new test fixtures to LF via `.gitattributes` or snapshots break in CI.
+- Squash-merge Ticket PRs; DCO checks every merge commit inside the PR range.
+- `CONTEXT.md` `_Avoid_` terms bind docstrings and test names, not just prose.
