@@ -89,3 +89,5 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - Empty `git diff` plus `M` status means `core.autocrlf`, not a real change.
 - Fork Actions need the Actions-tab enable button clicked once; only a human can.
 - Pin new test fixtures to LF via `.gitattributes` or snapshots break in CI.
+- Squash-merge Ticket PRs; DCO checks every merge commit inside the PR range.
+- `CONTEXT.md` `_Avoid_` terms bind docstrings and test names, not just prose.

@@ -1,6 +1,7 @@
 # Multi-framework skill analysis — design
 
-**Status:** design proposal. Nothing described here is implemented.
+**Status:** design proposal, except [§4](#4-the-unchanged-behavior-gate) — the unchanged-behavior
+gate is built and merged. Nothing else described here is implemented.
 **Goal:** extend SkillSpector to evaluate skills hosted by **LangChain4j** (Java) and
 **LangChain Deep Agents** (Python), covering both structural/best-practice conformance and
 the security analysis SkillSpector already performs.
@@ -427,7 +428,7 @@ file on every run with zero code changed. It has two further defects: it is invi
 and it requires a human to capture "before" *before* editing, which a dirty working tree
 already makes impossible.
 
-The gate is instead a **committed golden snapshot plus a test that regenerates and compares
+The gate is instead a **committed Behavior Snapshot plus a test that regenerates and compares
 it**. Git supplies the "before" for free, and the snapshot is reviewable in the diff of the
 commit that changes it. It is specified in
 [issue #4](https://github.com/rodrigorjsf/SkillSpector/issues/4), was sliced into issues #5–#9,
