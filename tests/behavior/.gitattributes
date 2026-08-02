@@ -1,3 +1,4 @@
-# A Behavior Snapshot is written with "\n" by regenerate.py, and "make
-# snapshots" must leave the tree clean. See tests/behavior/COVERAGE_LIMITS.md.
+# A Behavior Snapshot is written with "\n" by regenerate.py, and
+# "make update-snapshots" must leave the tree clean.
+# See tests/behavior/COVERAGE_LIMITS.md.
 * text=auto eol=lf

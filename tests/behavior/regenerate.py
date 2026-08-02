@@ -17,7 +17,7 @@
 
 Regeneration is always deliberate and always its own commit. It lives here, in a
 separate entry point, rather than as a branch inside the test: no environment
-variable and no test run may rewrite a golden file.
+variable and no test run may rewrite a Behavior Snapshot.
 
 ``--emit-all`` prints every projection instead of writing it, together with the
 model configuration the run resolved. The determinism tests use it to compare

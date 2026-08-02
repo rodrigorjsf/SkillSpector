@@ -338,12 +338,12 @@ def test_the_unexercised_sort_keys_are_still_unexercised() -> None:
 
 
 @CORPUS_PARAMS
-def test_two_consecutive_runs_produce_identical_projections(
+def test_two_consecutive_scans_produce_identical_projections(
     fixture: str, scan_once: Callable[[str], dict[str, Any]]
 ) -> None:
     """Two Scans of one Skill in one process project byte-identically.
 
-    The first run is the memoized one the gate already compared against the
+    The first Scan is the memoized one the gate already compared against the
     committed file; the second is fresh. Comparing the serializations rather
     than the dictionaries is deliberate -- byte-identity is the property the
     committed file depends on, and it is strictly stronger than equality.

@@ -126,7 +126,7 @@ def _atom(value: Any) -> tuple[int, float, str]:
 
     Named keys mix ``None``, ints and strings (``end_line`` is ``int | None``),
     which are not mutually comparable. The type rank keeps the comparison legal
-    while numbers still sort numerically, so the golden file stays grouped by
+    while numbers still sort numerically, so the Behavior Snapshot stays grouped by
     file and ascending line -- which is how a reviewer reads a security diff.
     """
     if value is None:
