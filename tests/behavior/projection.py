@@ -312,7 +312,7 @@ def load_snapshot(name: str) -> dict[str, Any]:
 
     Deliberately catches nothing: a missing file raises ``FileNotFoundError`` and
     a corrupt one raises ``json.JSONDecodeError``. The gate never self-heals --
-    regeneration is only ever the explicit ``make snapshots`` target.
+    regeneration is only ever the explicit ``make update-snapshots`` target.
     """
     return json.loads(snapshot_path(name).read_text(encoding="utf-8"))
 

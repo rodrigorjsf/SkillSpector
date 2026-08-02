@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Rewrite the committed Behavior Snapshots -- ``make snapshots``.
+"""Rewrite the committed Behavior Snapshots -- ``make update-snapshots``.
 
 Regeneration is always deliberate and always its own commit. It lives here, in a
 separate entry point, rather than as a branch inside the test: no environment

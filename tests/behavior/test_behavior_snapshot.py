@@ -19,7 +19,7 @@ Carries no pytest marker, and its path contains no ``integration`` segment, so
 it runs under ``make test-unit``. Both matter -- see ``tests/behavior/__init__``.
 
 A mismatch is a real behavior change. Snapshots are only ever rewritten by
-``make snapshots``, in their own commit.
+``make update-snapshots``, in their own commit.
 
 The module is partitioned deliberately. Tests that hold *behavior* still run
 across the whole corpus; tests that assert something about a measured *shape*
@@ -89,7 +89,7 @@ def test_scan_matches_committed_snapshot(
 
 @CORPUS_PARAMS
 def test_committed_snapshot_is_canonically_serialized(fixture: str) -> None:
-    """The file on disk is byte-for-byte what ``make snapshots`` writes.
+    """The file on disk is byte-for-byte what ``make update-snapshots`` writes.
 
     Without this, a hand-edit that reflowed a file would pass the gate above
     and then show up as churn in the next regeneration's diff.
