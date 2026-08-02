@@ -41,6 +41,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 
@@ -51,9 +52,14 @@ _SRC = Path(__file__).resolve().parents[2] / "src" / "skillspector"
 # The module under guard is excluded: it is the home, not a leak site.
 _VOCABULARY = _SRC / "langchain4j" / "vocabulary.py"
 
-# Every module that matches on a LangChain4j spelling. ``framework.py`` is here
-# because detection reads the same inventory; ``repository_scan.py`` is not,
-# and ``TestScope`` records why.
+# Every module that matches on a LangChain4j spelling. The package is globbed,
+# so a new module inside it is guarded the moment it exists; the two entries
+# outside it are **hand-maintained**, and a future LangChain4j-coupled module
+# elsewhere in the tree has to be added here by hand. ``framework.py`` is one
+# because detection reads the same inventory. ``repository_scan.py`` is
+# deliberately absent rather than overlooked --
+# ``docs/adr/0005-langchain4j-upstream-vocabulary.md`` records why, and why
+# adding it would not flag the copy it holds.
 _GUARDED_FILES: tuple[Path, ...] = (
     *sorted(path for path in (_SRC / "langchain4j").glob("*.py") if path != _VOCABULARY),
     _SRC / "framework.py",
@@ -72,24 +78,43 @@ _NOT_A_SPELLING = frozenset({"OBSERVED_VERSION_RANGE"})
 _GRAMMAR_ACCESSOR = "child_by_field_name"
 
 
-def _spellings() -> dict[str, str]:
-    """Every inventoried spelling, mapped to the constant that declares it."""
-    found: dict[str, str] = {}
-    for constant, value in vars(vocabulary).items():
-        if constant.startswith("_") or constant in _NOT_A_SPELLING:
+def _read_inventory(module: ModuleType = vocabulary) -> tuple[dict[str, str], list[str]]:
+    """Every inventoried spelling by declaring constant, and what could not be read.
+
+    The second return value is the point. A constant holding something this
+    reader does not understand contributes no spelling, so nothing guards it --
+    and a guard that quietly covers less than it claims is worse than none.
+    Returning the unreadable names makes that loud; ``TestScope`` asserts the
+    list is empty.
+
+    Keyed off ``__annotations__`` rather than a leading-underscore convention,
+    so imported names such as ``Final`` are not mistaken for inventory entries.
+    """
+    spellings: dict[str, str] = {}
+    unreadable: list[str] = []
+    for constant, value in vars(module).items():
+        if constant not in module.__annotations__ or constant in _NOT_A_SPELLING:
             continue
         if isinstance(value, str):
             members: tuple[object, ...] = (value,)
-        elif isinstance(value, frozenset | tuple):
+        elif isinstance(value, frozenset | tuple | set | list):
             members = tuple(value)
         else:
+            unreadable.append(constant)
             continue
+        held = [member for member in members if isinstance(member, str)]
+        if not held:
+            unreadable.append(constant)
         # First declaration wins, so a spelling that also appears in a
         # collection is reported against the constant that names it alone.
-        for member in members:
-            if isinstance(member, str):
-                found.setdefault(member, constant)
-    return found
+        for member in held:
+            spellings.setdefault(member, constant)
+    return spellings, unreadable
+
+
+def _spellings() -> dict[str, str]:
+    """Every inventoried spelling, mapped to the constant that declares it."""
+    return _read_inventory()[0]
 
 
 def _exempt(tree: ast.Module) -> set[int]:
@@ -157,6 +182,27 @@ class TestScope:
         # near-zero would make every assertion below pass while guarding
         # nothing, so the floor is asserted rather than the exact count.
         assert len(_spellings()) >= 16
+
+    def test_every_declared_constant_is_readable(self) -> None:
+        _spellings_found, unreadable = _read_inventory()
+        assert unreadable == [], (
+            f"{unreadable} hold no spelling this guard can read, so nothing guards them. "
+            "The reader understands a string, or a tuple, set, list or frozenset of them "
+            "-- teach _read_inventory to read the new shape, or add the constant to "
+            "_NOT_A_SPELLING if it is not a spelling at all."
+        )
+
+    def test_an_unreadable_constant_is_reported(self) -> None:
+        # The control for the assertion above: without it, a reader that
+        # returned an empty list unconditionally would look just as green.
+        stub = ModuleType("stub_vocabulary")
+        stub.__annotations__ = {"SETTER": "Final[str]", "RETRY_LIMIT": "Final[int]"}
+        stub.SETTER = "workingDirectory"
+        stub.RETRY_LIMIT = 3
+
+        spellings, unreadable = _read_inventory(stub)
+        assert unreadable == ["RETRY_LIMIT"]
+        assert spellings == {"workingDirectory": "SETTER"}
 
     def test_a_spelling_written_inline_is_reported(self, tmp_path: Path) -> None:
         leaked = tmp_path / "leaked.py"

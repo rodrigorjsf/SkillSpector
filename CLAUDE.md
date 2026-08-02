@@ -132,3 +132,4 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - Truncated subagent result: resume it with `SendMessage`, never re-run it.
 - `gh api search/code` matches terms, not phrases; use WebSearch for exact phrases.
 - `agentskills.io/llms.txt` lists every spec page; grep all before claiming absence.
+- Guarding literals: match spellings exactly — containment hits Finding-message prose.
