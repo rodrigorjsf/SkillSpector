@@ -48,6 +48,13 @@ CAUSES: tuple[tuple[str, str | None, ManifestStatus], ...] = (
 )
 
 
+EVERY_CAUSE = pytest.mark.parametrize(
+    ("body", "expected"),
+    [(body, expected) for _name, body, expected in CAUSES],
+    ids=[name for name, _body, _expected in CAUSES],
+)
+
+
 def _skill_dir(root: Path, body: str | None) -> Path:
     """Write one scan target carrying ``body`` as its ``SKILL.md``, or none."""
     root.mkdir(parents=True, exist_ok=True)
@@ -57,11 +64,7 @@ def _skill_dir(root: Path, body: str | None) -> Path:
     return root
 
 
-@pytest.mark.parametrize(
-    ("body", "expected"),
-    [(body, expected) for _name, body, expected in CAUSES],
-    ids=[name for name, _body, _expected in CAUSES],
-)
+@EVERY_CAUSE
 def test_every_cause_of_an_empty_manifest_reports_its_own_status(
     tmp_path: Path, body: str | None, expected: ManifestStatus
 ) -> None:
@@ -73,11 +76,7 @@ def test_every_cause_of_an_empty_manifest_reports_its_own_status(
     assert result["manifest_status"] == expected
 
 
-@pytest.mark.parametrize(
-    ("body", "expected"),
-    [(body, expected) for _name, body, expected in CAUSES],
-    ids=[name for name, _body, _expected in CAUSES],
-)
+@EVERY_CAUSE
 def test_the_manifest_itself_is_unchanged_by_the_status(
     tmp_path: Path, body: str | None, expected: ManifestStatus
 ) -> None:

@@ -21,7 +21,7 @@ The declared metadata of a Skill — its name, description, and the tools it cla
 _Avoid_: frontmatter, header, config
 
 **Manifest Status**:
-Why a Scan's Manifest holds what it holds — declared, empty, unparseable, unreadable, or absent
+Why a Scan's Manifest holds what it holds — present, empty, unparseable, unreadable, or absent
 because the scanned directory holds no Skill at all. Reported beside the Manifest, never inside it.
 _Avoid_: manifest state, parse result, manifest error
 

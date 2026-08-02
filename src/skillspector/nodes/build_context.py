@@ -70,10 +70,6 @@ _EXECUTABLE_EXTENSIONS = frozenset(
     {".py", ".sh", ".bash", ".zsh", ".js", ".ts", ".rb", ".go", ".rs", ".pl"}
 )
 
-# The Manifest fields a Skill can declare. A Skill that populates none of them
-# has an empty Manifest rather than a present one.
-_MANIFEST_FIELDS = ("name", "description", "triggers", "permissions", "allowed-tools", "parameters")
-
 
 def _resolve_skill_dir(state: SkillspectorState) -> Path:
     """Resolve state skill_path to an existing directory Path."""
@@ -316,8 +312,10 @@ def _parse_manifest(skill_dir: Path) -> tuple[dict[str, object], ManifestStatus]
             [p for p in parameters if isinstance(p, dict)] if isinstance(parameters, list) else []
         )
         # A mapping always yields the four list keys, so "did the Skill actually
-        # declare anything" is a question about the values, not the keys.
-        declared = any(manifest.get(field) for field in _MANIFEST_FIELDS)
+        # declare anything" is a question about the values, not the keys. Read
+        # off the manifest itself rather than a second list of field names,
+        # which a later field would have to be added to twice.
+        declared = any(manifest.values())
         return manifest, (ManifestStatus.PRESENT if declared else ManifestStatus.EMPTY)
     return {}, ManifestStatus.ABSENT
 

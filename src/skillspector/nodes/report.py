@@ -691,17 +691,12 @@ def _format_json(
     """Generate JSON report string."""
     suppressed = suppressed or []
     skill_name = (manifest.get("name") or "unknown") if manifest else "unknown"
-    skill: dict[str, object] = {
-        "name": skill_name,
-        "source": skill_path or "",
-        "scanned_at": datetime.now(UTC).isoformat(),
-    }
-    manifest_notice = _manifest_status_notice(manifest_status)
-    if manifest_notice:
-        skill["manifest_status"] = manifest_status.value
-        skill["manifest_status_detail"] = manifest_notice
     data: dict[str, object] = {
-        "skill": skill,
+        "skill": {
+            "name": skill_name,
+            "source": skill_path or "",
+            "scanned_at": datetime.now(UTC).isoformat(),
+        },
         "risk_assessment": {
             "score": risk_score,
             "severity": risk_severity,
@@ -724,6 +719,12 @@ def _format_json(
         "execution_successful": execution_successful,
     }
     data["analysis_completeness"] = dict(analysis_completeness or {})
+    manifest_notice = _manifest_status_notice(manifest_status)
+    if manifest_notice:
+        skill = data["skill"]
+        if isinstance(skill, dict):
+            skill["manifest_status"] = manifest_status.value
+            skill["manifest_status_detail"] = manifest_notice
     return json.dumps(data, indent=2)
 
 
