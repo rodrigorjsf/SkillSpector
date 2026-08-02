@@ -88,7 +88,7 @@ dependent), `report_body` (wall clock plus absolute path), `skill_path` and `tem
 - **Model selection is unguarded**, by construction. That is the point of excluding it, and the test
   suite demonstrates the exclusion by projecting identically under two provider settings.
 
-State keys outside the ten-key allow-list are likewise unguarded, notably `inspection_ledger`,
+State keys outside the eleven-key allow-list are likewise unguarded, notably `inspection_ledger`,
 `analyzer_status_events`, `effective_finding_ids`, `filtered_findings`, `file_cache`, and
 `llm_call_log`. `analysis_completeness` is projected, so an Analyzer's *status* is guarded even
 though the ledger row behind it is not — that is what gives

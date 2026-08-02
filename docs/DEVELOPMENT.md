@@ -86,6 +86,7 @@ All targets assume the virtual environment is **already created and activated**.
 | `ast_cache` | Map of path → AST representation (for future use) |
 | `manifest`, `previous_manifest` | Parsed skill metadata (e.g. from SKILL.md) |
 | `manifest_status` | Why `manifest` holds what it holds: `present`, `empty`, `unparseable`, `unreadable`, or `absent` (no SKILL.md — the directory declares no skill) |
+| `framework` | Which framework the scanned tree is written against: `agent_skills` (the conservative default), `langchain4j`, or `deepagents`. Detected by a pure function under build_context; read by nothing yet — it exists for the gated analyzers of later phases |
 | `component_metadata` | List of dicts: path, type, lines, executable, size_bytes (from build_context) |
 | `has_executable_scripts` | True if any component has executable extension (e.g. .py, .sh); used for risk multiplier |
 | `output_format` | Requested report format: `terminal`, `json`, `markdown`, or `sarif` |
@@ -131,7 +132,7 @@ There are no conditional edges: after `resolve_input` → `build_context`, all a
 | Node | Role | Source |
 |------|------|--------|
 | **resolve_input** | Consumes `input_path` or `skill_path`; resolves URLs/zips/files via InputHandler; sets `skill_path` and (when needed) `temp_dir_for_cleanup` | [resolve_input.py](../src/skillspector/nodes/resolve_input.py) |
-| **build_context** | Reads `skill_path`, populates `components`, `file_cache`, `ast_cache`, `manifest`, `manifest_status`, `component_metadata`, `has_executable_scripts` | [build_context.py](../src/skillspector/nodes/build_context.py) |
+| **build_context** | Reads `skill_path`, populates `components`, `file_cache`, `ast_cache`, `manifest`, `manifest_status`, `framework`, `component_metadata`, `has_executable_scripts` | [build_context.py](../src/skillspector/nodes/build_context.py) |
 | **Analyzers** | 22 nodes; each returns `AnalyzerNodeResponse` (list of `Finding`). State reducer appends to `findings`. | [nodes/analyzers/__init__.py](../src/skillspector/nodes/analyzers/__init__.py) (`ANALYZER_NODE_IDS`, `ANALYZER_NODES`) |
 | **meta_analyzer** | Per-file LLM filter/enrich of canonical `findings`; emits ordered `effective_finding_ids` for report selection. One LLM call per file (or per chunk for oversized files); token budgets from `constants.py`; falls back when `use_llm` is False. | [meta_analyzer.py](../src/skillspector/nodes/meta_analyzer.py), [llm_analyzer_base.py](../src/skillspector/nodes/llm_analyzer_base.py) |
 | **report** | Applies baseline suppression (`state["baseline"]`), then builds SARIF 2.1.0, computes `risk_score`, `risk_severity`, `risk_recommendation` from the non-suppressed findings; writes `report_body` from `output_format` (terminal/json/markdown/sarif) | [report.py](../src/skillspector/nodes/report.py) |

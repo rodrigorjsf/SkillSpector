@@ -48,6 +48,14 @@ Detection is textual and reads only the files a signal names. It therefore does
 not distinguish code from comments inside a ``.py`` or ``.java`` file, while a
 mention in prose -- a ``README.md`` naming ``deepagents`` -- is not a signal at
 all, because no signal names markdown.
+
+Two signals are read more narrowly than §3.2's table spells them, both in the
+conservative direction the same section mandates. A requirement naming
+``deepagents-contrib`` is a *different* distribution and is not a Deep Agents
+signal; and an import is matched at the start of a line, so ``vendor.deepagents``
+and a package named inside a string are not signals either. Both narrowings can
+only ever return ``AGENT_SKILLS`` where a looser reading would return a
+Framework, so they cannot make an existing Scan detect as something new.
 """
 
 from __future__ import annotations
@@ -142,8 +150,12 @@ def _signals_langchain4j(components: Iterable[str], file_cache: Mapping[str, str
     return False
 
 
-def _signals_deepagents(components: Iterable[str], file_cache: Mapping[str, str]) -> bool:
-    """Whether any §3.2 Deep Agents signal is present."""
+def _signals_deepagents(file_cache: Mapping[str, str]) -> bool:
+    """Whether any §3.2 Deep Agents signal is present.
+
+    Takes no ``components``: every Deep Agents signal is a content one, unlike
+    LangChain4j's Maven resource layout, which is a path.
+    """
     for path, content in file_cache.items():
         if _is_python_requirement_file(path) and _DEEPAGENTS_DISTRIBUTION.search(content):
             return True
@@ -165,9 +177,8 @@ def detect_framework(components: Iterable[str], file_cache: Mapping[str, str]) -
     Returns ``AGENT_SKILLS`` when no signal fires *and* when both fire; the
     module docstring records why the second case is not a precedence rule.
     """
-    components = tuple(components)
     langchain4j = _signals_langchain4j(components, file_cache)
-    deepagents = _signals_deepagents(components, file_cache)
+    deepagents = _signals_deepagents(file_cache)
     if langchain4j and not deepagents:
         return Framework.LANGCHAIN4J
     if deepagents and not langchain4j:

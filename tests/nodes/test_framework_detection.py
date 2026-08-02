@@ -97,8 +97,18 @@ SIGNALS: tuple[tuple[str, dict[str, str], Framework], ...] = (
         Framework.AGENT_SKILLS,
     ),
     (
+        "gradle_without_the_coordinate",
+        {"build.gradle.kts": 'implementation("org.junit.jupiter:junit-jupiter:5.10.0")'},
+        Framework.AGENT_SKILLS,
+    ),
+    (
         "java_without_the_import",
         {"Agent.java": "package a;\n\nimport java.util.List;\n"},
+        Framework.AGENT_SKILLS,
+    ),
+    (
+        "kotlin_without_the_import",
+        {"Agent.kt": "import kotlin.collections.List\n"},
         Framework.AGENT_SKILLS,
     ),
     (
