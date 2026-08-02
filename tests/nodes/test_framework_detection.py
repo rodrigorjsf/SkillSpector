@@ -48,8 +48,8 @@ FIXTURES_DIR = proj.FIXTURES_DIR
 # detecting ``agent_skills`` -- a fixture arriving here by accident rather than
 # by this edit is the drift the assertion below exists to catch.
 DETECTION_FIXTURES: dict[str, Framework] = {
-    "deepagents_detection": Framework.DEEPAGENTS,
     "langchain4j_detection": Framework.LANGCHAIN4J,
+    "deepagents_detection": Framework.DEEPAGENTS,
     "langchain4j_shell_skill": Framework.LANGCHAIN4J,
 }
 

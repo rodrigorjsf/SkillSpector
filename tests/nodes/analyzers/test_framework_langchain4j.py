@@ -80,6 +80,22 @@ PLAIN_POM = """<project>
 </project>
 """
 
+COMMENTED_POM = """<project>
+  <!--
+    We removed langchain4j-experimental-skills-shell when we left the prototype
+    behind; do not put it back.
+  -->
+  <dependencies>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j</artifactId>
+    </dependency>
+  </dependencies>
+</project>
+"""
+
+SHELL_COORDINATE = "dev.langchain4j:langchain4j-experimental-skills-shell:1.18.1-beta28"
+
 
 def make_state(
     file_cache: dict[str, str],
@@ -151,6 +167,37 @@ class TestShellDependencyDeclaration:
         result = analyzer.node(make_state({"pom.xml": PLAIN_POM, "A.java": TOOL_MODE_JAVA}))
 
         assert shell_findings(result) == []
+
+    def test_a_commented_out_declaration_is_not_a_declaration(self) -> None:
+        """An XML comment naming the artifact is prose, not a dependency.
+
+        A plain substring scan reads the two the same way and reports the
+        comment's line, which is both a false positive and a wrong location.
+        """
+        commented = COMMENTED_POM
+        assert analyzer.signals.SHELL_ARTIFACT_ID in commented
+
+        findings = shell_findings(analyzer.node(make_state({"pom.xml": commented})))
+
+        assert findings == []
+
+    def test_a_gradle_line_comment_is_not_a_declaration(self) -> None:
+        gradle = f"dependencies {{\n    // implementation '{SHELL_COORDINATE}'\n}}\n"
+
+        assert shell_findings(analyzer.node(make_state({"build.gradle": gradle}))) == []
+
+    def test_a_live_gradle_declaration_below_a_comment_is_found_at_its_own_line(self) -> None:
+        gradle = (
+            "dependencies {\n"
+            f"    // was: implementation '{SHELL_COORDINATE}'\n"
+            f"    implementation '{SHELL_COORDINATE}'\n"
+            "}\n"
+        )
+
+        findings = shell_findings(analyzer.node(make_state({"build.gradle": gradle})))
+
+        assert len(findings) == 1
+        assert findings[0].start_line == 3
 
     def test_the_declaration_fires_with_no_java_in_the_scan(self) -> None:
         """The Rule fires on the dependency *or* the wiring -- neither implies the other."""

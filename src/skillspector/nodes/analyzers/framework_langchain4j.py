@@ -44,13 +44,18 @@ from skillspector.inspection_ledger import (
 from skillspector.langchain4j import signals
 from skillspector.logging_config import get_logger
 from skillspector.models import Finding
+from skillspector.nodes.analyzers.pattern_defaults import (
+    get_category,
+    get_explanation,
+    get_pattern_name,
+    get_remediation,
+)
 from skillspector.state import AnalyzerNodeResponse, SkillspectorState
 
 ANALYZER_ID = "framework_langchain4j"
 logger = get_logger(__name__)
 
 _RULE_ID = "L4J-SHELL"
-_CATEGORY = "LangChain4j Framework"
 _TAGS = ["ASI02"]
 _SEVERITY = "HIGH"
 
@@ -68,23 +73,16 @@ _DECLARATION_MESSAGE = (
     f"The build file declares {signals.SHELL_ARTIFACT_ID}, putting LangChain4j's unsandboxed "
     "shell mode on the classpath where any wiring can reach it."
 )
-_EXPLANATION = (
-    "In shell mode LangChain4j replaces the activate_skill tool surface with a single "
-    "run_shell_command tool and lets the model read Skill files off the filesystem itself. "
-    "Commands run directly in the host process environment -- LangChain4j's own documentation "
-    "states there is no sandboxing, containerization or privilege restriction. A prompt-injected "
-    "or misbehaving model therefore executes arbitrary commands on the machine running the "
-    "application."
-)
-_REMEDIATION = (
-    "Prefer tool mode (Skills.from(...)) so the model reaches only the tools the Skill declares. "
-    "Where shell mode is genuinely required, confine the process: run it in a container or under "
-    "a restricted user, and set RunShellCommandToolConfig.workingDirectory rather than inheriting "
-    "the JVM's."
-)
 
 
 def _finding(path: str, start_line: int, message: str, confidence: float) -> Finding:
+    """Build one ``L4J-SHELL`` Finding.
+
+    Category, name, explanation and remediation are read from
+    ``pattern_defaults`` rather than restated here. They are the same strings a
+    report would fall back to anyway, and a second copy in this module would be
+    free to drift from the catalogue the README and the AST10 crosswalk cite.
+    """
     return Finding(
         rule_id=_RULE_ID,
         message=message,
@@ -92,10 +90,11 @@ def _finding(path: str, start_line: int, message: str, confidence: float) -> Fin
         confidence=confidence,
         file=path,
         start_line=start_line,
-        category=_CATEGORY,
+        category=get_category(_RULE_ID),
+        pattern=get_pattern_name(_RULE_ID),
         tags=list(_TAGS),
-        explanation=_EXPLANATION,
-        remediation=_REMEDIATION,
+        explanation=get_explanation(_RULE_ID),
+        remediation=get_remediation(_RULE_ID),
     )
 
 
@@ -126,7 +125,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
 
     file_cache: Mapping[str, str] = state.get("file_cache") or {}
     java_sources = signals.java_sources(file_cache)
-    shell_declarations = signals.find_shell_artifact_declarations(file_cache)
+    shell_declarations = signals.shell_artifact_declaration_lines(file_cache)
 
     # Applicability, second and last gate. With no Java to parse and no build
     # file already naming the shell module, this Analyzer holds nothing it can

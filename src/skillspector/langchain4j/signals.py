@@ -29,6 +29,7 @@ wrong thing to couple to.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from typing import Final
 
@@ -38,6 +39,15 @@ JAVA_SUFFIX: Final[str] = ".java"
 # dependencies in a child module's ``pom.xml``, not only at the scan root.
 _JVM_BUILD_FILES: Final[tuple[str, ...]] = ("pom.xml",)
 _JVM_BUILD_PREFIX: Final[str] = "build.gradle"
+
+# Comment syntaxes, keyed by the build file that can hold them. Applied per file
+# kind rather than all at once: a ``//`` sweep over XML would blank the tail of
+# any line carrying a URL, and an XML-comment sweep over Gradle would match
+# nothing but cost a scan.
+_XML_COMMENT: Final[re.Pattern[str]] = re.compile(r"<!--.*?-->", re.DOTALL)
+_GRADLE_BLOCK_COMMENT: Final[re.Pattern[str]] = re.compile(r"/\*.*?\*/", re.DOTALL)
+_GRADLE_LINE_COMMENT: Final[re.Pattern[str]] = re.compile(r"//[^\n]*")
+_NON_NEWLINE: Final[re.Pattern[str]] = re.compile(r"[^\n]")
 
 # The Maven artifact id of LangChain4j's shell mode. Its presence on the
 # classpath is the capability: upstream documents shell execution as running
@@ -81,16 +91,41 @@ def jvm_build_files(file_cache: Mapping[str, str]) -> dict[str, str]:
     return {path: content for path, content in file_cache.items() if is_jvm_build_file(path)}
 
 
-def find_shell_artifact_declarations(file_cache: Mapping[str, str]) -> dict[str, int]:
-    """Map each build file declaring LangChain4j's shell module to that line.
+def _without_comments(path: str, content: str) -> str:
+    """Blank out *content*'s comments, leaving every newline where it was.
+
+    Line numbers survive because only non-newline characters are replaced, so a
+    match found afterwards still reports the line the reader sees.
+    """
+    patterns = (
+        (_XML_COMMENT,)
+        if _basename(path) in _JVM_BUILD_FILES
+        else (_GRADLE_BLOCK_COMMENT, _GRADLE_LINE_COMMENT)
+    )
+    for pattern in patterns:
+        content = pattern.sub(lambda match: _NON_NEWLINE.sub(" ", match.group(0)), content)
+    return content
+
+
+def shell_artifact_declaration_lines(file_cache: Mapping[str, str]) -> dict[str, int]:
+    """Map each build file that declares LangChain4j's shell module to its line.
 
     Textual on purpose. Maven declares the artifact id as XML, Gradle as a
     coordinate string, and a Gradle version catalog as TOML; the artifact id
-    itself is the one spelling all three share.
+    itself is the one spelling all three share, and no parser is shared.
+
+    Comments are blanked first, so a build file that names the artifact only to
+    say it was *removed* is not read as declaring it -- a substring scan cannot
+    tell the two apart, and would report both the false positive and the
+    comment's line as the location.
+
+    One line per file: the first live declaration. A second in the same build
+    file is the same capability, and pointing at both would add noise rather
+    than a second thing to fix.
     """
     declarations: dict[str, int] = {}
     for path, content in jvm_build_files(file_cache).items():
-        for number, line in enumerate(content.splitlines(), start=1):
+        for number, line in enumerate(_without_comments(path, content).splitlines(), start=1):
             if SHELL_ARTIFACT_ID in line:
                 declarations[path] = number
                 break

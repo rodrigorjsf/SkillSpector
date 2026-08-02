@@ -292,17 +292,17 @@
       "confidence": 0.85,
       "context": null,
       "end_line": null,
-      "explanation": "In shell mode LangChain4j replaces the activate_skill tool surface with a single run_shell_command tool and lets the model read Skill files off the filesystem itself. Commands run directly in the host process environment -- LangChain4j's own documentation states there is no sandboxing, containerization or privilege restriction. A prompt-injected or misbehaving model therefore executes arbitrary commands on the machine running the application.",
+      "explanation": "The application reaches LangChain4j shell mode, which hands the model a single run_shell_command tool executing in the host process. Upstream documents it as running without sandboxing, containerization, or privilege restriction, so a prompt-injected model runs arbitrary commands on the host.",
       "file": "pom.xml",
       "finding": null,
       "intent": null,
       "matched_text": null,
       "message": "The build file declares langchain4j-experimental-skills-shell, putting LangChain4j's unsandboxed shell mode on the classpath where any wiring can reach it.",
-      "pattern": null,
-      "remediation": "Prefer tool mode (Skills.from(...)) so the model reaches only the tools the Skill declares. Where shell mode is genuinely required, confine the process: run it in a container or under a restricted user, and set RunShellCommandToolConfig.workingDirectory rather than inheriting the JVM's.",
+      "pattern": "Unsandboxed Shell Mode",
+      "remediation": "Prefer tool mode (Skills.from(...)) so the model reaches only the tools the Skill declares. Where shell mode is genuinely required, confine the process to a container or a restricted user and set RunShellCommandToolConfig.workingDirectory rather than inheriting the JVM's.",
       "rule_id": "L4J-SHELL",
       "severity": "HIGH",
-      "start_line": 5,
+      "start_line": 21,
       "tags": [
         "ASI02"
       ]
@@ -313,14 +313,14 @@
       "confidence": 0.95,
       "context": null,
       "end_line": null,
-      "explanation": "In shell mode LangChain4j replaces the activate_skill tool surface with a single run_shell_command tool and lets the model read Skill files off the filesystem itself. Commands run directly in the host process environment -- LangChain4j's own documentation states there is no sandboxing, containerization or privilege restriction. A prompt-injected or misbehaving model therefore executes arbitrary commands on the machine running the application.",
+      "explanation": "The application reaches LangChain4j shell mode, which hands the model a single run_shell_command tool executing in the host process. Upstream documents it as running without sandboxing, containerization, or privilege restriction, so a prompt-injected model runs arbitrary commands on the host.",
       "file": "src/main/java/com/example/OpsAgent.java",
       "finding": null,
       "intent": null,
       "matched_text": null,
       "message": "LangChain4j shell mode is wired here: the agent is given a run_shell_command tool that executes arbitrary commands in the host process with no sandboxing or privilege restriction.",
-      "pattern": null,
-      "remediation": "Prefer tool mode (Skills.from(...)) so the model reaches only the tools the Skill declares. Where shell mode is genuinely required, confine the process: run it in a container or under a restricted user, and set RunShellCommandToolConfig.workingDirectory rather than inheriting the JVM's.",
+      "pattern": "Unsandboxed Shell Mode",
+      "remediation": "Prefer tool mode (Skills.from(...)) so the model reaches only the tools the Skill declares. Where shell mode is genuinely required, confine the process to a container or a restricted user and set RunShellCommandToolConfig.workingDirectory rather than inheriting the JVM's.",
       "rule_id": "L4J-SHELL",
       "severity": "HIGH",
       "start_line": 18,
@@ -393,7 +393,7 @@
                     "uri": "pom.xml"
                   },
                   "region": {
-                    "startLine": 5
+                    "startLine": 21
                   }
                 }
               }
@@ -404,8 +404,9 @@
             "properties": {
               "category": "LangChain4j Framework",
               "confidence": 0.85,
-              "explanation": "In shell mode LangChain4j replaces the activate_skill tool surface with a single run_shell_command tool and lets the model read Skill files off the filesystem itself. Commands run directly in the host process environment -- LangChain4j's own documentation states there is no sandboxing, containerization or privilege restriction. A prompt-injected or misbehaving model therefore executes arbitrary commands on the machine running the application.",
-              "remediation": "Prefer tool mode (Skills.from(...)) so the model reaches only the tools the Skill declares. Where shell mode is genuinely required, confine the process: run it in a container or under a restricted user, and set RunShellCommandToolConfig.workingDirectory rather than inheriting the JVM's.",
+              "explanation": "The application reaches LangChain4j shell mode, which hands the model a single run_shell_command tool executing in the host process. Upstream documents it as running without sandboxing, containerization, or privilege restriction, so a prompt-injected model runs arbitrary commands on the host.",
+              "pattern": "Unsandboxed Shell Mode",
+              "remediation": "Prefer tool mode (Skills.from(...)) so the model reaches only the tools the Skill declares. Where shell mode is genuinely required, confine the process to a container or a restricted user and set RunShellCommandToolConfig.workingDirectory rather than inheriting the JVM's.",
               "severity": "HIGH",
               "tags": [
                 "ASI02"
@@ -433,8 +434,9 @@
             "properties": {
               "category": "LangChain4j Framework",
               "confidence": 0.95,
-              "explanation": "In shell mode LangChain4j replaces the activate_skill tool surface with a single run_shell_command tool and lets the model read Skill files off the filesystem itself. Commands run directly in the host process environment -- LangChain4j's own documentation states there is no sandboxing, containerization or privilege restriction. A prompt-injected or misbehaving model therefore executes arbitrary commands on the machine running the application.",
-              "remediation": "Prefer tool mode (Skills.from(...)) so the model reaches only the tools the Skill declares. Where shell mode is genuinely required, confine the process: run it in a container or under a restricted user, and set RunShellCommandToolConfig.workingDirectory rather than inheriting the JVM's.",
+              "explanation": "The application reaches LangChain4j shell mode, which hands the model a single run_shell_command tool executing in the host process. Upstream documents it as running without sandboxing, containerization, or privilege restriction, so a prompt-injected model runs arbitrary commands on the host.",
+              "pattern": "Unsandboxed Shell Mode",
+              "remediation": "Prefer tool mode (Skills.from(...)) so the model reaches only the tools the Skill declares. Where shell mode is genuinely required, confine the process to a container or a restricted user and set RunShellCommandToolConfig.workingDirectory rather than inheriting the JVM's.",
               "severity": "HIGH",
               "tags": [
                 "ASI02"
