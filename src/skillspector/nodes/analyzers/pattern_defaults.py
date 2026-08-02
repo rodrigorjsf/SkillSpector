@@ -41,6 +41,7 @@ class PatternCategory(StrEnum):
     AGENT_SNOOPING = "Agent Snooping"
     ANTI_REFUSAL = "Anti-Refusal"
     SERVER_SIDE_REQUEST_FORGERY = "Server-Side Request Forgery"
+    LANGCHAIN4J_FRAMEWORK = "LangChain4j Framework"
 
 
 # Pattern-specific explanations (why the finding is dangerous)
@@ -138,6 +139,12 @@ DEFAULT_EXPLANATIONS: dict[str, str] = {
     "SSRF1": "Code accesses a cloud instance metadata endpoint (e.g. 169.254.169.254). A single request can return temporary IAM credentials, making this a high-value SSRF target for credential theft.",
     "SSRF2": "Code issues a request to a loopback, link-local, or private-range host. This can reach internal services not meant to be exposed and is a common SSRF pivot.",
     "SSRF3": "Request target host is built from a dynamic or untrusted value. If the host is attacker-influenced, this enables SSRF to arbitrary internal or metadata endpoints.",
+    # LangChain4j Framework
+    "L4J-SHELL": "The application reaches LangChain4j shell mode, which hands the model a single run_shell_command tool executing in the host process. Upstream documents it as running without sandboxing, containerization, or privilege restriction, so a prompt-injected model runs arbitrary commands on the host.",
+    "L4J-UNRESOLVED": "A Java-defined Skill carries text that is not statically resolvable -- content, a name, a description, or a loader path built at runtime. The instruction surface the model reads exists in no scanned file, so no content rule examined it. This is reported rather than skipped: silence here would let the report read as clean on the one surface never inspected.",
+    "L4J-TOOL-DESC": "A @Tool annotation's description carries instructions rather than describing the tool. The model reads that text as guidance, so an annotation nobody reviews as prose becomes a prompt-injection surface -- tool poisoning expressed in Java rather than in an MCP manifest.",
+    "L4J-MCP-FILTER": "An MCP tool provider is built without a tool filter, so every tool the MCP server exposes reaches the agent instead of a scoped subset. The agent's capability is then whatever the server offers, which can widen without any change to this application.",
+    "L4J-WORKDIR": "A shell-command tool configuration omits its working directory, so commands run wherever the JVM happened to start -- usually the application root, where source, configuration and credentials sit.",
 }
 
 # Rule ID -> category (for report output)
@@ -216,6 +223,12 @@ RULE_ID_TO_CATEGORY: dict[str, str] = {
     "SSRF1": PatternCategory.SERVER_SIDE_REQUEST_FORGERY.value,
     "SSRF2": PatternCategory.SERVER_SIDE_REQUEST_FORGERY.value,
     "SSRF3": PatternCategory.SERVER_SIDE_REQUEST_FORGERY.value,
+    # LangChain4j Framework
+    "L4J-SHELL": PatternCategory.LANGCHAIN4J_FRAMEWORK.value,
+    "L4J-UNRESOLVED": PatternCategory.LANGCHAIN4J_FRAMEWORK.value,
+    "L4J-TOOL-DESC": PatternCategory.LANGCHAIN4J_FRAMEWORK.value,
+    "L4J-MCP-FILTER": PatternCategory.LANGCHAIN4J_FRAMEWORK.value,
+    "L4J-WORKDIR": PatternCategory.LANGCHAIN4J_FRAMEWORK.value,
 }
 
 # Rule ID -> pattern display name (for report output)
@@ -294,6 +307,12 @@ PATTERN_NAMES: dict[str, str] = {
     "SSRF1": "Cloud Metadata Access",
     "SSRF2": "Internal Network Request",
     "SSRF3": "Dynamic Request Target",
+    # LangChain4j Framework
+    "L4J-SHELL": "Unsandboxed Shell Mode",
+    "L4J-UNRESOLVED": "Unresolvable Skill Content",
+    "L4J-TOOL-DESC": "Instruction-Carrying Tool Description",
+    "L4J-MCP-FILTER": "Unfiltered MCP Tool Provider",
+    "L4J-WORKDIR": "Unset Shell Working Directory",
 }
 
 # Pattern-specific remediations (how to fix the issue)
@@ -391,6 +410,12 @@ DEFAULT_REMEDIATIONS: dict[str, str] = {
     "SSRF1": "Remove access to cloud metadata endpoints unless strictly required. If metadata is needed, restrict it (e.g. IMDSv2 with hop limit) and never expose returned credentials.",
     "SSRF2": "Avoid requests to loopback/link-local/private hosts from skill code. If internal access is intended, document it and validate the target against an allowlist.",
     "SSRF3": "Do not build request URLs from untrusted input. Validate the host against an allowlist and reject internal/metadata addresses before issuing the request.",
+    # LangChain4j Framework
+    "L4J-SHELL": "Prefer tool mode (Skills.from(...)) so the model reaches only the tools the Skill declares. Where shell mode is genuinely required, confine the process to a container or a restricted user and set RunShellCommandToolConfig.workingDirectory rather than inheriting the JVM's.",
+    "L4J-UNRESOLVED": "Move the text into a literal, a text block, or a same-file constant so the scanner can read what the model reads. Where it genuinely has to come from a database or a remote call, review that source separately -- no static scan can see it.",
+    "L4J-TOOL-DESC": "Rewrite the @Tool description so it says what the tool does and nothing more. Directives to the model belong in the Skill content, where they are reviewed as instructions.",
+    "L4J-MCP-FILTER": "Add .toolFilter(...) to the McpToolProvider builder and name the tools this agent needs, so a tool added on the server does not silently reach the agent.",
+    "L4J-WORKDIR": "Set RunShellCommandToolConfig.workingDirectory to a directory scoped to the task, so commands cannot reach the application root by default.",
 }
 
 

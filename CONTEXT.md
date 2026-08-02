@@ -34,6 +34,11 @@ _Avoid_: format, flavour, dialect
 One complete pass over a Skill, from resolving the input to emitting a Recommendation.
 _Avoid_: run, check, inspection
 
+**Repository Scan**:
+A single pass over an entire repository that finds every Skill within it and Scans each, as opposed
+to a Scan of one already-identified Skill directory.
+_Avoid_: repo scan, recursive scan, project scan, full scan
+
 ### Detection
 
 **Analyzer**:

@@ -21,6 +21,7 @@ No business logic; workflow lives in the graph.
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import sys
@@ -39,6 +40,7 @@ from skillspector.graph import graph
 from skillspector.logging_config import get_logger, set_level
 from skillspector.mcp_registry import scan_registry
 from skillspector.multi_skill import MultiSkillDetectionResult, detect_skills
+from skillspector.repository_scan import DISCOVERY_ROOTS, DiscoveredSkill, discover_skills
 from skillspector.suppression import build_baseline_dict, dump_baseline, load_baseline
 
 logger = get_logger(__name__)
@@ -261,6 +263,22 @@ def scan(
             help="Scan an MCP Registry payload or URL instead of a skill.",
         ),
     ] = False,
+    repo_scan: Annotated[
+        bool,
+        typer.Option(
+            "--repo-scan",
+            help="Repository Scan: find every skill inside a repository and scan each "
+            "separately, instead of treating the whole tree as one skill.",
+        ),
+    ] = False,
+    repo_scan_root: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--repo-scan-root",
+            help="Replace the conventional discovery roots of a Repository Scan. "
+            "Repeatable. Each is matched as a path suffix at any depth.",
+        ),
+    ] = None,
 ) -> None:
     """
     Scan a skill for security vulnerabilities.
@@ -293,10 +311,16 @@ def scan(
         NVIDIA_INFERENCE_KEY                 for the NVIDIA providers
     """
     if mcp_registry:
-        if recursive or baseline is not None or show_suppressed or yara_rules_dir is not None:
+        if (
+            recursive
+            or repo_scan
+            or baseline is not None
+            or show_suppressed
+            or yara_rules_dir is not None
+        ):
             console.print(
                 "[red]Error:[/red] --mcp-registry cannot be combined with "
-                "--recursive, --baseline, --show-suppressed, or --yara-rules-dir"
+                "--recursive, --repo-scan, --baseline, --show-suppressed, or --yara-rules-dir"
             )
             raise typer.Exit(code=2)
         if format != FormatChoice.json:
@@ -323,6 +347,23 @@ def scan(
         set_level("DEBUG")
 
     resolved_path = Path(input_path).resolve()
+    if repo_scan:
+        if not resolved_path.is_dir():
+            console.print("[red]Error:[/red] --repo-scan needs a directory to search")
+            raise typer.Exit(code=2)
+        _scan_repository(
+            resolved_path,
+            tuple(repo_scan_root) if repo_scan_root else DISCOVERY_ROOTS,
+            format,
+            output,
+            no_llm,
+            yara_rules_dir,
+            baseline,
+            show_suppressed,
+            verbose,
+        )
+        return
+
     if recursive and resolved_path.is_dir():
         detection = detect_skills(resolved_path)
         if detection.is_multi_skill:
@@ -511,6 +552,132 @@ def _scan_multi_skill(
                 sections.append(f"--- {skill.relative_path} ---\n\n{_result_body(result)}")
         Path(output).write_text("\n\n".join(sections), encoding="utf-8")
         console.print(f"[green]Combined report saved to:[/green] {output}")
+
+    if execution_failed:
+        raise typer.Exit(code=2)
+    if max_score > RISK_THRESHOLD:
+        raise typer.Exit(code=1)
+
+
+def _relocate_sarif_run(run: dict, prefix: str) -> dict:
+    """Copy one SARIF run with every artifact URI moved under *prefix*.
+
+    Each Skill is Scanned in its own directory, so its SARIF locations are
+    relative to that directory. A Repository Scan's output is read against the
+    repository root -- by GitHub code scanning, among others -- so the URIs are
+    rewritten to match, or every location would point at a path that does not
+    exist there.
+    """
+    relocated = copy.deepcopy(run)
+    for result in relocated.get("results", []):
+        for location in result.get("locations", []):
+            artifact = location.get("physicalLocation", {}).get("artifactLocation")
+            if isinstance(artifact, dict) and isinstance(artifact.get("uri"), str):
+                artifact["uri"] = f"{prefix}/{artifact['uri']}"
+    return relocated
+
+
+def _merge_repository_sarif(scanned: list[tuple[DiscoveredSkill, dict]]) -> dict[str, object]:
+    """One SARIF log for a whole Repository Scan, a run per Skill.
+
+    SARIF carries several runs in one log, which is exactly the shape here: each
+    Skill was a separate Scan and keeping them separate preserves which tool
+    invocation produced what.
+    """
+    runs: list[dict] = []
+    version = "2.1.0"
+    schema = "https://json.schemastore.org/sarif-2.1.0.json"
+    for skill, result in scanned:
+        report = result.get("sarif_report")
+        if not isinstance(report, dict):
+            continue
+        version = str(report.get("version", version))
+        schema = str(report.get("$schema", schema))
+        runs.extend(_relocate_sarif_run(run, skill.relative_path) for run in report.get("runs", []))
+    return {"$schema": schema, "version": version, "runs": runs}
+
+
+def _scan_repository(
+    repository_root: Path,
+    roots: tuple[str, ...],
+    format: FormatChoice,
+    output: Path | None,
+    no_llm: bool,
+    yara_rules_dir: Path | None,
+    baseline: Path | None,
+    show_suppressed: bool,
+    verbose: bool,
+) -> None:
+    """Scan every Skill inside a repository, each as its own Skill.
+
+    The alternative this replaces is not "no result" but a wrong one: a
+    repository root declares no Skill, so an ordinary Scan reports the whole
+    tree as one anonymous Skill with an empty Manifest and scores it as such.
+    """
+    discovered = discover_skills(repository_root, roots=roots)
+    if not discovered:
+        console.print(
+            f"[yellow]Warning:[/yellow] no skill found under {repository_root}. "
+            f"Searched these directory patterns at any depth: {', '.join(roots)}. "
+            "Use --repo-scan-root for a layout that does not follow them."
+        )
+        return
+
+    yara_dir = str(yara_rules_dir.resolve()) if yara_rules_dir else None
+    scanned: list[tuple[DiscoveredSkill, dict]] = []
+    failures: list[tuple[DiscoveredSkill, str]] = []
+    max_score = 0
+    execution_failed = False
+
+    for index, skill in enumerate(discovered, start=1):
+        console.print(f"[{index}/{len(discovered)}] Scanning {skill.name} ({skill.relative_path}/)")
+        result = None
+        try:
+            state = _scan_state(
+                str(skill.path),
+                format,
+                no_llm,
+                yara_rules_dir=yara_dir,
+                baseline=baseline,
+                show_suppressed=show_suppressed,
+            )
+            result = graph.invoke(
+                state, config=_build_trace_config(str(skill.path), format, no_llm)
+            )
+            max_score = max(max_score, int(result.get("risk_score") or 0))
+            if result.get("execution_successful") is False:
+                execution_failed = True
+            scanned.append((skill, dict(result)))
+        except Exception as exception:  # one bad Skill must not lose the other results
+            if verbose:
+                console.print_exception()
+            failures.append((skill, str(exception)))
+            execution_failed = True
+        finally:
+            if result is not None:
+                cleanup_result(result)
+
+    console.print(f"\n{'Skill':<28} {'Score':>6} {'Severity':>10} {'Findings':>9}")
+    for skill, result in scanned:
+        findings = result.get("filtered_findings") or result.get("findings") or []
+        console.print(
+            f"{skill.name[:28]:<28} {int(result.get('risk_score') or 0):>6} "
+            f"{str(result.get('risk_severity') or ''):>10} {len(findings):>9}"
+        )
+    for skill, message in failures:
+        console.print(f"{skill.name[:28]:<28} {'ERROR':>6} {message[:40]}")
+
+    if format == FormatChoice.sarif:
+        body = json.dumps(_merge_repository_sarif(scanned), indent=2)
+    else:
+        body = "\n\n".join(
+            f"--- {skill.relative_path} ---\n{_result_body(result)}" for skill, result in scanned
+        )
+    if output:
+        Path(output).write_text(body, encoding="utf-8")
+        console.print(f"Report saved to: {output}")
+    else:
+        print(body)
 
     if execution_failed:
         raise typer.Exit(code=2)
