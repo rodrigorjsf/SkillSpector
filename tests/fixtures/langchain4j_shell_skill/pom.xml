@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  An analysis fixture, not a detection one: langchain4j_detection carries the
+  bare Framework signal, while this tree carries a LangChain4j application whose
+  host code wires a Skill in shell mode. The `langchain4j-experimental-skills-shell`
+  dependency below is itself an L4J-SHELL signal, and OpsAgent.java is the second.
+-->
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example</groupId>
+  <artifactId>ops-agent</artifactId>
+  <version>0.1.0</version>
+  <dependencies>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j</artifactId>
+      <version>1.18.0</version>
+    </dependency>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-experimental-skills-shell</artifactId>
+      <version>1.18.1-beta28</version>
+    </dependency>
+  </dependencies>
+</project>

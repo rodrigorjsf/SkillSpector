@@ -21,8 +21,8 @@ no graph. Only the two seam tests at the bottom touch the disk: they prove
 ``build_context`` sets the key to what the pure function returned.
 
 Every existing fixture is asserted to detect ``agent_skills``, which is the
-evidence behind the phase's behavior-preservation claim. The two detection
-fixtures are the deliberate exception.
+evidence behind the phase's behavior-preservation claim. The fixtures listed in
+``DETECTION_FIXTURES`` are the deliberate exception.
 """
 
 from __future__ import annotations
@@ -41,12 +41,16 @@ from tests.behavior import projection as proj
 # a fixture from the assertion below without turning anything red.
 FIXTURES_DIR = proj.FIXTURES_DIR
 
-# The two fixtures added by issue #21 to carry a positive detection signal.
-# Every other fixture directory predates framework detection and must keep
-# detecting ``agent_skills``.
+# Every fixture whose Framework is not the default, and what it must detect as.
+# Two carry a bare detection signal and nothing else (issue #21); the third is a
+# LangChain4j application the ``framework_langchain4j`` Analyzer reads. Every
+# fixture outside this mapping predates Framework detection and must keep
+# detecting ``agent_skills`` -- a fixture arriving here by accident rather than
+# by this edit is the drift the assertion below exists to catch.
 DETECTION_FIXTURES: dict[str, Framework] = {
-    "langchain4j_detection": Framework.LANGCHAIN4J,
     "deepagents_detection": Framework.DEEPAGENTS,
+    "langchain4j_detection": Framework.LANGCHAIN4J,
+    "langchain4j_shell_skill": Framework.LANGCHAIN4J,
 }
 
 # One row per signal, positive and negative: the in-memory ``file_cache`` and

@@ -41,6 +41,7 @@ class PatternCategory(StrEnum):
     AGENT_SNOOPING = "Agent Snooping"
     ANTI_REFUSAL = "Anti-Refusal"
     SERVER_SIDE_REQUEST_FORGERY = "Server-Side Request Forgery"
+    LANGCHAIN4J_FRAMEWORK = "LangChain4j Framework"
 
 
 # Pattern-specific explanations (why the finding is dangerous)
@@ -138,6 +139,8 @@ DEFAULT_EXPLANATIONS: dict[str, str] = {
     "SSRF1": "Code accesses a cloud instance metadata endpoint (e.g. 169.254.169.254). A single request can return temporary IAM credentials, making this a high-value SSRF target for credential theft.",
     "SSRF2": "Code issues a request to a loopback, link-local, or private-range host. This can reach internal services not meant to be exposed and is a common SSRF pivot.",
     "SSRF3": "Request target host is built from a dynamic or untrusted value. If the host is attacker-influenced, this enables SSRF to arbitrary internal or metadata endpoints.",
+    # LangChain4j Framework
+    "L4J-SHELL": "The application reaches LangChain4j shell mode, which hands the model a single run_shell_command tool executing in the host process. Upstream documents it as running without sandboxing, containerization, or privilege restriction, so a prompt-injected model runs arbitrary commands on the host.",
 }
 
 # Rule ID -> category (for report output)
@@ -216,6 +219,8 @@ RULE_ID_TO_CATEGORY: dict[str, str] = {
     "SSRF1": PatternCategory.SERVER_SIDE_REQUEST_FORGERY.value,
     "SSRF2": PatternCategory.SERVER_SIDE_REQUEST_FORGERY.value,
     "SSRF3": PatternCategory.SERVER_SIDE_REQUEST_FORGERY.value,
+    # LangChain4j Framework
+    "L4J-SHELL": PatternCategory.LANGCHAIN4J_FRAMEWORK.value,
 }
 
 # Rule ID -> pattern display name (for report output)
@@ -294,6 +299,8 @@ PATTERN_NAMES: dict[str, str] = {
     "SSRF1": "Cloud Metadata Access",
     "SSRF2": "Internal Network Request",
     "SSRF3": "Dynamic Request Target",
+    # LangChain4j Framework
+    "L4J-SHELL": "Unsandboxed Shell Mode",
 }
 
 # Pattern-specific remediations (how to fix the issue)
@@ -391,6 +398,8 @@ DEFAULT_REMEDIATIONS: dict[str, str] = {
     "SSRF1": "Remove access to cloud metadata endpoints unless strictly required. If metadata is needed, restrict it (e.g. IMDSv2 with hop limit) and never expose returned credentials.",
     "SSRF2": "Avoid requests to loopback/link-local/private hosts from skill code. If internal access is intended, document it and validate the target against an allowlist.",
     "SSRF3": "Do not build request URLs from untrusted input. Validate the host against an allowlist and reject internal/metadata addresses before issuing the request.",
+    # LangChain4j Framework
+    "L4J-SHELL": "Prefer tool mode (Skills.from(...)) so the model reaches only the tools the Skill declares. Where shell mode is genuinely required, confine the process to a container or a restricted user and set RunShellCommandToolConfig.workingDirectory rather than inheriting the JVM's.",
 }
 
 

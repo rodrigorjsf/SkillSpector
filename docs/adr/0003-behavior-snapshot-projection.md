@@ -4,7 +4,7 @@ Status: accepted
 
 A Behavior Snapshot is a committed, canonical projection of one Scan, compared by a blocking test so
 that a change to existing behavior surfaces as a reviewable file diff. What it projects *is* the
-project's working definition of observable behavior, so the choice is worth recording: with 26
+project's working definition of observable behavior, so the choice is worth recording: with 27
 snapshots committed, changing the projection means regenerating all of them and losing the
 ability to say whether a diff was behavior or reformatting.
 

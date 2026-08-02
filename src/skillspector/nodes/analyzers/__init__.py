@@ -21,6 +21,9 @@ from skillspector.nodes.analyzers.behavioral_ast import node as behavioral_ast_n
 from skillspector.nodes.analyzers.behavioral_taint_tracking import (
     node as behavioral_taint_tracking_node,
 )
+from skillspector.nodes.analyzers.framework_langchain4j import (
+    node as framework_langchain4j_node,
+)
 from skillspector.nodes.analyzers.mcp_least_privilege import node as mcp_least_privilege_node
 from skillspector.nodes.analyzers.mcp_rug_pull import node as mcp_rug_pull_node
 from skillspector.nodes.analyzers.mcp_tool_poisoning import node as mcp_tool_poisoning_node
@@ -101,6 +104,9 @@ ANALYZER_NODE_IDS: list[str] = [
     "semantic_security_discovery",
     "semantic_developer_intent",
     "semantic_quality_policy",
+    # Fork-added Framework Analyzers keep to the end of the list, so an upstream
+    # merge that appends its own id does not have to reorder this one.
+    "framework_langchain4j",
 ]
 
 ANALYZER_NODES = {
@@ -127,6 +133,7 @@ ANALYZER_NODES = {
     "semantic_security_discovery": semantic_security_discovery_node,
     "semantic_developer_intent": semantic_developer_intent_node,
     "semantic_quality_policy": semantic_quality_policy_node,
+    "framework_langchain4j": framework_langchain4j_node,
 }
 
 __all__ = ["ANALYZER_NODE_IDS", "ANALYZER_NODES"]

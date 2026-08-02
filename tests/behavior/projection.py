@@ -276,7 +276,8 @@ FIXTURES_DIR = _BEHAVIOR_DIR.parent / "fixtures"
 # one (``sdi/sdi1_mismatch`` -> ``snapshots/sdi/sdi1_mismatch.json``).
 #
 # A leaf is a directory that is itself a scan target. Twenty-three bear a
-# ``SKILL.md``; ``mcp_registry`` bears none and is included anyway, because it is
+# ``SKILL.md`` *at their root*, which is the only place the Manifest parser looks;
+# ``mcp_registry`` bears none and is included anyway, because it is
 # scanned in practice and the gate's job is to hold current behavior still --
 # including the anonymous-Skill result #11 tracks changing.
 #
@@ -286,11 +287,19 @@ FIXTURES_DIR = _BEHAVIOR_DIR.parent / "fixtures"
 # which is the baseline later phases measure against. Adding new inputs is not a
 # behavior change on existing ones, so the gate's promise holds.
 #
+# ``langchain4j_shell_skill`` (#28) is the first fixture a Framework Analyzer
+# actually reads: a LangChain4j application whose Skill sits at
+# ``src/main/resources/skills/`` and whose host code wires shell mode. Its root
+# bears no ``SKILL.md`` either, so its Manifest is ``absent`` -- the Skill is
+# nested, and repository-level discovery of nested Skills is #29's subject, not
+# this snapshot's.
+#
 # ``sdi/``, ``sqp/`` and ``ssd/`` are excluded: they are fixture-layout
 # containers holding a family of Skills, not Skills themselves.
 CORPUS_NAMES: tuple[str, ...] = (
     "deepagents_detection",
     "langchain4j_detection",
+    "langchain4j_shell_skill",
     "malicious_skill",
     "mcp_clean_skill",
     "mcp_mismatched_skill",
