@@ -56,6 +56,13 @@ signal; and an import is matched at the start of a line, so ``vendor.deepagents`
 and a package named inside a string are not signals either. Both narrowings can
 only ever return ``AGENT_SKILLS`` where a looser reading would return a
 Framework, so they cannot make an existing Scan detect as something new.
+
+One signal is read more widely: a build file is matched on its basename at any
+depth, because a multi-module Maven build declares the dependency in a child
+module's ``pom.xml`` rather than at the scan root, and §3.2's table says nothing
+about depth. Unlike the narrowings, this direction *could* make an input detect
+as a Framework, so it rests on evidence rather than argument -- every input
+scanned before this module existed is asserted to detect ``AGENT_SKILLS``.
 """
 
 from __future__ import annotations

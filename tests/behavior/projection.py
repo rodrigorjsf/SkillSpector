@@ -253,7 +253,7 @@ def project_scan_state(state: Mapping[str, Any]) -> dict[str, Any]:
     Pure: the input is not mutated, and the result depends on nothing but it.
     A projected key absent from the state is absent from the result -- a key that
     stops being emitted is itself a behavior change and must show as a diff.
-    ``OMITTED_WHEN`` drops one key at one value, for the reason recorded there.
+    ``OMITTED_WHEN`` drops each key it names at the one value recorded there.
     """
     projection = {key: _to_plain(state[key]) for key in PROJECTED_STATE_KEYS if key in state}
     for key, omitted_value in OMITTED_WHEN.items():
