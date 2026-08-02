@@ -1,10 +1,14 @@
 # Parse Java with tree-sitter
 
-Status: proposed
+Status: accepted
 
 Supporting LangChain4j Skills means reading Java to resolve where Skills are defined and what their
 content is. We chose tree-sitter (`tree-sitter` + `tree-sitter-java`) over `javalang`, accepting two
 new runtime dependencies on a deliberately tight list.
+
+Accepted because the LangChain4j Analyzer is now the next increment rather than a later one:
+[ADR 0004](0004-langchain4j-before-deepagents.md) schedules the Java track ahead of Deep Agents on
+risk grounds, which closes the dependency gate this ADR held open.
 
 ## Considered Options
 
