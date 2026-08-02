@@ -27,15 +27,19 @@ fixtures are the deliberate exception.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from skillspector.framework import Framework, detect_framework
 from skillspector.nodes.build_context import build_context
 from skillspector.state import SkillspectorState
+from tests.behavior import projection as proj
 
-FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures"
+# The behavior corpus is the declared list of leaf scan targets, and
+# ``test_the_corpus_is_exactly_the_leaf_fixture_directories`` already holds it
+# equal to what is on disk. Deriving from it rather than re-walking the tree
+# keeps one leaf rule in the suite: a second one could drift silently, dropping
+# a fixture from the assertion below without turning anything red.
+FIXTURES_DIR = proj.FIXTURES_DIR
 
 # The two fixtures added by issue #21 to carry a positive detection signal.
 # Every other fixture directory predates framework detection and must keep
@@ -117,6 +121,16 @@ SIGNALS: tuple[tuple[str, dict[str, str], Framework], ...] = (
         Framework.AGENT_SKILLS,
     ),
     (
+        "java_names_the_package_mid_line",
+        {"Agent.java": "int n = 1; // see import dev.langchain4j.service.AiServices\n"},
+        Framework.AGENT_SKILLS,
+    ),
+    (
+        "coordinate_in_an_xml_that_is_not_a_build_file",
+        {"logback.xml": "<logger name='dev.langchain4j' level='DEBUG'/>"},
+        Framework.AGENT_SKILLS,
+    ),
+    (
         "skills_directory_outside_the_maven_layout",
         {"skills/review/SKILL.md": "# review\n"},
         Framework.AGENT_SKILLS,
@@ -178,6 +192,11 @@ SIGNALS: tuple[tuple[str, dict[str, str], Framework], ...] = (
         {"agent.py": "import vendor.deepagents\n"},
         Framework.AGENT_SKILLS,
     ),
+    (
+        "distribution_in_a_txt_that_is_not_a_requirement_file",
+        {"notes.txt": "deepagents\n"},
+        Framework.AGENT_SKILLS,
+    ),
     # -- Neither ------------------------------------------------------------ #
     ("nothing_at_all", {}, Framework.AGENT_SKILLS),
     (
@@ -219,8 +238,8 @@ def test_both_frameworks_signalled_is_doubt_and_resolves_to_agent_skills() -> No
 def test_the_ambiguous_case_is_not_vacuous() -> None:
     """Each half of the ambiguous tree detects its own Framework alone.
 
-    Without this control the test above would pass on a detector that simply
-    never fires.
+    Without this control the test above would pass on a pure function that
+    simply never fires.
     """
     pom = {"pom.xml": "<groupId>dev.langchain4j</groupId>"}
     pyproject = {"pyproject.toml": 'dependencies = ["deepagents"]\n'}
@@ -250,31 +269,18 @@ def test_the_enum_serializes_to_the_specified_wire_values() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def _fixture_dirs() -> list[Path]:
-    """Every leaf fixture directory, the scan targets of the behavior corpus."""
-    leaves: list[Path] = []
-    for path in sorted(FIXTURES_DIR.iterdir()):
-        if not path.is_dir():
-            continue
-        if (path / "SKILL.md").exists() or not any(child.is_dir() for child in path.iterdir()):
-            leaves.append(path)
-        else:
-            leaves.extend(sorted(child for child in path.iterdir() if child.is_dir()))
-    return leaves
-
-
 @pytest.mark.parametrize(
-    "fixture",
-    [p for p in _fixture_dirs() if p.name not in DETECTION_FIXTURES],
-    ids=lambda p: p.name,
+    "name",
+    [name for name in proj.CORPUS_NAMES if name not in DETECTION_FIXTURES],
+    ids=lambda name: name,
 )
-def test_every_pre_existing_fixture_detects_agent_skills(fixture: Path) -> None:
+def test_every_pre_existing_fixture_detects_agent_skills(name: str) -> None:
     """The evidence behind the phase's behavior-preservation claim.
 
     Detection returns the default on every input scanned today, so ``framework``
     is omitted from every pre-existing snapshot and none of them changes.
     """
-    state: SkillspectorState = {"skill_path": str(fixture)}
+    state: SkillspectorState = {"skill_path": str(FIXTURES_DIR / name)}
 
     assert build_context(state)["framework"] == Framework.AGENT_SKILLS
 
