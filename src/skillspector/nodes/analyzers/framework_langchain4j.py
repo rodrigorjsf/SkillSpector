@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""LangChain4j Framework analyzer node -- ``L4J-SHELL``.
+"""LangChain4j Framework analyzer node.
 
 Gated on the LangChain4j Framework. On every other input it returns no Findings
 and emits nothing at all: no ledger event, no analyzer status. That silence is
@@ -22,16 +22,30 @@ Analyzer whose gate does not open plans no Work Item, so there is no unaccounted
 work -- and it is what keeps a Scan of an Agent Skills Skill byte-for-byte
 unchanged by this module's existence.
 
-The Rule it carries is ``L4J-SHELL``. LangChain4j's shell mode hands the model a
-single ``run_shell_command`` tool that runs in the host process with no
-sandboxing, containerization or privilege restriction; upstream documents it as
-unsafe. It is the risk that scheduled the Java track ahead of Deep Agents in
+Two Rules today.
+
+``L4J-SHELL`` (HIGH). LangChain4j's shell mode hands the model a single
+``run_shell_command`` tool that runs in the host process with no sandboxing,
+containerization or privilege restriction; upstream documents it as unsafe. It
+is the risk that scheduled the Java track ahead of Deep Agents in
 ``docs/adr/0004-langchain4j-before-deepagents.md``.
+
+``L4J-UNRESOLVED`` (MEDIUM). A Java-defined Skill's content, name, description
+or loader path can be assembled at runtime, and then the instruction text the
+model reads exists in no file this Scan can open. Resolving arbitrary Java
+dataflow is out of scope; reporting the boundary is not. Silence there would let
+the report read as clean on the one surface that was never examined.
+
+What *is* resolvable -- a text block, a string literal, a same-unit constant --
+is scanned by the existing content Analyzers, so a Skill body written in Java
+gets the scrutiny a ``SKILL.md`` body gets.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
+from types import ModuleType
+from typing import TYPE_CHECKING
 
 from skillspector.framework import Framework
 from skillspector.inspection_ledger import (
@@ -52,12 +66,35 @@ from skillspector.nodes.analyzers.pattern_defaults import (
 )
 from skillspector.state import AnalyzerNodeResponse, SkillspectorState
 
+if TYPE_CHECKING:  # Importing it at runtime would pull tree-sitter in at module top.
+    from skillspector.langchain4j.skill_definitions import BuilderArgument
+
 ANALYZER_ID = "framework_langchain4j"
 logger = get_logger(__name__)
 
 _RULE_ID = "L4J-SHELL"
+_UNRESOLVED_RULE_ID = "L4J-UNRESOLVED"
 _TAGS = ["ASI02"]
 _SEVERITY = "HIGH"
+_UNRESOLVED_SEVERITY = "MEDIUM"
+
+# What a non-literal argument means depends on which one it is, so the Finding
+# says so rather than making every unresolved argument read the same.
+_UNRESOLVED_MESSAGES = {
+    "content": (
+        "Skill content is not statically resolvable, so the instruction surface the model reads "
+        "was not scanned. It exists in no file this Scan could open."
+    ),
+    "name": (
+        "The Skill name is built dynamically, so the Scan cannot say which Skill this definition "
+        "declares."
+    ),
+    "description": (
+        "The Skill description is built dynamically, so the text that decides when this Skill "
+        "activates was not scanned."
+    ),
+}
+_UNRESOLVED_CONFIDENCE = 1.0
 
 # The wiring is the decision; the declaration only puts the capability within
 # reach. Both are HIGH -- an application that ships the shell module can reach
@@ -75,8 +112,15 @@ _DECLARATION_MESSAGE = (
 )
 
 
-def _finding(path: str, start_line: int, message: str, confidence: float) -> Finding:
-    """Build one ``L4J-SHELL`` Finding.
+def _finding(
+    rule_id: str,
+    path: str,
+    start_line: int,
+    message: str,
+    confidence: float,
+    severity: str = _SEVERITY,
+) -> Finding:
+    """Build one Finding for this Analyzer.
 
     Category, name, explanation and remediation are read from
     ``pattern_defaults`` rather than restated here. They are the same strings a
@@ -84,18 +128,128 @@ def _finding(path: str, start_line: int, message: str, confidence: float) -> Fin
     free to drift from the catalogue the README and the AST10 crosswalk cite.
     """
     return Finding(
-        rule_id=_RULE_ID,
+        rule_id=rule_id,
         message=message,
-        severity=_SEVERITY,
+        severity=severity,
         confidence=confidence,
         file=path,
         start_line=start_line,
-        category=get_category(_RULE_ID),
-        pattern=get_pattern_name(_RULE_ID),
+        category=get_category(rule_id),
+        pattern=get_pattern_name(rule_id),
         tags=list(_TAGS),
-        explanation=get_explanation(_RULE_ID),
-        remediation=get_remediation(_RULE_ID),
+        explanation=get_explanation(rule_id),
+        remediation=get_remediation(rule_id),
     )
+
+
+def _content_pattern_modules() -> list[ModuleType]:
+    """The static pattern modules that examine Skill instruction text.
+
+    Derived from the registry rather than listed, so a pattern family added
+    upstream examines resolved Java content too without anyone remembering to
+    come back here. Imported lazily: the registry imports this module, so naming
+    it at module top would close an import cycle.
+    """
+    from importlib import import_module  # noqa: PLC0415
+
+    from skillspector.nodes.analyzers import ANALYZER_NODE_IDS  # noqa: PLC0415
+
+    return [
+        import_module(f"skillspector.nodes.analyzers.{node_id}")
+        for node_id in ANALYZER_NODE_IDS
+        if node_id.startswith("static_patterns_")
+    ]
+
+
+def _scan_resolved_content(
+    path: str, source: str, skill_name: str | None, argument: BuilderArgument
+) -> list[Finding]:
+    """Run the content Analyzers over one resolved Skill body.
+
+    The text is scanned under a synthetic ``<skill>/SKILL.md`` path, not under
+    the Java file's, because that is what it *is*: a Skill declaration body. The
+    static runner's file-type filters treat a ``SKILL.md`` differently from an
+    unrecognized extension -- code-example downweighting, documentation-prose
+    exemptions -- so scanning it as Java would grade the same text on the wrong
+    curve. The synthetic path never leaves this function.
+
+    Each Finding is then relocated onto the Java file and line it really came
+    from, so the report sends a reviewer to the source and SARIF points at a
+    file that exists.
+
+    A Finding whose matched text sits verbatim on that same raw line is dropped.
+    Java sources are in ``file_cache`` and the ordinary static pass reads them,
+    so a text block written inline is scanned twice -- once as Java, once as
+    resolved content -- and reporting both would be the same string at the same
+    location, twice. What survives is what reading the file directly would not
+    have shown: text pulled from a constant declared elsewhere in the unit, or
+    text whose escapes only become line structure once resolved.
+    """
+    from skillspector.nodes.analyzers.static_runner import run_static_patterns  # noqa: PLC0415
+
+    body = argument.value
+    if not body:
+        return []
+    synthetic_path = f"{skill_name or 'skill'}/SKILL.md"
+    raw_lines = source.splitlines()
+
+    relocated: list[Finding] = []
+    for finding in run_static_patterns(
+        {"components": [synthetic_path], "file_cache": {synthetic_path: body}},
+        _content_pattern_modules(),
+    ):
+        java_line = argument.value_start_line + finding.start_line - 1
+        raw_line = raw_lines[java_line - 1] if 0 < java_line <= len(raw_lines) else ""
+        if finding.matched_text and finding.matched_text in raw_line:
+            continue
+        finding.file = path
+        finding.start_line = java_line
+        finding.end_line = None
+        relocated.append(finding)
+    return relocated
+
+
+def _skill_definition_findings(path: str, source: str) -> list[Finding]:
+    """``L4J-UNRESOLVED`` for what Java hides, content Findings for what it shows."""
+    from skillspector.langchain4j import skill_definitions  # noqa: PLC0415
+
+    findings: list[Finding] = []
+    for definition in skill_definitions.find_skill_definitions(source):
+        name_argument = definition.argument("name")
+        skill_name = name_argument.value if name_argument else None
+        for argument in definition.arguments:
+            if argument.value is None:
+                findings.append(
+                    _finding(
+                        _UNRESOLVED_RULE_ID,
+                        path,
+                        argument.line,
+                        _UNRESOLVED_MESSAGES[argument.setter],
+                        _UNRESOLVED_CONFIDENCE,
+                        severity=_UNRESOLVED_SEVERITY,
+                    )
+                )
+            elif argument.setter == "content":
+                findings.extend(_scan_resolved_content(path, source, skill_name, argument))
+
+    # A loader whose path is not a literal is the same silence in another shape:
+    # the Skills it reads are not in view, and no content Analyzer saw them.
+    for call in skill_definitions.find_skill_loader_calls(source):
+        if call.directory is None:
+            findings.append(
+                _finding(
+                    _UNRESOLVED_RULE_ID,
+                    path,
+                    call.line,
+                    (
+                        f"{call.loader}.{call.method} is called with a path that is not a literal, "
+                        "so the Skills it loads were not located or scanned."
+                    ),
+                    _UNRESOLVED_CONFIDENCE,
+                    severity=_UNRESOLVED_SEVERITY,
+                )
+            )
+    return findings
 
 
 def _planned_target(path: str) -> PlannedWorkTarget:
@@ -162,11 +316,16 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
     for path, source in java_sources.items():
         usage_line = shell_skills.find_shell_skills_usage(source)
         if usage_line is not None:
-            inspected[path].append(_finding(path, usage_line, _WIRING_MESSAGE, _WIRING_CONFIDENCE))
+            inspected[path].append(
+                _finding(_RULE_ID, path, usage_line, _WIRING_MESSAGE, _WIRING_CONFIDENCE)
+            )
+        inspected[path].extend(_skill_definition_findings(path, source))
 
     for path, declaration_line in shell_declarations.items():
         inspected.setdefault(path, []).append(
-            _finding(path, declaration_line, _DECLARATION_MESSAGE, _DECLARATION_CONFIDENCE)
+            _finding(
+                _RULE_ID, path, declaration_line, _DECLARATION_MESSAGE, _DECLARATION_CONFIDENCE
+            )
         )
 
     ordered = sorted(inspected.items())

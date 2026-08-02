@@ -20,7 +20,7 @@ SkillSpector helps you answer: **"Is this skill safe to install?"**
 ## Features
 
 - **Multi-format input**: Scan Git repos, URLs, zip files, directories, or single files
-- **69 vulnerability patterns** across 18 categories: prompt injection, data exfiltration, privilege escalation, supply chain, excessive agency, output handling, system prompt leakage, memory poisoning, tool misuse, rogue agent, anti-refusal, trigger abuse, dangerous code (AST), taint tracking, YARA signatures, MCP least privilege, MCP tool poisoning, and LangChain4j framework
+- **70 vulnerability patterns** across 18 categories: prompt injection, data exfiltration, privilege escalation, supply chain, excessive agency, output handling, system prompt leakage, memory poisoning, tool misuse, rogue agent, anti-refusal, trigger abuse, dangerous code (AST), taint tracking, YARA signatures, MCP least privilege, MCP tool poisoning, and LangChain4j framework
 - **Two-stage analysis**: Fast static analysis + optional LLM semantic evaluation
 - **Live vulnerability lookups**: SC4 queries [OSV.dev](https://osv.dev) for real-time CVE data with automatic offline fallback
 - **Multiple output formats**: Terminal, JSON, Markdown, and SARIF reports
@@ -346,7 +346,7 @@ claude mcp add skillspector -- skillspector mcp
 
 ## Vulnerability Patterns
 
-SkillSpector detects **69 vulnerability patterns** across 18 categories:
+SkillSpector detects **70 vulnerability patterns** across 18 categories:
 
 ### Prompt Injection (5 patterns)
 
@@ -501,7 +501,7 @@ SkillSpector detects **69 vulnerability patterns** across 18 categories:
 | TP3 | Parameter Description Injection | MEDIUM | Injection patterns in parameter definitions (overrides, system tokens, malicious defaults) |
 | TP4 | Description-Behavior Mismatch | MEDIUM | Declared tool description does not match actual code behavior (LLM-powered) |
 
-### LangChain4j Framework (1 pattern)
+### LangChain4j Framework (2 patterns)
 
 Applies only to a scan whose tree is detected as a LangChain4j project. On every other input
 these rules are inert and the scan is unchanged.
@@ -509,6 +509,7 @@ these rules are inert and the scan is unchanged.
 | ID | Pattern | Severity | Description |
 |----|---------|----------|-------------|
 | L4J-SHELL | Unsandboxed Shell Mode | HIGH | `ShellSkills` wiring, or a `langchain4j-experimental-skills-shell` dependency, gives the agent arbitrary command execution with no sandbox |
+| L4J-UNRESOLVED | Unresolvable Skill Content | MEDIUM | A Java-defined Skill's content, name, description, or loader path is built at runtime, so the instruction surface was never scanned |
 
 All detected patterns are listed in the tables above.
 
