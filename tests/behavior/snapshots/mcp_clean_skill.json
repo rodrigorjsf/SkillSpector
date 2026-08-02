@@ -1,0 +1,464 @@
+{
+  "analysis_completeness": {
+    "analyzer_statuses": [
+      {
+        "analyzer_id": "behavioral_ast",
+        "completed": 1,
+        "failed": 0,
+        "planned_work": 1,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "behavioral_taint_tracking",
+        "completed": 1,
+        "failed": 0,
+        "planned_work": 1,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "mcp_least_privilege",
+        "completed": 1,
+        "failed": 0,
+        "planned_work": 1,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "mcp_rug_pull",
+        "completed": 1,
+        "failed": 0,
+        "planned_work": 1,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "mcp_tool_poisoning",
+        "completed": 1,
+        "failed": 0,
+        "planned_work": 1,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "meta_analyzer",
+        "completed": 0,
+        "failed": 0,
+        "message": "Analyzer was disabled by the requested configuration.",
+        "planned_work": 0,
+        "reason_code": "disabled_by_configuration",
+        "skipped": 0,
+        "status": "disabled",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "semantic_developer_intent",
+        "completed": 0,
+        "failed": 0,
+        "message": "Analyzer was disabled by the requested configuration.",
+        "planned_work": 0,
+        "reason_code": "disabled_by_configuration",
+        "skipped": 0,
+        "status": "disabled",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "semantic_quality_policy",
+        "completed": 0,
+        "failed": 0,
+        "message": "Analyzer was disabled by the requested configuration.",
+        "planned_work": 0,
+        "reason_code": "disabled_by_configuration",
+        "skipped": 0,
+        "status": "disabled",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "semantic_security_discovery",
+        "completed": 0,
+        "failed": 0,
+        "message": "Analyzer was disabled by the requested configuration.",
+        "planned_work": 0,
+        "reason_code": "disabled_by_configuration",
+        "skipped": 0,
+        "status": "disabled",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_agent_snooping",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_anti_refusal",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_data_exfiltration",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_excessive_agency",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_harmful_content",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_memory_poisoning",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_output_handling",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_privilege_escalation",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_prompt_injection",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_rogue_agent",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_ssrf",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_supply_chain",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_system_prompt_leakage",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_tool_misuse",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_yara",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      }
+    ],
+    "coverage_percent": 100.0,
+    "entirely_uninspected_files": 0,
+    "execution_successful": true,
+    "findings_after_filtering": 2,
+    "findings_before_filtering": 2,
+    "fully_inspected_files": 2,
+    "is_complete": false,
+    "ledger_exceptions": [],
+    "limitations": [
+      "Analyzer was disabled by the requested configuration.",
+      "Analyzer was disabled by the requested configuration.",
+      "Analyzer was disabled by the requested configuration.",
+      "Analyzer was disabled by the requested configuration."
+    ],
+    "partially_inspected_files": 0,
+    "scanned_components": 2,
+    "scope_exclusions": [],
+    "total_components": 2
+  },
+  "component_metadata": [
+    {
+      "executable": false,
+      "lines": 14,
+      "path": "SKILL.md",
+      "size_bytes": 234,
+      "type": "markdown"
+    },
+    {
+      "executable": true,
+      "lines": 17,
+      "path": "scripts/format.py",
+      "size_bytes": 467,
+      "type": "python"
+    }
+  ],
+  "findings": [
+    {
+      "category": "Dangerous Code Execution",
+      "code_snippet": "\ndef format_file(path: str) -> str:\n    file_path = Path(path)\n    subprocess.run(  # noqa: S603, S607\n        [\"black\", \"--quiet\", str(file_path)],\n        check=True,\n        capture_output=True,",
+      "confidence": 0.7,
+      "context": "\ndef format_file(path: str) -> str:\n    file_path = Path(path)\n    subprocess.run(  # noqa: S603, S607\n        [\"black\", \"--quiet\", str(file_path)],\n        check=True,\n        capture_output=True,",
+      "end_line": 14,
+      "explanation": "subprocess module calls execute external commands. Without careful input validation, this enables command injection.",
+      "file": "scripts/format.py",
+      "finding": "    subprocess.run(  # noqa: S603, S607\n        [\"black\", \"--quiet\", str(file_path)],\n        check=True,\n        capture_output=True,\n        text=True,\n    )",
+      "intent": null,
+      "matched_text": "    subprocess.run(  # noqa: S603, S607\n        [\"black\", \"--quiet\", str(file_path)],\n        check=True,\n        capture_output=True,\n        text=True,\n    )",
+      "message": "subprocess module call",
+      "pattern": "subprocess module call",
+      "remediation": "Use subprocess.run() with shell=False and an explicit argument list. Validate all inputs and avoid passing user-controlled data to commands.",
+      "rule_id": "AST4",
+      "severity": "MEDIUM",
+      "start_line": 9,
+      "tags": [
+        "Dangerous Code Execution"
+      ]
+    },
+    {
+      "category": "Data Flow",
+      "code_snippet": "        text=True,\n    )\n    formatted = file_path.read_text()\n    file_path.write_text(formatted)  # write back with consistent line endings\n    return formatted",
+      "confidence": 0.65,
+      "context": "        text=True,\n    )\n    formatted = file_path.read_text()\n    file_path.write_text(formatted)  # write back with consistent line endings\n    return formatted",
+      "end_line": 16,
+      "explanation": "Data from a source is assigned to a variable that is later passed to a sink, creating a variable-mediated taint flow.",
+      "file": "scripts/format.py",
+      "finding": "    file_path.write_text(formatted)  # write back with consistent line endings",
+      "intent": null,
+      "matched_text": "    file_path.write_text(formatted)  # write back with consistent line endings",
+      "message": "Tainted flow: 'formatted' from pathlib.Path.read_text (line 15, file read) → pathlib.Path.write_text (file write)",
+      "pattern": "Tainted flow: 'formatted' from pathlib.Path.read_text (line 15, file read) → pathlib.Path.write_text (file write)",
+      "remediation": "Validate tainted variables before passing them to sinks. Use allowlists, type checks, or sanitization functions on data from external sources.",
+      "rule_id": "TT2",
+      "severity": "MEDIUM",
+      "start_line": 16,
+      "tags": [
+        "Data Flow"
+      ]
+    }
+  ],
+  "has_executable_scripts": true,
+  "manifest": {
+    "allowed-tools": [],
+    "description": "Formats Python code using the black formatter",
+    "name": "code-formatter",
+    "parameters": [],
+    "permissions": [
+      "bash",
+      "read",
+      "write"
+    ],
+    "triggers": [
+      "when user wants to format Python code"
+    ]
+  },
+  "risk_recommendation": "SAFE",
+  "risk_score": 17,
+  "risk_severity": "LOW",
+  "sarif_report": {
+    "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.4.json",
+    "runs": [
+      {
+        "invocations": [
+          {
+            "executionSuccessful": true,
+            "toolExecutionNotifications": [
+              {
+                "level": "warning",
+                "message": {
+                  "text": "Analyzer was disabled by the requested configuration."
+                },
+                "properties": {
+                  "kind": "inspection_limitation"
+                }
+              },
+              {
+                "level": "warning",
+                "message": {
+                  "text": "Analyzer was disabled by the requested configuration."
+                },
+                "properties": {
+                  "kind": "inspection_limitation"
+                }
+              },
+              {
+                "level": "warning",
+                "message": {
+                  "text": "Analyzer was disabled by the requested configuration."
+                },
+                "properties": {
+                  "kind": "inspection_limitation"
+                }
+              },
+              {
+                "level": "warning",
+                "message": {
+                  "text": "Analyzer was disabled by the requested configuration."
+                },
+                "properties": {
+                  "kind": "inspection_limitation"
+                }
+              }
+            ]
+          }
+        ],
+        "results": [
+          {
+            "level": "warning",
+            "locations": [
+              {
+                "physicalLocation": {
+                  "artifactLocation": {
+                    "uri": "scripts/format.py"
+                  },
+                  "region": {
+                    "endLine": 14,
+                    "startLine": 9
+                  }
+                }
+              }
+            ],
+            "message": {
+              "text": "subprocess module call"
+            },
+            "properties": {
+              "category": "Dangerous Code Execution",
+              "code_snippet": "\ndef format_file(path: str) -> str:\n    file_path = Path(path)\n    subprocess.run(  # noqa: S603, S607\n        [\"black\", \"--quiet\", str(file_path)],\n        check=True,\n        capture_output=True,",
+              "confidence": 0.7,
+              "explanation": "subprocess module calls execute external commands. Without careful input validation, this enables command injection.",
+              "finding": "    subprocess.run(  # noqa: S603, S607\n        [\"black\", \"--quiet\", str(file_path)],\n        check=True,\n        capture_output=True,\n        text=True,\n    )",
+              "pattern": "subprocess module call",
+              "remediation": "Use subprocess.run() with shell=False and an explicit argument list. Validate all inputs and avoid passing user-controlled data to commands.",
+              "severity": "MEDIUM",
+              "tags": [
+                "Dangerous Code Execution"
+              ]
+            },
+            "ruleId": "AST4"
+          },
+          {
+            "level": "warning",
+            "locations": [
+              {
+                "physicalLocation": {
+                  "artifactLocation": {
+                    "uri": "scripts/format.py"
+                  },
+                  "region": {
+                    "endLine": 16,
+                    "startLine": 16
+                  }
+                }
+              }
+            ],
+            "message": {
+              "text": "Tainted flow: 'formatted' from pathlib.Path.read_text (line 15, file read) → pathlib.Path.write_text (file write)"
+            },
+            "properties": {
+              "category": "Data Flow",
+              "code_snippet": "        text=True,\n    )\n    formatted = file_path.read_text()\n    file_path.write_text(formatted)  # write back with consistent line endings\n    return formatted",
+              "confidence": 0.65,
+              "explanation": "Data from a source is assigned to a variable that is later passed to a sink, creating a variable-mediated taint flow.",
+              "finding": "    file_path.write_text(formatted)  # write back with consistent line endings",
+              "pattern": "Tainted flow: 'formatted' from pathlib.Path.read_text (line 15, file read) → pathlib.Path.write_text (file write)",
+              "remediation": "Validate tainted variables before passing them to sinks. Use allowlists, type checks, or sanitization functions on data from external sources.",
+              "severity": "MEDIUM",
+              "tags": [
+                "Data Flow"
+              ]
+            },
+            "ruleId": "TT2"
+          }
+        ],
+        "tool": {
+          "driver": {
+            "name": "skillspector",
+            "rules": [
+              {
+                "id": "AST4",
+                "shortDescription": {
+                  "text": "subprocess module call"
+                }
+              },
+              {
+                "id": "TT2",
+                "shortDescription": {
+                  "text": "Tainted flow: 'formatted' from pathlib.Path.read_text (line 15, file read) → pathlib.Path.write_text (file write)"
+                }
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "version": "2.1.0"
+  }
+}

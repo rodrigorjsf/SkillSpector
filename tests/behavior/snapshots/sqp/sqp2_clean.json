@@ -1,0 +1,513 @@
+{
+  "analysis_completeness": {
+    "analyzer_statuses": [
+      {
+        "analyzer_id": "behavioral_ast",
+        "completed": 1,
+        "failed": 0,
+        "planned_work": 1,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "behavioral_taint_tracking",
+        "completed": 1,
+        "failed": 0,
+        "planned_work": 1,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "mcp_least_privilege",
+        "completed": 1,
+        "failed": 0,
+        "planned_work": 1,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "mcp_rug_pull",
+        "completed": 1,
+        "failed": 0,
+        "planned_work": 1,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "mcp_tool_poisoning",
+        "completed": 1,
+        "failed": 0,
+        "planned_work": 1,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "meta_analyzer",
+        "completed": 0,
+        "failed": 0,
+        "message": "Analyzer was disabled by the requested configuration.",
+        "planned_work": 0,
+        "reason_code": "disabled_by_configuration",
+        "skipped": 0,
+        "status": "disabled",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "semantic_developer_intent",
+        "completed": 0,
+        "failed": 0,
+        "message": "Analyzer was disabled by the requested configuration.",
+        "planned_work": 0,
+        "reason_code": "disabled_by_configuration",
+        "skipped": 0,
+        "status": "disabled",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "semantic_quality_policy",
+        "completed": 0,
+        "failed": 0,
+        "message": "Analyzer was disabled by the requested configuration.",
+        "planned_work": 0,
+        "reason_code": "disabled_by_configuration",
+        "skipped": 0,
+        "status": "disabled",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "semantic_security_discovery",
+        "completed": 0,
+        "failed": 0,
+        "message": "Analyzer was disabled by the requested configuration.",
+        "planned_work": 0,
+        "reason_code": "disabled_by_configuration",
+        "skipped": 0,
+        "status": "disabled",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_agent_snooping",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_anti_refusal",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_data_exfiltration",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_excessive_agency",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_harmful_content",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_memory_poisoning",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_output_handling",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_privilege_escalation",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_prompt_injection",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_rogue_agent",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_ssrf",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_supply_chain",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_system_prompt_leakage",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_patterns_tool_misuse",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
+        "analyzer_id": "static_yara",
+        "completed": 2,
+        "failed": 0,
+        "planned_work": 2,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      }
+    ],
+    "coverage_percent": 100.0,
+    "entirely_uninspected_files": 0,
+    "execution_successful": true,
+    "findings_after_filtering": 3,
+    "findings_before_filtering": 3,
+    "fully_inspected_files": 2,
+    "is_complete": false,
+    "ledger_exceptions": [],
+    "limitations": [
+      "Analyzer was disabled by the requested configuration.",
+      "Analyzer was disabled by the requested configuration.",
+      "Analyzer was disabled by the requested configuration.",
+      "Analyzer was disabled by the requested configuration."
+    ],
+    "partially_inspected_files": 0,
+    "scanned_components": 2,
+    "scope_exclusions": [],
+    "total_components": 2
+  },
+  "component_metadata": [
+    {
+      "executable": false,
+      "lines": 21,
+      "path": "SKILL.md",
+      "size_bytes": 554,
+      "type": "markdown"
+    },
+    {
+      "executable": true,
+      "lines": 21,
+      "path": "deploy.py",
+      "size_bytes": 677,
+      "type": "python"
+    }
+  ],
+  "findings": [
+    {
+      "category": "MCP Least Privilege",
+      "code_snippet": null,
+      "confidence": 0.7,
+      "context": null,
+      "end_line": null,
+      "explanation": "Without declared permissions the skill's intent is opaque and cannot be validated.",
+      "file": "SKILL.md",
+      "finding": null,
+      "intent": null,
+      "matched_text": null,
+      "message": "Skill has no declared permissions but code capabilities were detected: shell.",
+      "pattern": null,
+      "remediation": "Add a 'permissions' field to SKILL.md listing the capabilities this skill requires.",
+      "rule_id": "LP3",
+      "severity": "MEDIUM",
+      "start_line": 1,
+      "tags": [
+        "ASI02"
+      ]
+    },
+    {
+      "category": "Tool Misuse",
+      "code_snippet": "        print(\"Deployment cancelled.\")\n        return\n\n    result = subprocess.run(script, shell=True, capture_output=True, text=True)\n    print(f\"Exit code: {result.returncode}\")\n    if result.stdout:\n        print(result.stdout)",
+      "confidence": 0.9,
+      "context": "        print(\"Deployment cancelled.\")\n        return\n\n    result = subprocess.run(script, shell=True, capture_output=True, text=True)\n    print(f\"Exit code: {result.returncode}\")\n    if result.stdout:\n        print(result.stdout)",
+      "end_line": null,
+      "explanation": "Tool parameters are crafted to achieve unintended or unsafe behavior. Parameter abuse can bypass intended safety checks (e.g. shell=True, --force, dangerous glob patterns).",
+      "file": "deploy.py",
+      "finding": "subprocess.run(script, shell=True",
+      "intent": null,
+      "matched_text": "subprocess.run(script, shell=True",
+      "message": "Tool Parameter Abuse",
+      "pattern": "Tool Parameter Abuse",
+      "remediation": "Validate all tool parameters against an allowlist. Reject dangerous parameter values (shell=True, --force, -rf /) and use safe defaults.",
+      "rule_id": "TM1",
+      "severity": "HIGH",
+      "start_line": 16,
+      "tags": [
+        "Tool Misuse"
+      ]
+    },
+    {
+      "category": "Dangerous Code Execution",
+      "code_snippet": "        print(\"Deployment cancelled.\")\n        return\n\n    result = subprocess.run(script, shell=True, capture_output=True, text=True)\n    print(f\"Exit code: {result.returncode}\")\n    if result.stdout:\n        print(result.stdout)",
+      "confidence": 0.7,
+      "context": "        print(\"Deployment cancelled.\")\n        return\n\n    result = subprocess.run(script, shell=True, capture_output=True, text=True)\n    print(f\"Exit code: {result.returncode}\")\n    if result.stdout:\n        print(result.stdout)",
+      "end_line": 16,
+      "explanation": "subprocess module calls execute external commands. Without careful input validation, this enables command injection.",
+      "file": "deploy.py",
+      "finding": "    result = subprocess.run(script, shell=True, capture_output=True, text=True)",
+      "intent": null,
+      "matched_text": "    result = subprocess.run(script, shell=True, capture_output=True, text=True)",
+      "message": "subprocess module call",
+      "pattern": "subprocess module call",
+      "remediation": "Use subprocess.run() with shell=False and an explicit argument list. Validate all inputs and avoid passing user-controlled data to commands.",
+      "rule_id": "AST4",
+      "severity": "MEDIUM",
+      "start_line": 16,
+      "tags": [
+        "Dangerous Code Execution"
+      ]
+    }
+  ],
+  "has_executable_scripts": true,
+  "manifest": {
+    "allowed-tools": [],
+    "description": "Deploy a service to the staging environment via shell commands",
+    "name": "deploy-service",
+    "parameters": [],
+    "permissions": [],
+    "triggers": []
+  },
+  "risk_recommendation": "CAUTION",
+  "risk_score": 45,
+  "risk_severity": "MEDIUM",
+  "sarif_report": {
+    "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.4.json",
+    "runs": [
+      {
+        "invocations": [
+          {
+            "executionSuccessful": true,
+            "toolExecutionNotifications": [
+              {
+                "level": "warning",
+                "message": {
+                  "text": "Analyzer was disabled by the requested configuration."
+                },
+                "properties": {
+                  "kind": "inspection_limitation"
+                }
+              },
+              {
+                "level": "warning",
+                "message": {
+                  "text": "Analyzer was disabled by the requested configuration."
+                },
+                "properties": {
+                  "kind": "inspection_limitation"
+                }
+              },
+              {
+                "level": "warning",
+                "message": {
+                  "text": "Analyzer was disabled by the requested configuration."
+                },
+                "properties": {
+                  "kind": "inspection_limitation"
+                }
+              },
+              {
+                "level": "warning",
+                "message": {
+                  "text": "Analyzer was disabled by the requested configuration."
+                },
+                "properties": {
+                  "kind": "inspection_limitation"
+                }
+              }
+            ]
+          }
+        ],
+        "results": [
+          {
+            "level": "warning",
+            "locations": [
+              {
+                "physicalLocation": {
+                  "artifactLocation": {
+                    "uri": "SKILL.md"
+                  },
+                  "region": {
+                    "startLine": 1
+                  }
+                }
+              }
+            ],
+            "message": {
+              "text": "Skill has no declared permissions but code capabilities were detected: shell."
+            },
+            "properties": {
+              "category": "MCP Least Privilege",
+              "confidence": 0.7,
+              "explanation": "Without declared permissions the skill's intent is opaque and cannot be validated.",
+              "remediation": "Add a 'permissions' field to SKILL.md listing the capabilities this skill requires.",
+              "severity": "MEDIUM",
+              "tags": [
+                "ASI02"
+              ]
+            },
+            "ruleId": "LP3"
+          },
+          {
+            "level": "error",
+            "locations": [
+              {
+                "physicalLocation": {
+                  "artifactLocation": {
+                    "uri": "deploy.py"
+                  },
+                  "region": {
+                    "startLine": 16
+                  }
+                }
+              }
+            ],
+            "message": {
+              "text": "Tool Parameter Abuse"
+            },
+            "properties": {
+              "category": "Tool Misuse",
+              "code_snippet": "        print(\"Deployment cancelled.\")\n        return\n\n    result = subprocess.run(script, shell=True, capture_output=True, text=True)\n    print(f\"Exit code: {result.returncode}\")\n    if result.stdout:\n        print(result.stdout)",
+              "confidence": 0.9,
+              "explanation": "Tool parameters are crafted to achieve unintended or unsafe behavior. Parameter abuse can bypass intended safety checks (e.g. shell=True, --force, dangerous glob patterns).",
+              "finding": "subprocess.run(script, shell=True",
+              "pattern": "Tool Parameter Abuse",
+              "remediation": "Validate all tool parameters against an allowlist. Reject dangerous parameter values (shell=True, --force, -rf /) and use safe defaults.",
+              "severity": "HIGH",
+              "tags": [
+                "Tool Misuse"
+              ]
+            },
+            "ruleId": "TM1"
+          },
+          {
+            "level": "warning",
+            "locations": [
+              {
+                "physicalLocation": {
+                  "artifactLocation": {
+                    "uri": "deploy.py"
+                  },
+                  "region": {
+                    "endLine": 16,
+                    "startLine": 16
+                  }
+                }
+              }
+            ],
+            "message": {
+              "text": "subprocess module call"
+            },
+            "properties": {
+              "category": "Dangerous Code Execution",
+              "code_snippet": "        print(\"Deployment cancelled.\")\n        return\n\n    result = subprocess.run(script, shell=True, capture_output=True, text=True)\n    print(f\"Exit code: {result.returncode}\")\n    if result.stdout:\n        print(result.stdout)",
+              "confidence": 0.7,
+              "explanation": "subprocess module calls execute external commands. Without careful input validation, this enables command injection.",
+              "finding": "    result = subprocess.run(script, shell=True, capture_output=True, text=True)",
+              "pattern": "subprocess module call",
+              "remediation": "Use subprocess.run() with shell=False and an explicit argument list. Validate all inputs and avoid passing user-controlled data to commands.",
+              "severity": "MEDIUM",
+              "tags": [
+                "Dangerous Code Execution"
+              ]
+            },
+            "ruleId": "AST4"
+          }
+        ],
+        "tool": {
+          "driver": {
+            "name": "skillspector",
+            "rules": [
+              {
+                "id": "AST4",
+                "shortDescription": {
+                  "text": "subprocess module call"
+                }
+              },
+              {
+                "id": "LP3",
+                "shortDescription": {
+                  "text": "Skill has no declared permissions but code capabilities were detected: shell."
+                }
+              },
+              {
+                "id": "TM1",
+                "shortDescription": {
+                  "text": "Tool Parameter Abuse"
+                }
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "version": "2.1.0"
+  }
+}

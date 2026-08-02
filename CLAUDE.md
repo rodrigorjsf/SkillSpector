@@ -18,6 +18,14 @@ Order of preference: **`codegraph_explore` MCP tool → `codegraph explore` CLI 
 - `maxFiles` truncates by file without re-ranking, so a low cap can drop a file the blast radius just named. Narrow the query rather than the cap.
 - Use grep for non-code text (markdown, YAML, logs) and literal string matching.
 
+## Remote
+
+This repo is a fork. **Every git and GitHub operation targets `rodrigorjsf/SkillSpector` — never the
+upstream `NVIDIA/SkillSpector`.** Pushes, branches, pull requests, issues, issue comments, releases
+and workflow runs all belong to the fork. Upstream is a read-only sync source: fetch from it, never
+push to it and never open a pull request or issue against it. `gh` resolves the upstream remote by
+default on a fork, so pass `--repo rodrigorjsf/SkillSpector` whenever the target is not unambiguous.
+
 ## Commits
 
 - **Atomic** — one scope of change per commit. Never mix unrelated scopes; split instead.
@@ -76,3 +84,8 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - `gh issue view` fails with a projectCards GraphQL error; use `--json`.
 - `tests/integration/conftest.py` auto-marks by path; never put a unit test there.
 - Fish shell: activate does not persist between calls — invoke `.venv/bin/python` directly.
+- CI only triggers on `main`-targeting PRs; empty `gh pr checks` is not a pass.
+- `make` needs `export PATH="$PWD/.venv/bin:$PATH"`; sourcing `activate.fish` fails in Bash.
+- Empty `git diff` plus `M` status means `core.autocrlf`, not a real change.
+- Fork Actions need the Actions-tab enable button clicked once; only a human can.
+- Pin new test fixtures to LF via `.gitattributes` or snapshots break in CI.

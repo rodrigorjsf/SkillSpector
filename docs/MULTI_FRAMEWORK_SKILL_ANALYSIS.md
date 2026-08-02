@@ -430,7 +430,10 @@ already makes impossible.
 The gate is instead a **committed golden snapshot plus a test that regenerates and compares
 it**. Git supplies the "before" for free, and the snapshot is reviewable in the diff of the
 commit that changes it. It is specified in
-[issue #4](https://github.com/rodrigorjsf/SkillSpector/issues/4) and sliced into issues #5–#9.
+[issue #4](https://github.com/rodrigorjsf/SkillSpector/issues/4), was sliced into issues #5–#9,
+and **is delivered**: the gate lives in [`tests/behavior/`](../tests/behavior/), runs in
+`make test-unit` and in CI, and its stated blind spots are recorded in
+[`tests/behavior/COVERAGE_LIMITS.md`](../tests/behavior/COVERAGE_LIMITS.md).
 
 - **Seam: `graph.invoke`** — the highest existing seam below the CLI, with prior art at
   `tests/integration/test_graph.py:29`. The CLI is rejected as a seam precisely because
@@ -589,14 +592,16 @@ Recorded so the reasoning is not relitigated. Each links to where it is implemen
 
 ## 9. Recommended next step
 
-**Make the behavior gate executable**, before any analyzer work.
-[§4](#4-the-unchanged-behavior-gate) describes a snapshot mechanism that does not exist yet,
-and until it does, every phase in [§5](#5-phasing) carries an acceptance criterion that nobody
-can demonstrate. That work is specified in
-[issue #4](https://github.com/rodrigorjsf/SkillSpector/issues/4) and sliced into issues #5–#9:
-correct this document, prototype the projection's determinism and size, land a one-fixture
-snapshot in `make test-unit`, extend it to the full corpus with a demonstrated red, and verify
-it runs in CI.
+**Start phase 1** — `detect_framework` plus the `framework` state key, read by nothing.
+
+The previous recommendation here was to make the behavior gate executable before any analyzer
+work, because until it existed every phase in [§5](#5-phasing) carried an acceptance criterion
+nobody could demonstrate. **That is done.** Issue #4, sliced into #5–#9, landed the committed
+snapshot corpus in [`tests/behavior/`](../tests/behavior/): 24 fixtures, blocking in
+`make test-unit`, verified in CI, demonstrated red on a real behavior change, with its blind
+spots stated in [`COVERAGE_LIMITS.md`](../tests/behavior/COVERAGE_LIMITS.md). Every phase below
+can now be claimed behavior-preserving against evidence rather than against a promise: the
+snapshot test is green with no snapshot file modified in the same change.
 
 Phase 5 was the previous recommendation here, on the grounds that a LangChain4j fixture would
 make the [§3.7](#37-repository-level-discovery-cicd) claim falsifiable. **That purpose is

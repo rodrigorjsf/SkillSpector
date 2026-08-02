@@ -1,0 +1,3 @@
+# A fixture's byte count is part of the frozen Behavior Snapshot, so its line
+# endings must not depend on the checkout. See tests/behavior/COVERAGE_LIMITS.md.
+* text=auto eol=lf
