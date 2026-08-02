@@ -16,10 +16,12 @@
 """Which Framework a scanned tree is written against.
 
 Phase 1 of ``docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md``. Detection is pure over
-``components`` and ``file_cache`` (§3.2): it does no I/O, cannot fail a Scan,
-and is read by nothing today. The key exists so the gated Analyzers of later
-phases have something to gate on, and so the Behavior Snapshot can prove
-detection never drifts on an input scanned today.
+``components`` and ``file_cache`` (§3.2): it does no I/O and cannot fail a Scan.
+The key exists so a gated Analyzer has something to gate on, and so the Behavior
+Snapshot can prove detection never drifts on an input scanned today.
+
+``framework_langchain4j`` reads it (#23). ``LANGCHAIN4J`` is therefore no longer
+inert: what this function returns now decides whether five Rules run.
 
 Enum rather than the bare ``str`` the design document writes, mirroring
 ``skillspector.manifest_status``: a misspelled literal in a later Analyzer's
@@ -36,13 +38,18 @@ matches is doubt, and §3.2's conservative rule ("when in doubt,
 The bad consequence is known rather than discovered later: a genuinely
 LangChain4j repository that happens to carry ``deepagents`` in a test dependency
 loses Framework analysis entirely, and loses it *in silence*, because the gate
-declines without a ledger event. This is accepted while no Analyzer reads the
-key, so nothing is lost today. **Reopen trigger:** the first real repository
-observed to detect ambiguously. Two alternatives were rejected and should not be
-relitigated without that trigger -- a fixed precedence between the two
+declines without a ledger event.
+
+**That cost is now real.** It was accepted while no Analyzer read the key, when
+nothing was lost by getting the answer wrong. Since #23 an ambiguous detection
+costs a repository all five LangChain4j Rules, including ``L4J-SHELL`` -- so a
+polyglot repository can be granted unsandboxed command execution and reported
+clean. **Reopen trigger:** the first real repository observed to detect
+ambiguously; the trigger has not fired, and the two alternatives below should
+still not be relitigated without it -- a fixed precedence between the two
 Frameworks (deterministic, but an arbitrary order becomes silent law) and
 returning a set of Frameworks (the right answer for a real polyglot world, and
-speculative generality before the first Analyzer exists).
+speculative generality when only one Framework Analyzer exists).
 
 Detection is textual and reads only the files a signal names. It therefore does
 not distinguish code from comments inside a ``.py`` or ``.java`` file, while a

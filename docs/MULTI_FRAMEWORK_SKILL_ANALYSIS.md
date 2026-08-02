@@ -1,9 +1,14 @@
 # Multi-framework skill analysis — design
 
-**Status:** design proposal, except [§4](#4-the-unchanged-behavior-gate) — the unchanged-behavior
-gate is built and merged — and phase 1 of [§5](#5-phasing), which landed `detect_framework` and the
-`framework` state key (issue #21). No Analyzer reads that key yet. Nothing else described here is
-implemented.
+**Status:** partly built. [§4](#4-the-unchanged-behavior-gate)'s unchanged-behavior gate is merged,
+and phases 1 and 4–7 of [§5](#5-phasing) have shipped: `detect_framework` and the `framework` state
+key (issue #21), then the LangChain4j-in-CI increment (issue #23) — the gated
+`framework_langchain4j` Analyzer carrying all five L4J rules of
+[§3.6](#36-java-parsing-and-definition-path-coverage), and the Repository Scan of
+[§3.7](#37-repository-level-discovery-cicd) behind `--repo-scan`. **Phases 2, 3 and 8 remain design
+proposal** — Deep Agents, spec conformance, and the deferred behavior-affecting changes.
+[§9](#9-recommended-next-step) carries the live status; each phase row in §5 names the Ticket that
+landed it.
 **Goal:** extend SkillSpector to evaluate skills hosted by **LangChain4j** (Java) and
 **LangChain Deep Agents** (Python), covering both structural/best-practice conformance and
 the security analysis SkillSpector already performs.
@@ -340,8 +345,10 @@ LangChain4j lets a skill be defined**, and says plainly where static analysis st
 | `tree-sitter` 0.26.0 + `tree-sitter-java` 0.23.5 | **Chosen.** Current, `requires_python >=3.10` against this project's `>=3.12`, error-tolerant parsing (a partially-invalid file still yields a usable tree). |
 
 This adds a runtime dependency to a deliberately tight dependency list, so it lands in its
-own phase with its own decision — see [§5](#5-phasing). Until it is accepted,
-`framework_langchain4j` is not implementable to the standard this section describes.
+own phase with its own decision — see [§5](#5-phasing). **Accepted** in
+[ADR 0001](adr/0001-tree-sitter-for-java-parsing.md) and shipped with issue #23; both
+distributions publish `cp39-abi3` wheels, so no C toolchain is needed on any supported
+interpreter.
 
 #### Definition-path coverage
 
@@ -529,7 +536,7 @@ Ordered by value-to-risk. Each phase is independently shippable and independentl
 | Phase | Content | Behavior-preserving? |
 |-------|---------|----------------------|
 | **0** | This document + [`docs/references/`](references/README.md) | Yes — docs only |
-| **1** | `detect_framework` + `framework` state key. No analyzer reads it yet. Unit tests assert correct detection on new fixtures and `"agent_skills"` on every existing fixture | Yes |
+| **1** | ~~`detect_framework` + `framework` state key~~ **Done** (#21) — no analyzer read it at the time; `framework_langchain4j` does now. Unit tests assert correct detection on new fixtures and `"agent_skills"` on every existing fixture | Yes |
 | **2** | `framework_deepagents` analyzer, gated. Cheapest — reuses Python AST | Yes, via gate |
 | **3** | `structure_agent_skills_spec` behind `--spec-checks` (default `off`), plus the advisory-section rendering in [§3.5](#35-spec-conformance-rules-and-scoring) | Yes, via opt-in |
 | **4** | ~~**Dependency decision:** accept `tree-sitter` + `tree-sitter-java`~~ **Done** (#23) — accepted in [ADR 0001](adr/0001-tree-sitter-for-java-parsing.md), both ship `cp39-abi3` wheels | N/A |

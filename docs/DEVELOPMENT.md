@@ -86,7 +86,7 @@ All targets assume the virtual environment is **already created and activated**.
 | `ast_cache` | Map of path → AST representation (for future use) |
 | `manifest`, `previous_manifest` | Parsed skill metadata (e.g. from SKILL.md) |
 | `manifest_status` | Why `manifest` holds what it holds: `present`, `empty`, `unparseable`, `unreadable`, or `absent` (no SKILL.md — the directory declares no skill) |
-| `framework` | Which framework the scanned tree is written against: `agent_skills` (the conservative default), `langchain4j`, or `deepagents`. Detected by a pure function under build_context; read by nothing yet — it exists for the gated analyzers of later phases |
+| `framework` | Which framework the scanned tree is written against: `agent_skills` (the conservative default), `langchain4j`, or `deepagents`. Detected by a pure function under build_context; read by the gated `framework_langchain4j` analyzer, which declines unless it holds `langchain4j` |
 | `component_metadata` | List of dicts: path, type, lines, executable, size_bytes (from build_context) |
 | `has_executable_scripts` | True if any component has executable extension (e.g. .py, .sh); used for risk multiplier |
 | `output_format` | Requested report format: `terminal`, `json`, `markdown`, or `sarif` |

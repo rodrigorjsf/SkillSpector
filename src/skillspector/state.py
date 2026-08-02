@@ -68,9 +68,9 @@ class SkillspectorState(TypedDict, total=False):
     # skillspector.manifest_status.
     manifest_status: ManifestStatus
     # Which Framework the scanned tree is written against, detected by a pure
-    # function under `build_context` -- no new graph node. Read by nothing yet:
-    # it exists so the gated Analyzers of later phases have something to gate
-    # on. See skillspector.framework.
+    # function under `build_context` -- no new graph node. Read by the gated
+    # `framework_langchain4j` analyzer, which returns no findings unless it holds
+    # LANGCHAIN4J. See skillspector.framework.
     framework: Framework
     previous_manifest: dict[str, object] | None
 
