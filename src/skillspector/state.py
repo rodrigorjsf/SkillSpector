@@ -22,6 +22,7 @@ from typing import Annotated, NotRequired
 
 from typing_extensions import TypedDict
 
+from skillspector.framework import Framework
 from skillspector.inspection_ledger import (
     AnalysisCompleteness,
     AnalyzerStatusEvent,
@@ -66,6 +67,11 @@ class SkillspectorState(TypedDict, total=False):
     # Additive -- `manifest` keeps its type and contents. See
     # skillspector.manifest_status.
     manifest_status: ManifestStatus
+    # Which Framework the scanned tree is written against, detected by a pure
+    # function under `build_context` -- no new graph node. Read by nothing yet:
+    # it exists so the gated Analyzers of later phases have something to gate
+    # on. See skillspector.framework.
+    framework: Framework
     previous_manifest: dict[str, object] | None
 
     # Accumulated canonical findings. Same-ID meta updates replace in place.

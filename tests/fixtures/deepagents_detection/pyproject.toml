@@ -1,0 +1,11 @@
+# A detection fixture, not an analysis one: it carries the single positive Deep
+# Agents signal and nothing else, so its committed Behavior Snapshot freezes what
+# a Scan of such a directory produces *before* any Framework Analyzer exists.
+# That is the baseline phases 2 and 6 measure against, and it is also what keeps
+# the `framework` omission rule in tests/behavior/projection.py non-vacuous -- do
+# not delete it as an unused fixture.
+
+[project]
+name = "deepagents-detection"
+version = "0.1.0"
+dependencies = ["deepagents>=0.1"]

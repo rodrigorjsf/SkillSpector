@@ -29,6 +29,7 @@ from stat import S_ISREG
 import yaml
 
 from skillspector.constants import build_model_config
+from skillspector.framework import detect_framework
 from skillspector.inspection_ledger import (
     InspectionLedgerEvent,
     LedgerOutcome,
@@ -343,6 +344,7 @@ def build_context(state: SkillspectorState) -> dict[str, object]:
         "ast_cache": {},
         "manifest": manifest,
         "manifest_status": manifest_status,
+        "framework": detect_framework(components, file_cache),
         "previous_manifest": None,
         "model_config": build_model_config(),
         "component_metadata": component_metadata,

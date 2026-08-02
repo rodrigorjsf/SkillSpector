@@ -94,3 +94,6 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - Pin new test fixtures to LF via `.gitattributes` or snapshots break in CI.
 - Squash-merge Ticket PRs; DCO checks every merge commit inside the PR range.
 - `CONTEXT.md` `_Avoid_` terms bind docstrings and test names, not just prose.
+- Prove a snapshot change additive with `git status` after `make update-snapshots`.
+- Corpus counts are prose in six files; grep the phrasing, not just the number.
+- Commit-time CRLF warnings are harmless when `git ls-files --eol` shows `i/lf`.

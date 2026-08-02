@@ -35,7 +35,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-# The ten state keys the snapshot projects. See ADR 0003.
+# The eleven state keys the snapshot projects. See ADR 0003.
 PROJECTED_STATE_KEYS: tuple[str, ...] = (
     "findings",
     "risk_score",
@@ -45,16 +45,27 @@ PROJECTED_STATE_KEYS: tuple[str, ...] = (
     "has_executable_scripts",
     "manifest",
     "manifest_status",
+    "framework",
     "analysis_completeness",
     "sarif_report",
 )
 
-# The one projected key carried conditionally, mirroring the report: a Manifest
-# that parsed is reported exactly as it was before the status existed, so the
-# key is dropped when it holds this value. Not a gate hole -- a Skill whose
-# Manifest regressed to any other status gains the key, and the byte-compare
-# fails on its appearance.
-OMITTED_WHEN: Mapping[str, str] = {"manifest_status": "present"}
+# The two projected keys carried conditionally, each dropped at the one value
+# that was the state of the world before the key existed.
+#
+# ``manifest_status`` mirrors the report: a Manifest that parsed is reported
+# exactly as it was before the status existed. ``framework`` is the same shape
+# one phase later -- every input scanned before detection existed detects
+# ``agent_skills``, so the key is dropped there and no snapshot predating it
+# changes.
+#
+# Neither is a gate hole. A Skill whose Manifest regressed to any other status,
+# or an input that starts detecting as another Framework, *gains* the key, and
+# the byte-compare fails on its appearance.
+OMITTED_WHEN: Mapping[str, str] = {
+    "manifest_status": "present",
+    "framework": "agent_skills",
+}
 
 # State keys deliberately kept out, each with the reason it is out.
 EXCLUDED_STATE_KEYS: Mapping[str, str] = {
@@ -242,7 +253,7 @@ def project_scan_state(state: Mapping[str, Any]) -> dict[str, Any]:
     Pure: the input is not mutated, and the result depends on nothing but it.
     A projected key absent from the state is absent from the result -- a key that
     stops being emitted is itself a behavior change and must show as a diff.
-    ``OMITTED_WHEN`` drops one key at one value, for the reason recorded there.
+    ``OMITTED_WHEN`` drops each key it names at the one value recorded there.
     """
     projection = {key: _to_plain(state[key]) for key in PROJECTED_STATE_KEYS if key in state}
     for key, omitted_value in OMITTED_WHEN.items():
@@ -269,9 +280,17 @@ FIXTURES_DIR = _BEHAVIOR_DIR.parent / "fixtures"
 # scanned in practice and the gate's job is to hold current behavior still --
 # including the anonymous-Skill result #11 tracks changing.
 #
+# ``deepagents_detection`` and ``langchain4j_detection`` (#21) bear none either.
+# They are here deliberately: their snapshots freeze what a Scan of a
+# Framework-bearing directory produces *before* any Framework Analyzer exists,
+# which is the baseline later phases measure against. Adding new inputs is not a
+# behavior change on existing ones, so the gate's promise holds.
+#
 # ``sdi/``, ``sqp/`` and ``ssd/`` are excluded: they are fixture-layout
 # containers holding a family of Skills, not Skills themselves.
 CORPUS_NAMES: tuple[str, ...] = (
+    "deepagents_detection",
+    "langchain4j_detection",
     "malicious_skill",
     "mcp_clean_skill",
     "mcp_mismatched_skill",

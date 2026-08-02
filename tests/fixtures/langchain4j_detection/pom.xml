@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A detection fixture, not an analysis one: it carries the single positive
+  LangChain4j signal and nothing else, so its committed Behavior Snapshot
+  freezes what a Scan of such a directory produces *before* any Framework
+  Analyzer exists. That is the baseline phases 2 and 6 measure against, and it
+  is also what keeps the `framework` omission rule in tests/behavior/projection.py
+  non-vacuous -- do not delete it as an unused fixture.
+-->
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example</groupId>
+  <artifactId>langchain4j-detection</artifactId>
+  <version>0.1.0</version>
+  <dependencies>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j</artifactId>
+      <version>0.36.0</version>
+    </dependency>
+  </dependencies>
+</project>

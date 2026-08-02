@@ -1,7 +1,9 @@
 # Multi-framework skill analysis — design
 
 **Status:** design proposal, except [§4](#4-the-unchanged-behavior-gate) — the unchanged-behavior
-gate is built and merged. Nothing else described here is implemented.
+gate is built and merged — and phase 1 of [§5](#5-phasing), which landed `detect_framework` and the
+`framework` state key (issue #21). No Analyzer reads that key yet. Nothing else described here is
+implemented.
 **Goal:** extend SkillSpector to evaluate skills hosted by **LangChain4j** (Java) and
 **LangChain Deep Agents** (Python), covering both structural/best-practice conformance and
 the security analysis SkillSpector already performs.
@@ -485,8 +487,9 @@ and **is delivered**: the gate lives in [`tests/behavior/`](../tests/behavior/),
   those two would catch none of them. Measurement confirmed the breadth is affordable: the
   specified projection is 323–859 lines per fixture and 11 079 across the corpus, well inside
   what a reviewer reads.
-- **Corpus: 24 leaf directories.** Every fixture directory bearing a `SKILL.md` (23), plus
-  `tests/fixtures/mcp_registry`, which bears none and scans as an anonymous Skill. The three
+- **Corpus: 26 leaf directories.** Every fixture directory bearing a `SKILL.md` (23), plus
+  `tests/fixtures/mcp_registry`, which bears none and scans as an anonymous Skill, plus the two
+  `*_detection` fixtures phase 1 added, which bear none either and carry one Framework signal each. The three
   family parents — `sdi/`, `sqp/`, `ssd/` — are fixture-layout containers, not Skills, and are
   not scan targets.
 - **Blocking, inside `make test-unit`**, with a `make update-snapshots` to regenerate. The
@@ -621,12 +624,19 @@ Recorded so the reasoning is not relitigated. Each links to where it is implemen
 
 ## 9. Recommended next step
 
-**Start phase 1** — `detect_framework` plus the `framework` state key, read by nothing.
+**Start phase 2** — the gated `framework_deepagents` analyzer, the first reader of the key.
 
-The previous recommendation here was to make the behavior gate executable before any analyzer
+Phase 1 was the previous recommendation here. **That is done.** Issue #21 landed
+[`src/skillspector/framework.py`](../src/skillspector/framework.py) and the `framework` state key,
+set by `build_context` and read by nothing, with detection asserted `agent_skills` on every input
+scanned before it existed. The key is projected into the Behavior Snapshot and omitted at
+`agent_skills`, so no pre-existing snapshot changed and a future change that flips one to another
+Framework fails the gate on the key's appearance.
+
+The recommendation before that was to make the behavior gate executable before any analyzer
 work, because until it existed every phase in [§5](#5-phasing) carried an acceptance criterion
 nobody could demonstrate. **That is done.** Issue #4, sliced into #5–#9, landed the committed
-snapshot corpus in [`tests/behavior/`](../tests/behavior/): 24 fixtures, blocking in
+snapshot corpus in [`tests/behavior/`](../tests/behavior/): 26 fixtures, blocking in
 `make test-unit`, verified in CI, demonstrated red on a real behavior change, with its blind
 spots stated in [`COVERAGE_LIMITS.md`](../tests/behavior/COVERAGE_LIMITS.md). Every phase below
 can now be claimed behavior-preserving against evidence rather than against a promise: the
