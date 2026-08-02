@@ -22,6 +22,11 @@ what its tools may do. This package is what makes that Java readable to the
 
 The split across modules exists to keep the parser optional at the right moment:
 
+* :mod:`skillspector.langchain4j.vocabulary` is every upstream spelling this
+  package matches on, and nothing else. It needs no parser and imports nothing,
+  because ``skillspector.framework`` reads it during detection, which runs on
+  every Scan. A LangChain4j upgrade is read against that one file --
+  ``docs/adr/0005-langchain4j-upstream-vocabulary.md``.
 * :mod:`skillspector.langchain4j.signals` needs no parser. It answers which files
   of a Scan are Java or JVM build files, and scans build files textually. The
   Analyzer imports it at module top and uses it to decide applicability *before*

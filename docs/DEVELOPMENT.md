@@ -301,6 +301,8 @@ An analyzer that only applies to one Framework gates on `state["framework"]` as 
 
 Anything the analyzer needs that is not a base dependency is imported **inside** the node, not at module top. A module-level import of an absent dependency breaks importing the registry itself; inside the node the failure reaches `guard_analyzer_node`, which records the analyzer as `failed` with a fatal ledger exception, so the scan exits non-zero and says why. Do not wrap that import in `try`/`except` — swallowing it is the silent failure the ordering exists to prevent. See [framework_langchain4j.py](../src/skillspector/nodes/analyzers/framework_langchain4j.py).
 
+Every upstream spelling a Framework analyzer matches on — type names, method names, artifact ids, conventional layouts — belongs in that Framework's own vocabulary module, never inline. A framework whose API is beta will rename something, and a Rule matching a stale identifier stops producing Findings while the scan still succeeds and the report still reads as clean. LangChain4j's inventory is [vocabulary.py](../src/skillspector/langchain4j/vocabulary.py), enforced by `tests/unit/test_langchain4j_vocabulary.py` and recorded in [ADR 0005](adr/0005-langchain4j-upstream-vocabulary.md); Deep Agents should copy the shape.
+
 ---
 
 ## 10. Environment and configuration

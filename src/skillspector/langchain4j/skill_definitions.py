@@ -41,18 +41,23 @@ from tree_sitter import Node
 
 from skillspector.langchain4j import builder_chains, java_parser
 
-# The builders that define a Skill, and the argument of each that carries text a
-# model reads. ``relativePath`` is not one: it names a file, not instructions.
-_SKILL_BUILDERS: Final[frozenset[str]] = frozenset({"Skill", "SkillResource"})
-_TEXT_SETTERS: Final[tuple[str, ...]] = ("content", "name", "description")
+# Every upstream spelling this module matches on -- the builders that define a
+# Skill, the loaders that find one, and the arguments each takes -- lives in
+# ``vocabulary``, which is the one file a LangChain4j upgrade is read against.
+from skillspector.langchain4j.vocabulary import (
+    CLASSPATH_SKILL_LOADER,
+    LOADER_METHODS,
+    SKILL_BUILDER,
+    SKILL_BUILDERS,
+    SKILL_LOADERS,
+    TEXT_SETTERS,
+    TOOLS_SETTER,
+)
 
-# The loaders that find a Skill on disk or on the classpath, per §3.6's table.
-_SKILL_LOADERS: Final[frozenset[str]] = frozenset({"FileSystemSkillLoader", "ClassPathSkillLoader"})
-_LOADER_METHODS: Final[frozenset[str]] = frozenset({"loadSkills", "loadSkill"})
-
-# ``ClassPathSkillLoader.loadSkills("skills")`` resolves against the Maven
-# resource root, so the same literal names a different directory than the
-# filesystem loader's would.
+# Maven's, not LangChain4j's: ``ClassPathSkillLoader.loadSkills("skills")``
+# resolves against the resource root, so the same literal names a different
+# directory than the filesystem loader's would. It changes on Maven's clock,
+# which is why it stays here rather than joining the inventory.
 _CLASSPATH_ROOT: Final[str] = "src/main/resources/"
 
 _TEXT_BLOCK_DELIMITER: Final[str] = '"""'
@@ -220,8 +225,8 @@ def _skill_builder(invocation: Node) -> str | None:
         return None
     receiver, entry_method = entry
     if entry_method == "toBuilder":
-        return "Skill"
-    return receiver if receiver in _SKILL_BUILDERS else None
+        return SKILL_BUILDER
+    return receiver if receiver in SKILL_BUILDERS else None
 
 
 def find_skill_definitions(source: str) -> list[SkillDefinition]:
@@ -235,7 +240,7 @@ def find_skill_definitions(source: str) -> list[SkillDefinition]:
         if node.type != "method_invocation":
             continue
         name_node = node.child_by_field_name("name")
-        if name_node is None or java_parser.text(name_node) not in _TEXT_SETTERS:
+        if name_node is None or java_parser.text(name_node) not in TEXT_SETTERS:
             continue
         builder = _skill_builder(node)
         if builder is None:
@@ -283,7 +288,7 @@ def find_skill_loader_calls(source: str) -> list[SkillLoaderCall]:
             continue
         method = java_parser.text(name_node)
         loader = java_parser.text(target)
-        if method not in _LOADER_METHODS or loader not in _SKILL_LOADERS:
+        if method not in LOADER_METHODS or loader not in SKILL_LOADERS:
             continue
         calls.append(
             SkillLoaderCall(
@@ -313,7 +318,7 @@ def _loader_directory(loader: str, invocation: Node, constants: dict[str, str]) 
     if literal is None:
         return None
     directory = literal.rstrip("/")
-    if loader == "ClassPathSkillLoader":
+    if loader == CLASSPATH_SKILL_LOADER:
         return f"{_CLASSPATH_ROOT}{directory}"
     return directory
 
@@ -327,7 +332,7 @@ def find_attached_tools(source: str) -> list[AttachedTools]:
         if node.type != "method_invocation":
             continue
         name_node = node.child_by_field_name("name")
-        if name_node is None or java_parser.text(name_node) != "tools":
+        if name_node is None or java_parser.text(name_node) != TOOLS_SETTER:
             continue
         if _skill_builder(node) is None:
             continue

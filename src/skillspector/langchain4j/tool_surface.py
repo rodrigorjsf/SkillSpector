@@ -41,13 +41,12 @@ from tree_sitter import Node
 
 from skillspector.langchain4j import builder_chains, java_parser
 
-_TOOL_ANNOTATION: Final[str] = "Tool"
-_ANNOTATION_TYPES: Final[frozenset[str]] = frozenset({"annotation", "marker_annotation"})
+# The upstream spelling this module matches on. The types and setters the
+# Analyzer passes to :func:`find_unset_setter` are spelled there too -- this
+# module takes a receiver and a setter as arguments and does not name them.
+from skillspector.langchain4j.vocabulary import TOOL_ANNOTATION
 
-MCP_TOOL_PROVIDER: Final[str] = "McpToolProvider"
-TOOL_FILTER_SETTER: Final[str] = "toolFilter"
-SHELL_COMMAND_CONFIG: Final[str] = "RunShellCommandToolConfig"
-WORKING_DIRECTORY_SETTER: Final[str] = "workingDirectory"
+_ANNOTATION_TYPES: Final[frozenset[str]] = frozenset({"annotation", "marker_annotation"})
 
 
 @dataclass(frozen=True)
@@ -100,7 +99,7 @@ def find_tool_annotations(source: str) -> list[ToolAnnotation]:
         if node.type not in _ANNOTATION_TYPES:
             continue
         name = node.child_by_field_name("name")
-        if name is None or java_parser.text(name) != _TOOL_ANNOTATION:
+        if name is None or java_parser.text(name) != TOOL_ANNOTATION:
             continue
         strings = _annotation_strings(node)
         if not strings:
