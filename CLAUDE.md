@@ -96,3 +96,4 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - `CONTEXT.md` `_Avoid_` terms bind docstrings and test names, not just prose.
 - Prove a snapshot change additive with `git status` after `make update-snapshots`.
 - Corpus counts are prose in six files; grep the phrasing, not just the number.
+- Commit-time CRLF warnings are harmless when `git ls-files --eol` shows `i/lf`.
