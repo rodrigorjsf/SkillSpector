@@ -1,7 +1,9 @@
 # Multi-framework skill analysis — design
 
 **Status:** design proposal, except [§4](#4-the-unchanged-behavior-gate) — the unchanged-behavior
-gate is built and merged. Nothing else described here is implemented.
+gate is built and merged — and phase 1 of [§5](#5-phasing), which landed `detect_framework` and the
+`framework` state key (issue #21). No Analyzer reads that key yet. Nothing else described here is
+implemented.
 **Goal:** extend SkillSpector to evaluate skills hosted by **LangChain4j** (Java) and
 **LangChain Deep Agents** (Python), covering both structural/best-practice conformance and
 the security analysis SkillSpector already performs.
@@ -622,9 +624,16 @@ Recorded so the reasoning is not relitigated. Each links to where it is implemen
 
 ## 9. Recommended next step
 
-**Start phase 1** — `detect_framework` plus the `framework` state key, read by nothing.
+**Start phase 2** — the gated `framework_deepagents` analyzer, the first reader of the key.
 
-The previous recommendation here was to make the behavior gate executable before any analyzer
+Phase 1 was the previous recommendation here. **That is done.** Issue #21 landed
+[`src/skillspector/framework.py`](../src/skillspector/framework.py) and the `framework` state key,
+set by `build_context` and read by nothing, with detection asserted `agent_skills` on every input
+scanned before it existed. The key is projected into the Behavior Snapshot and omitted at
+`agent_skills`, so no pre-existing snapshot changed and a future change that flips one to another
+Framework fails the gate on the key's appearance.
+
+The recommendation before that was to make the behavior gate executable before any analyzer
 work, because until it existed every phase in [§5](#5-phasing) carried an acceptance criterion
 nobody could demonstrate. **That is done.** Issue #4, sliced into #5–#9, landed the committed
 snapshot corpus in [`tests/behavior/`](../tests/behavior/): 26 fixtures, blocking in
