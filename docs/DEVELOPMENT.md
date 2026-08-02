@@ -172,6 +172,11 @@ There are no conditional edges: after `resolve_input` → `build_context`, all a
 | `mcp_least_privilege.py`, `mcp_tool_poisoning.py` | MCP analyzers (LP1–LP4 least-privilege; TP1–TP4 tool poisoning) |
 | `mcp_rug_pull.py` | MCP rug-pull analyzer (RP1–RP3): detects manifest/tool-definition changes between scans |
 | `semantic_security_discovery.py`, `semantic_developer_intent.py`, `semantic_quality_policy.py` | Semantic (LLM) analyzers; emit findings only when `use_llm` is enabled |
+| `framework_langchain4j.py` | Gated LangChain4j analyzer (L4J-SHELL): reports unsandboxed shell mode. Declines silently on every other Framework |
+| **langchain4j/** | |
+| `signals.py` | Parser-free: which files are Java or JVM build files, and the comment-aware build-file scan the analyzer gates on |
+| `java_parser.py` | The tree-sitter binding for Java. Importing this imports tree-sitter, so analyzers import it lazily |
+| `shell_skills.py` | Finds `ShellSkills` in Java source |
 
 ---
 
@@ -288,6 +293,12 @@ Use [pattern_defaults](../src/skillspector/nodes/analyzers/pattern_defaults.py) 
 ### Placeholder analyzers
 
 Return `{"findings": []}`. All analyzer nodes are currently implemented; use this pattern for any new placeholder analyzer added before its detection logic lands. The LLM-backed semantic analyzers also return `{"findings": []}` when `use_llm` is False.
+
+### Gated Framework analyzers
+
+An analyzer that only applies to one Framework gates on `state["framework"]` as its **first statement** and returns a bare `{"findings": []}` otherwise — no ledger event, no analyzer status event. That total silence is [ADR 0002](adr/0002-gated-analyzers-decline-silently.md): `finalize_ledger` builds `analyzer_statuses` from whatever status events arrive, so a `not_applicable` row would appear in `analysis_completeness` for every existing scan and churn every behavior snapshot. The gate is a convention with no enforcement; the snapshot test is what catches a breach.
+
+Anything the analyzer needs that is not a base dependency is imported **inside** the node, not at module top. A module-level import of an absent dependency breaks importing the registry itself; inside the node the failure reaches `guard_analyzer_node`, which records the analyzer as `failed` with a fatal ledger exception, so the scan exits non-zero and says why. Do not wrap that import in `try`/`except` — swallowing it is the silent failure the ordering exists to prevent. See [framework_langchain4j.py](../src/skillspector/nodes/analyzers/framework_langchain4j.py).
 
 ---
 
