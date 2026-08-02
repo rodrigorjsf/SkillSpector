@@ -289,6 +289,9 @@ produced sit together.
 3. **Nine projected keys:** `findings`, `risk_score`, `risk_severity`, `risk_recommendation`,
    `component_metadata`, `has_executable_scripts`, `manifest`, `analysis_completeness`,
    `sarif_report`.
+   *Superseded by #11:* a tenth key, `manifest_status`, was added and is carried conditionally —
+   dropped when it holds `present`. The measurement above is left as it was taken;
+   [ADR 0003](adr/0003-behavior-snapshot-projection.md) is the current statement.
 4. **Excluded, with reason:** `model_config` (environment-dependent), `report_body` (wall clock +
    absolute path), `skill_path` (absolute path), `temp_dir_for_cleanup` (absolute path).
    `file_cache` is outside the allow-list; had it been in, it would be excluded for echoing fixture
@@ -323,6 +326,12 @@ score of 48 while claiming an empty manifest.
 is to hold it still. The three family parents are containers, not Skills, and stay out of the corpus.
 The failure mode itself is tracked as its own issue — fixing it is a deliberate behavior change that
 regenerates snapshots, which is exactly the workflow the gate exists to make visible.
+
+*Resolved by #11, and it played out exactly that way:* a Scan now reports `manifest_status` beside
+the Manifest, `mcp_registry`'s snapshot regenerated alone with a one-line diff, and the other 23
+stayed byte-identical. Triage also widened the finding — the empty Manifest was an overloaded
+sentinel for **six** causes, not just the missing file. See
+`docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md` §3.7.
 
 ### `tests/integration/` tests do **not** run in `make test-unit`
 

@@ -405,10 +405,12 @@ credentials. Two of them return a scored MEDIUM verdict while reporting an empty
 | `tests/fixtures/ssd` | `{}` | 5 | 0 | 0 (LOW) |
 
 Triage then built five control directories differing only in their `SKILL.md` — absent, no fence,
-`---\n---`, a frontmatter list rather than a mapping, and invalid YAML — and **all five produced a
+`---\n---`, a declaration block parsing to a list rather than a mapping, and invalid YAML — and
+**all five produced a
 byte-identical signature**: `manifest == {}`, with `manifest_absent` as the Inspection Ledger reason
-code. The empty manifest was an overloaded sentinel for five distinct causes, not one, and the
-absence of a Skill was indistinguishable from a Skill whose declaration failed to parse.
+code. The empty manifest was an overloaded sentinel for those five causes plus a sixth the controls
+could not produce portably — a file that exists but raises on read — and the absence of a Skill was
+indistinguishable from a Skill whose declaration failed to parse.
 
 **Fixed additively.** A Scan now carries `manifest_status` beside `manifest`
 (`src/skillspector/manifest_status.py`), taking one of `present`, `empty`, `unparseable`,
