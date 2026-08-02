@@ -15,16 +15,14 @@
 
 """``skillspector.langchain4j.vocabulary`` is the only home for an upstream spelling.
 
-The property asserted here -- "this literal exists nowhere else" -- has no
-behavioral manifestation, so no existing seam can observe it. A LangChain4j
-release that renames a type breaks a Rule *silently*: the Scan succeeds, the
-Analyzer reports itself as having run, and the report reads as clean. Keeping
-the spellings in one file is what makes that rename a one-file edit, and this
-module is what keeps them there.
+Why the inventory exists is
+``docs/adr/0005-langchain4j-upstream-vocabulary.md``. Why it needs a test of its
+own is that the property -- "this literal exists nowhere else" -- has no
+behavioral manifestation, so no existing seam can observe it.
 
-Read as source text rather than as imported values because the leak being
-guarded against is a source-level one: a contributor writing ``"ShellSkills"``
-inline is not observable from the outside.
+Read as source text rather than as imported values for the same reason: a
+contributor writing ``"ShellSkills"`` inline produces working code, and nothing
+about the running system looks different.
 
 **Scope of the assertion.** A spelling is caught when it is written as a literal
 of its own -- the shape a matcher takes, and the shape every leak this Spec

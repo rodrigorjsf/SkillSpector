@@ -74,8 +74,11 @@ from __future__ import annotations
 
 from typing import Final
 
-# The releases the sweep covered. Every spelling below was observed across this
-# whole range unless its own comment narrows it.
+# The releases the sweep covered. Every *identifier* below -- the types, methods
+# and builder arguments -- was observed across this whole range unless its own
+# comment narrows it. The three entries under "Framework detection signals" are
+# not identifiers and were not observed that way; their own section says how
+# they were established instead.
 OBSERVED_VERSION_RANGE: Final[tuple[str, str]] = ("1.12.1-beta21", "1.18.1-beta28")
 
 
@@ -115,6 +118,10 @@ LOADER_METHODS: Final[frozenset[str]] = frozenset({LOAD_SKILLS_METHOD, LOAD_SKIL
 # the Maven resource root. The ``skills/`` segment is LangChain4j's convention;
 # the prefix is Maven's, which is why the bare resource root is not inventoried
 # here and stays with the module that resolves classpath loader paths.
+#
+# A documented convention rather than a class identifier, so the release sweep
+# did not observe it either: it is upstream's own example layout under "From the
+# classpath", unchanged across every capture of that page.
 CLASSPATH_SKILL_LAYOUT: Final[str] = "src/main/resources/skills/"
 
 
@@ -150,6 +157,13 @@ TOOL_FILTER_SETTER: Final[str] = "toolFilter"
 # Read by ``skillspector.framework`` as well as by this package. Detection and
 # Analyzer applicability stay separate predicates; the *spelling* of a package
 # name is one fact, not two.
+#
+# Upstream: the ``<groupId>`` of every dependency block under "Creating skills",
+# and the imports of every example on that page. Unlike the entries above these
+# are not class identifiers, so the class-listing sweep across the 17 releases
+# did not observe them; they were read from the captured documentation and from
+# the published Maven coordinates of both artifacts, which have carried this
+# group id since their first release.
 
 # The Maven group id, as it appears in a build file's dependency block.
 GROUP_COORDINATE: Final[str] = "dev.langchain4j"

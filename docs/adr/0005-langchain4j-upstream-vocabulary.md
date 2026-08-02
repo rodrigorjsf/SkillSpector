@@ -88,8 +88,11 @@ This does not reopen the deliberate decoupling between detection and Analyzer ap
 in `skillspector.langchain4j.signals`. What that decision defends is the duplication of the
 *predicates* — "is this tree LangChain4j at all" versus "which of its files do I open" — and those
 stay separate. The spelling of a package name is one fact, not two, and a rename that reached only
-one of the two would leave the other matching nothing in silence. Both module docstrings now say so
-explicitly, so the consolidation is not later mistaken for a reversal.
+one of the two would leave the other matching nothing in silence.
+
+`signals.py`'s docstring — the one that recorded the decoupling — now says so; `framework.py`
+carries the same note at the import itself, where a reader meets the coupling. The consolidation is
+therefore not later mistaken for a reversal.
 
 `vocabulary` is import-free and parser-free, which is what makes this safe: detection runs on every
 Scan, and the Analyzer decides applicability before reaching for tree-sitter. An import in
@@ -100,11 +103,21 @@ assert it directly, in a subprocess, with importing a Rule module as the control
 
 **`repository_scan.py` is a known gap.** `DISCOVERY_ROOTS` names `src/main/resources/skills`
 alongside the Agent Skills and Deep Agents layouts, so a LangChain4j layout rename would silently
-stop Repository Scan discovering Skills there. It is not inventoried and not guarded, because it
-sits in a three-Framework table where coupling one row to a LangChain4j module would invert the
-dependency and give a cross-cutting module a Framework-specific import. The enforcement test's file
-set therefore stops at the LangChain4j-coupled modules. Revisit when the Deep Agents Analyzer lands
-and the same question arises for its layout.
+stop Repository Scan discovering Skills there.
+
+It is not inventoried, and the reason is the literal rather than the dependency direction —
+`framework.py` is a three-Framework module too, and it imports from `vocabulary` without trouble.
+Repository Scan's entry has **no trailing slash**: it is matched as a path suffix at any depth,
+where detection matches `src/main/resources/skills/` as a substring. They are two shapes of one
+convention, not one spelling in two files. Consolidating them means either editing a literal —
+which this change cannot do, since its entire proof is that no Behavior Snapshot moved — or
+inventorying a second spelling for the same convention and explaining why there are two.
+
+The enforcement test's file set therefore stops at the LangChain4j-coupled modules, and the honest
+consequence is that adding `repository_scan.py` to it today would **not** flag the existing copy:
+the guard matches literals exactly, and the two literals differ. Revisit when the Deep Agents
+Analyzer lands and the same question arises for its layout — that is the point at which one
+inventory per Framework, and a discovery table composed from all of them, becomes worth the churn.
 
 **The enforcement test catches a spelling written as a literal of its own, not one embedded in a
 longer string.** That is the shape a matcher takes, and the shape every leak this change relocated
@@ -112,6 +125,14 @@ had. Containment was measured and rejected: the Finding messages in `framework_l
 legitimately quote type names in prose — *"McpToolProvider is built without a toolFilter"* — and
 containment cannot tell a quoted name from a matcher. Regex-escaped forms *are* caught, so
 recomposing `re.compile(r"dev\.langchain4j")` inline fails the same way the plain spelling does.
+
+**A leak fails the build; a stale identifier still does not.** The guard fires when a spelling is
+written inline, which is what keeps the inventory whole. It cannot fire when upstream renames
+`ShellSkills` and the inventory still says `ShellSkills` — every test passes, `L4J-SHELL` stops
+matching, and the report reads as clean. That is the failure this record opened with, and this
+decision does not close it: it reduces the fix to one line and gives a maintainer one file to read
+against a release. Detecting that the rename happened is issue #45; re-measuring the stability claim
+on a schedule is issue #46. Neither should be read as delivered here.
 
 **This change altered no behavior, and that is its proof.** No Rule logic changed, no Rule was added
 or removed, no Finding changed. Regenerating the Behavior Snapshot corpus left the working tree
