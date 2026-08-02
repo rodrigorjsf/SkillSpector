@@ -2,6 +2,13 @@
 
 > **Source:** <https://docs.langchain4j.dev/tutorials/skills/>
 > **Captured:** 2026-08-01
+>
+> **Verified:** 2026-08-02 — re-fetched from `Source:` to confirm the two specification
+> citations under [Modes](#modes) are upstream's own wording, and they are; this capture
+> does not misquote LangChain4j. Scope: that check only, not a re-comparison of the whole
+> capture. See
+> [The two "integration approaches" are not specification vocabulary](#the-two-integration-approaches-are-not-specification-vocabulary).
+>
 > **Upstream status:** *The Skills API is experimental. APIs and behavior may still change
 > in future releases.* Artifact versions below are `1.18.1-beta28` as published at capture
 > time.
@@ -137,7 +144,7 @@ and trust is needed.
 ### Tool mode (recommended)
 
 Class: `Skills` (from `langchain4j-skills`). Corresponds to the *tool-based agents*
-integration approach in the Agent Skills specification.
+integration approach in the Agent Skills specification.[^approach]
 
 The LLM activates a skill to receive step-by-step instructions, then carries them out by
 calling tools registered explicitly. **The LLM has no access to the file system at
@@ -316,7 +323,7 @@ merge into a single set of skill-scoped tools.
 ### Shell mode (experimental)
 
 Class: `ShellSkills` (from `langchain4j-experimental-skills-shell`). Corresponds to the
-*filesystem-based agents* integration approach in the Agent Skills specification.
+*filesystem-based agents* integration approach in the Agent Skills specification.[^approach]
 
 > **Upstream warning.** Shell execution is inherently unsafe. Commands run directly in the
 > host process environment **without any sandboxing, containerization, or privilege
@@ -442,3 +449,59 @@ chain, so a manifest-only reading of a LangChain4j skill understates its true pr
 
 See [MULTI_FRAMEWORK_SKILL_ANALYSIS.md](../MULTI_FRAMEWORK_SKILL_ANALYSIS.md) for how these
 are proposed to be wired without altering existing scan behavior.
+
+### The two "integration approaches" are not specification vocabulary
+
+Upstream introduces each mode above by saying it "corresponds to the *tool-based agents*" or
+"*filesystem-based agents* integration approach in the Agent Skills specification". **The
+specification defines no such approaches, and has not in any published revision of the page
+at its source.** Treat the correspondence as
+upstream LangChain4j's own framing, not as a normative mapping that can be cited back to the
+specification.
+
+Checked 2026-08-02 against the published sources:
+
+| Checked | Result |
+|---------|--------|
+| `https://agentskills.io/specification.md`, fetched fresh | Neither phrase, nor "integration approach", appears |
+| All 15 commits of `docs/specification.mdx` in `agentskills/agentskills`, from the first (2025-12-18) to current head (2026-05-16) | Zero occurrences in every revision |
+| All 9 pages listed in `https://agentskills.io/llms.txt` | Zero occurrences site-wide |
+| Anthropic's own Agent Skills overview (`platform.claude.com`) | Names no pair of integration approaches |
+
+So [agent-skills-specification.md](agent-skills-specification.md) is **not** a partial
+capture — the vocabulary is absent upstream too, which was the open question in
+[issue #49](https://github.com/rodrigorjsf/SkillSpector/issues/49).
+
+**Where the axis actually lives upstream.** The distinction itself is real; it is documented
+outside the specification, in the client-implementation guide
+(`https://agentskills.io/client-implementation/adding-skills-support`), § *Step 4: Activate
+skills* → *Model-driven activation*, which names "two implementation patterns":
+
+- **Dedicated tool activation** — a registered tool takes a skill name and returns the
+  content. This is Tool mode. The guide's own example tool is named `activate_skill`, which
+  is the tool LangChain4j registers, so the two descriptions line up on the detail that
+  matters.
+- **File-read activation** — the model calls its standard file-read tool with the `SKILL.md`
+  path from the catalog. This is the nearest counterpart to Shell mode, though not a precise
+  one: LangChain4j hands the model a general `run_shell_command` rather than a file-read
+  tool, so reading `SKILL.md` is one use of a broader capability. That gap is the whole
+  security story — see the upstream warning quoted above.
+
+That guide is the citable source for this axis. Note that it is a guide, not normative
+specification text, so a rule keyed to the distinction cannot claim specification backing.
+A search for that section vocabulary does surface it, but on third-party renderings rather
+than on upstream's own pages — DeepWiki's auto-generated wiki of the
+`agentskills/agentskills` repository carries sections named "Tool-Based Integration" and
+"Filesystem-Based Integration". No claim is made here about where LangChain4j drew the
+wording from; the checks above establish only that the specification is not its source.
+
+For SkillSpector the axis is still the security-relevant one, and it is already captured
+under names that do not borrow the disputed vocabulary: the `ShellSkills` row in the
+detection table above is exactly the filesystem/shell side, and it is flagged on the
+strength of upstream's own unsandboxed-execution warning rather than on any specification
+mapping.
+
+[^approach]: This correspondence is upstream LangChain4j's own claim, not a mapping the
+    Agent Skills specification defines — see
+    [The two "integration approaches" are not specification vocabulary](#the-two-integration-approaches-are-not-specification-vocabulary)
+    for the verification.

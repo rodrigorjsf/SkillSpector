@@ -27,6 +27,29 @@ Python `create_deep_agent` arguments) where the security-relevant configuration 
 - A **"Relevance to SkillSpector"** section at the end of each file maps upstream rules
   to concrete detection opportunities. That section is SkillSpector's own analysis, not
   upstream content.
+- An optional **`Verified:`** line in the front-matter block records a date on which the
+  capture was re-checked against upstream and found still accurate. It is deliberately
+  distinct from `Captured:`, which changes only on an actual re-capture — a `Verified:`
+  date means the content was confirmed unchanged, not refreshed. Bumping `Captured:`
+  without re-capturing would misreport when this text was taken.
+- **A `Verified:` line must state what was checked.** Re-verification is nearly always
+  partial — a heading comparison, one field, a single disputed sentence — and a bare
+  "verified" reads as a full re-audit nobody performed. Name the scope and the limit, so a
+  later reader can tell what still rests on the original capture. These files are cited as
+  primary sources when analyzers are written; an overstated line here is exactly the drift
+  this directory exists to prevent.
+
+## Upstream cross-citations are claims, not facts
+
+These files quote Frameworks that cite *each other* — most often the Agent Skills
+specification, which both LangChain4j and Deep Agents name as the convention they follow.
+Such a citation is upstream's assertion and can be wrong. Before relying on one, check it
+against the cited capture. When it does not hold, annotate the citing file rather than
+silently rewriting upstream's words, so the capture stays faithful and the correction stays
+visible.
+
+One such citation has been checked and does not hold; the finding is recorded once, in
+[langchain4j-skills.md § The two "integration approaches" are not specification vocabulary](langchain4j-skills.md#the-two-integration-approaches-are-not-specification-vocabulary).
 
 ## Refreshing
 
@@ -41,5 +64,13 @@ curl -sSL https://docs.langchain.com/oss/python/deepagents/skills.md
 curl -sSL https://docs.langchain4j.dev/tutorials/skills/ | lynx -dump -nolist -stdin
 ```
 
-Update the capture date in the file's front-matter block and in the table above.
+Update the capture date in the file's front-matter block and in the table above. Drop any
+stale `Verified:` line at the same time — it describes the text being replaced.
 LangChain4j's Skills API is marked experimental upstream — expect it to drift.
+
+**A re-capture overwrites annotations. Re-apply them.** These commands emit upstream
+content only, so they discard the "Relevance to SkillSpector" section and every editorial
+marker attached to the body — today that means the `[^approach]` footnote markers in
+`langchain4j-skills.md` and their definition. Diff the fresh capture against the committed
+file rather than replacing it wholesale, and carry the annotations across. An annotation
+silently lost in a refresh restores the very citation it was written to correct.

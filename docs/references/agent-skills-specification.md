@@ -2,6 +2,12 @@
 
 > **Source:** <https://agentskills.io/specification>
 > **Captured:** 2026-08-01
+>
+> **Verified:** 2026-08-02 — re-fetched from `Source:`. Every heading on the upstream page
+> is present here, so this capture is not partial, and `allowed-tools` is still specified
+> as a space-separated string. Scope of that check: a heading-level comparison plus that
+> one spot check, not a line-by-line re-audit of every normative claim.
+>
 > **Status:** normative. This is the shared format both LangChain4j Skills and
 > LangChain Deep Agents defer to, and the format SkillSpector's `SKILL.md`
 > manifest parser already targets.
@@ -270,3 +276,19 @@ are recorded in
 In short: a real scan producing a wrong LP1/LP3/LP4 verdict on a space-separated
 `allowed-tools` value, a user-reported false negative or positive traced to this parsing, or
 upstream changing it first.
+
+### What this specification does not define
+
+The specification defines how a Skill is laid out and declared — directory structure, the
+Manifest fields, and authoring guidance. It says nothing about how a host agent wires
+Skills in, and in particular it defines **no named integration approaches**. If you came
+here looking for
+"tool-based agents" or "filesystem-based agents" because
+[langchain4j-skills.md](langchain4j-skills.md) cites the specification for them, the terms
+are absent by fact, not by omission in this capture — that citation is upstream
+LangChain4j's own framing, verified and documented in
+[langchain4j-skills.md § The two "integration approaches" are not specification vocabulary](langchain4j-skills.md#the-two-integration-approaches-are-not-specification-vocabulary).
+
+Host-side integration is covered by a separate, non-normative upstream guide,
+`https://agentskills.io/client-implementation/adding-skills-support`. Do not cite this
+specification for a claim that only that guide supports.

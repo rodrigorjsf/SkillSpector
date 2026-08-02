@@ -130,3 +130,5 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - New fixtures also need a `DETECTION_FIXTURES` row in `test_framework_detection.py`.
 - After shipping, grep docs for text still claiming the feature is unbuilt.
 - Truncated subagent result: resume it with `SendMessage`, never re-run it.
+- `gh api search/code` matches terms, not phrases; use WebSearch for exact phrases.
+- `agentskills.io/llms.txt` lists every spec page; grep all before claiming absence.
