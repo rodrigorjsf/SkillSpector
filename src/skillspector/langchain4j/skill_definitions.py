@@ -39,12 +39,11 @@ from typing import Final
 
 from tree_sitter import Node
 
-from skillspector.langchain4j import java_parser
+from skillspector.langchain4j import builder_chains, java_parser
 
 # The builders that define a Skill, and the argument of each that carries text a
 # model reads. ``relativePath`` is not one: it names a file, not instructions.
 _SKILL_BUILDERS: Final[frozenset[str]] = frozenset({"Skill", "SkillResource"})
-_BUILDER_ENTRY_METHODS: Final[frozenset[str]] = frozenset({"builder", "toBuilder"})
 _TEXT_SETTERS: Final[tuple[str, ...]] = ("content", "name", "description")
 
 # The loaders that find a Skill on disk or on the classpath, per §3.6's table.
@@ -208,42 +207,21 @@ def _resolve(argument: Node, constants: dict[str, str]) -> str | None:
     return None
 
 
-def _sole_argument(invocation: Node) -> Node | None:
-    """The single argument of an invocation, or ``None`` if it takes another count."""
-    arguments = invocation.child_by_field_name("arguments")
-    if arguments is None:
-        return None
-    values = [child for child in arguments.children if child.type not in ("(", ")", ",")]
-    return values[0] if len(values) == 1 else None
+def _skill_builder(invocation: Node) -> str | None:
+    """Which Skill builder the chain holding *invocation* starts from, if any.
 
-
-def _chain_root(invocation: Node) -> tuple[str, str] | None:
-    """The ``(type, entry method)`` a builder chain starts from.
-
-    ``Skill.builder().name(...).content(...)`` nests left, so the chain is walked
-    by following each invocation's object down to the ``Skill.builder()`` at the
-    bottom. Returns ``None`` for a chain that is not a Skill builder.
+    ``skill.toBuilder()`` receives an already-built Skill, so the builder's type
+    comes from the value rather than from the name the variable happens to be
+    spelled with -- which is why the generic walk reports the receiver text and
+    this function, not that walk, decides what it means.
     """
-    current: Node | None = invocation
-    while current is not None and current.type == "method_invocation":
-        name = current.child_by_field_name("name")
-        target = current.child_by_field_name("object")
-        if (
-            name is not None
-            and java_parser.text(name) in _BUILDER_ENTRY_METHODS
-            and target is not None
-        ):
-            entry = java_parser.text(name)
-            if entry == "toBuilder":
-                # ``skill.toBuilder()`` -- the receiver is an already-built Skill,
-                # so the builder's type comes from the value, not from the name
-                # the variable happens to be spelled with.
-                return "Skill", entry
-            if target.type == "identifier":
-                return java_parser.text(target), entry
-            return None
-        current = target
-    return None
+    entry = builder_chains.chain_entry(invocation)
+    if entry is None:
+        return None
+    receiver, entry_method = entry
+    if entry_method == "toBuilder":
+        return "Skill"
+    return receiver if receiver in _SKILL_BUILDERS else None
 
 
 def find_skill_definitions(source: str) -> list[SkillDefinition]:
@@ -259,16 +237,16 @@ def find_skill_definitions(source: str) -> list[SkillDefinition]:
         name_node = node.child_by_field_name("name")
         if name_node is None or java_parser.text(name_node) not in _TEXT_SETTERS:
             continue
-        chain = _chain_root(node)
-        if chain is None or chain[0] not in _SKILL_BUILDERS:
+        builder = _skill_builder(node)
+        if builder is None:
             continue
-        argument = _sole_argument(node)
+        argument = builder_chains.sole_argument(node)
         if argument is None:
             continue
         # Chains are keyed by their own start position, so two Skills built in
         # one statement stay two Skills.
-        key = (node.start_point[0], _chain_start_column(node))
-        builders[key] = chain[0]
+        key = (node.start_point[0], builder_chains.chain_start(node))
+        builders[key] = builder
         argument_line = java_parser.line(argument)
         is_text_block = java_parser.text(argument).startswith(_TEXT_BLOCK_DELIMITER)
         by_root.setdefault(key, []).append(
@@ -288,22 +266,6 @@ def find_skill_definitions(source: str) -> list[SkillDefinition]:
         )
         for key, arguments in sorted(by_root.items())
     ]
-
-
-def _chain_start_column(invocation: Node) -> int:
-    """The start byte of the chain *invocation* belongs to.
-
-    Two chains on the same line are distinguished by where each begins, which is
-    the position of the outermost object once the chain has been walked down.
-    """
-    current: Node | None = invocation
-    while (
-        current is not None
-        and current.type == "method_invocation"
-        and current.child_by_field_name("object") is not None
-    ):
-        current = current.child_by_field_name("object")
-    return int(current.start_byte) if current is not None else 0
 
 
 def find_skill_loader_calls(source: str) -> list[SkillLoaderCall]:
@@ -340,11 +302,11 @@ def _loader_directory(loader: str, invocation: Node, constants: dict[str, str]) 
     ``Path.of("skills/")`` is unwrapped: the filesystem loader takes a ``Path``,
     so the literal is one call deeper than the classpath loader's.
     """
-    argument = _sole_argument(invocation)
+    argument = builder_chains.sole_argument(invocation)
     if argument is None:
         return None
     if argument.type == "method_invocation":
-        argument = _sole_argument(argument)
+        argument = builder_chains.sole_argument(argument)
         if argument is None:
             return None
     literal = _resolve(argument, constants)
@@ -367,8 +329,7 @@ def find_attached_tools(source: str) -> list[AttachedTools]:
         name_node = node.child_by_field_name("name")
         if name_node is None or java_parser.text(name_node) != "tools":
             continue
-        chain = _chain_root(node)
-        if chain is None or chain[0] not in _SKILL_BUILDERS:
+        if _skill_builder(node) is None:
             continue
         attached.append(
             AttachedTools(line=java_parser.line(node), type_name=_constructed_type(node))
@@ -378,7 +339,7 @@ def find_attached_tools(source: str) -> list[AttachedTools]:
 
 def _constructed_type(invocation: Node) -> str | None:
     """The class name of a sole ``new X()`` argument, or ``None``."""
-    argument = _sole_argument(invocation)
+    argument = builder_chains.sole_argument(invocation)
     if argument is None or argument.type != "object_creation_expression":
         return None
     for child in argument.children:

@@ -74,9 +74,30 @@ logger = get_logger(__name__)
 
 _RULE_ID = "L4J-SHELL"
 _UNRESOLVED_RULE_ID = "L4J-UNRESOLVED"
+_TOOL_DESC_RULE_ID = "L4J-TOOL-DESC"
+_MCP_FILTER_RULE_ID = "L4J-MCP-FILTER"
+_WORKDIR_RULE_ID = "L4J-WORKDIR"
 _TAGS = ["ASI02"]
 _SEVERITY = "HIGH"
 _UNRESOLVED_SEVERITY = "MEDIUM"
+_TOOL_SURFACE_SEVERITY = "MEDIUM"
+
+# Each of the three is a fact about the shape of the source -- an annotation
+# carrying prose, a setter never called -- rather than an inference from it.
+_TOOL_SURFACE_CONFIDENCE = 0.9
+
+_TOOL_DESC_MESSAGE = (
+    "A @Tool description carries instructions rather than describing the tool. The model reads "
+    "this text as guidance, so it is a prompt-injection surface sitting in an annotation."
+)
+_MCP_FILTER_MESSAGE = (
+    "McpToolProvider is built without a toolFilter, so every tool the MCP server exposes reaches "
+    "the agent rather than a scoped subset."
+)
+_WORKDIR_MESSAGE = (
+    "RunShellCommandToolConfig is built without a workingDirectory, so commands run in the JVM's "
+    "own working directory -- usually the application root."
+)
 
 # What a non-literal argument means depends on which one it is, so the Finding
 # says so rather than making every unresolved argument read the same.
@@ -209,6 +230,69 @@ def _scan_resolved_content(
     return relocated
 
 
+def _carries_instructions(text: str) -> bool:
+    """Whether *text* reads as instructions to a model rather than as description.
+
+    Judged by the content Rules already in the catalogue rather than by a new
+    list of phrases here. "Instruction-like" is exactly the thing those Rules
+    were written to recognize, and a second definition of it would drift from
+    theirs and disagree with the report.
+    """
+    from skillspector.nodes.analyzers.static_runner import run_static_patterns  # noqa: PLC0415
+
+    return bool(
+        run_static_patterns(
+            {"components": ["tool/SKILL.md"], "file_cache": {"tool/SKILL.md": text}},
+            _content_pattern_modules(),
+        )
+    )
+
+
+def _tool_surface_findings(path: str, source: str) -> list[Finding]:
+    """The three Rules over an application's tool wiring."""
+    from skillspector.langchain4j import tool_surface  # noqa: PLC0415
+
+    findings = [
+        _finding(
+            _TOOL_DESC_RULE_ID,
+            path,
+            annotation.line,
+            _TOOL_DESC_MESSAGE,
+            _TOOL_SURFACE_CONFIDENCE,
+            severity=_TOOL_SURFACE_SEVERITY,
+        )
+        for annotation in tool_surface.find_tool_annotations(source)
+        if _carries_instructions(annotation.description)
+    ]
+
+    for rule_id, receiver, setter, message in (
+        (
+            _MCP_FILTER_RULE_ID,
+            tool_surface.MCP_TOOL_PROVIDER,
+            tool_surface.TOOL_FILTER_SETTER,
+            _MCP_FILTER_MESSAGE,
+        ),
+        (
+            _WORKDIR_RULE_ID,
+            tool_surface.SHELL_COMMAND_CONFIG,
+            tool_surface.WORKING_DIRECTORY_SETTER,
+            _WORKDIR_MESSAGE,
+        ),
+    ):
+        findings.extend(
+            _finding(
+                rule_id,
+                path,
+                unset.line,
+                message,
+                _TOOL_SURFACE_CONFIDENCE,
+                severity=_TOOL_SURFACE_SEVERITY,
+            )
+            for unset in tool_surface.find_unset_setter(source, receiver, setter)
+        )
+    return findings
+
+
 def _skill_definition_findings(path: str, source: str) -> list[Finding]:
     """``L4J-UNRESOLVED`` for what Java hides, content Findings for what it shows."""
     from skillspector.langchain4j import skill_definitions  # noqa: PLC0415
@@ -320,6 +404,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
                 _finding(_RULE_ID, path, usage_line, _WIRING_MESSAGE, _WIRING_CONFIDENCE)
             )
         inspected[path].extend(_skill_definition_findings(path, source))
+        inspected[path].extend(_tool_surface_findings(path, source))
 
     for path, declaration_line in shell_declarations.items():
         inspected.setdefault(path, []).append(
