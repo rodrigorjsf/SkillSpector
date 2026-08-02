@@ -32,6 +32,34 @@ default on a fork, so pass `--repo rodrigorjsf/SkillSpector` whenever the target
 - **Conventional Commits, strictly** — `type(scope): subject`, imperative mood, no trailing period. Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `build`, `ci`. Breaking changes use `!` after the scope and a `BREAKING CHANGE:` footer.
 - Every commit needs a `Signed-off-by:` trailer — use `git commit -s`. CI's DCO job walks each commit in the PR range and fails without it.
 
+## Pull requests
+
+**Only call a PR ready — or recommend merging it — once everything that belongs in it is
+finished.** Not started, not queued, not "running in the background": finished, with its output
+read. Before saying it is ready, all of these must be true.
+
+- **Validations green.** `make test-unit`, `make lint`, `make format-check`, and
+  `make update-snapshots` leaving the tree clean.
+- **Reviews closed out.** Every review or adversarial pass complete, with each finding either
+  fixed on the branch or written into the PR body as a deliberate deferral.
+- **Subagents finished.** A background subagent is unfinished work, not a parallel activity the
+  merge can race. Wait for it and read its result — one has already caught a defect after the PR
+  was green and the human had been told to merge.
+- **Nothing left to add.** A `CLAUDE.md` edit, an Applied Learning bullet, or a documentation
+  correction the work exposed rides **this** PR. Never a follow-up.
+- **CI verified against the right commit.** `gh pr checks` must be green on a `headRefOid` equal
+  to `git rev-parse HEAD`, with `state` still `OPEN`.
+
+If anything is outstanding, say what it is instead of saying the PR is ready. A human merges on
+that word, and a merged PR ignores later pushes — a commit that lands afterwards is lost from
+`main` and costs a second PR to recover.
+
+**Every merged PR leaves an orphan branch. Delete it, local and remote.**
+`delete_branch_on_merge` is off on this repository, so nothing is cleaned up automatically and
+merged branches accumulate. `gh pr merge --delete-branch` handles both sides when the agent does
+the merge; when a human merges, delete it afterwards with `git branch -d` and
+`git push origin --delete <branch>`. A merge is not closed out until its branch is gone.
+
 ## Spec execution workflow
 
 Applies whenever a Spec — a parent issue plus its child Tickets, as published by `/to-spec` — is
@@ -100,3 +128,4 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - Commit-time CRLF warnings are harmless when `git ls-files --eol` shows `i/lf`.
 - Faking an absent module needs `delattr` on the package, not just `sys.modules`.
 - New fixtures also need a `DETECTION_FIXTURES` row in `test_framework_detection.py`.
+- After shipping, grep docs for text still claiming the feature is unbuilt.
