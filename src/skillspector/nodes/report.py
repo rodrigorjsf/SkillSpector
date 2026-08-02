@@ -38,6 +38,7 @@ from skillspector import __version__ as skillspector_version
 from skillspector.inspection_ledger import AnalysisCompleteness
 from skillspector.llm_utils import is_llm_available
 from skillspector.logging_config import get_logger
+from skillspector.manifest_status import MANIFEST_STATUS_MESSAGES, ManifestStatus
 from skillspector.models import Finding
 from skillspector.nodes.deduplicate import deduplicate
 from skillspector.sarif_models import (
@@ -462,12 +463,14 @@ def _format_terminal(
     show_suppressed: bool = False,
     analysis_completeness: Mapping[str, object] | None = None,
     execution_successful: bool = True,
+    manifest_status: ManifestStatus = ManifestStatus.PRESENT,
 ) -> str:
     """Generate Rich terminal output and export as string."""
     suppressed = suppressed or []
     console = Console(record=True, force_terminal=True, width=80, file=StringIO())
     skill_name = (manifest.get("name") or "unknown") if manifest else "unknown"
     source = skill_path or ""
+    manifest_notice = _manifest_status_notice(manifest_status)
 
     console.print()
     console.print(
@@ -479,6 +482,11 @@ def _format_terminal(
     console.print(f"\n[bold]Skill:[/bold] {skill_name}")
     console.print(f"[bold]Source:[/bold] {source}")
     console.print(f"[bold]Scanned:[/bold] {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}")
+    if manifest_notice:
+        console.print(
+            f"[bold]Manifest:[/bold] [yellow]{escape(manifest_status.value)}[/yellow] - "
+            f"{escape(manifest_notice)}"
+        )
 
     severity_colors = {
         "LOW": "green",
@@ -598,6 +606,30 @@ def _llm_degradation_notice(
     )
 
 
+def _resolve_manifest_status(value: object) -> ManifestStatus:
+    """Read a Manifest status off state, defaulting to ``present``.
+
+    A state assembled by hand -- as many tests and API callers do -- carries no
+    status. Defaulting to ``present`` keeps their reports byte-identical: the
+    notice only ever appears for a value the Scan actually measured.
+    """
+    try:
+        return ManifestStatus(value)
+    except ValueError:
+        return ManifestStatus.PRESENT
+
+
+def _manifest_status_notice(manifest_status: ManifestStatus) -> str | None:
+    """Return the reader-facing sentence for a Manifest status, or None.
+
+    ``present`` returns None: a Skill that declares a Manifest reports exactly
+    what it reported before this notice existed.
+    """
+    if manifest_status is ManifestStatus.PRESENT:
+        return None
+    return MANIFEST_STATUS_MESSAGES[manifest_status]
+
+
 def _build_metadata(
     has_executable_scripts: bool,
     use_llm: bool,
@@ -654,16 +686,22 @@ def _format_json(
     analysis_completeness: Mapping[str, object] | None = None,
     suppressed: list[SuppressedFinding] | None = None,
     execution_successful: bool = True,
+    manifest_status: ManifestStatus = ManifestStatus.PRESENT,
 ) -> str:
     """Generate JSON report string."""
     suppressed = suppressed or []
     skill_name = (manifest.get("name") or "unknown") if manifest else "unknown"
+    skill: dict[str, object] = {
+        "name": skill_name,
+        "source": skill_path or "",
+        "scanned_at": datetime.now(UTC).isoformat(),
+    }
+    manifest_notice = _manifest_status_notice(manifest_status)
+    if manifest_notice:
+        skill["manifest_status"] = manifest_status.value
+        skill["manifest_status_detail"] = manifest_notice
     data: dict[str, object] = {
-        "skill": {
-            "name": skill_name,
-            "source": skill_path or "",
-            "scanned_at": datetime.now(UTC).isoformat(),
-        },
+        "skill": skill,
         "risk_assessment": {
             "score": risk_score,
             "severity": risk_severity,
@@ -763,17 +801,24 @@ def _format_markdown(
     show_suppressed: bool = False,
     analysis_completeness: Mapping[str, object] | None = None,
     execution_successful: bool = True,
+    manifest_status: ManifestStatus = ManifestStatus.PRESENT,
 ) -> str:
     """Generate Markdown report string."""
     suppressed = suppressed or []
     lines: list[str] = []
     skill_name = (manifest.get("name") or "unknown") if manifest else "unknown"
     source = skill_path or ""
+    manifest_notice = _manifest_status_notice(manifest_status)
 
     lines.append("# SkillSpector Security Report\n")
     lines.append(f"**Skill:** {skill_name}  ")
     lines.append(f"**Source:** `{source}`  ")
     lines.append(f"**Scanned:** {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}  ")
+    if manifest_notice:
+        lines.append(
+            f"**Manifest:** {_markdown_cell(manifest_status.value)} - "
+            f"{_markdown_cell(manifest_notice)}  "
+        )
     lines.append("")
 
     degraded_notice = _llm_degradation_notice(use_llm, llm_call_log or [])
@@ -890,6 +935,7 @@ def report(state: SkillspectorState) -> dict[str, object]:
     file_cache = state.get("file_cache") or {}
     has_executable_scripts = state.get("has_executable_scripts", False)
     manifest = state.get("manifest") or {}
+    manifest_status = _resolve_manifest_status(state.get("manifest_status"))
     skill_path = state.get("skill_path")
     output_format = state.get("output_format") or "sarif"
     use_llm = state.get("use_llm", True)
@@ -956,6 +1002,7 @@ def report(state: SkillspectorState) -> dict[str, object]:
             show_suppressed=show_suppressed,
             analysis_completeness=analysis_completeness,
             execution_successful=execution_successful,
+            manifest_status=manifest_status,
         )
     elif output_format == "json":
         report_body = _format_json(
@@ -972,6 +1019,7 @@ def report(state: SkillspectorState) -> dict[str, object]:
             analysis_completeness=analysis_completeness,
             suppressed=suppressed,
             execution_successful=execution_successful,
+            manifest_status=manifest_status,
         )
     elif output_format == "markdown":
         report_body = _format_markdown(
@@ -989,6 +1037,7 @@ def report(state: SkillspectorState) -> dict[str, object]:
             show_suppressed=show_suppressed,
             analysis_completeness=analysis_completeness,
             execution_successful=execution_successful,
+            manifest_status=manifest_status,
         )
     else:
         report_body = json.dumps(sarif_report, indent=2)

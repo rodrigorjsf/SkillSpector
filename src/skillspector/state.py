@@ -27,6 +27,7 @@ from skillspector.inspection_ledger import (
     AnalyzerStatusEvent,
     InspectionLedgerEvent,
 )
+from skillspector.manifest_status import ManifestStatus
 from skillspector.models import Finding
 
 
@@ -60,6 +61,11 @@ class SkillspectorState(TypedDict, total=False):
     file_cache: dict[str, str]
     ast_cache: dict[str, str]
     manifest: dict[str, object]
+    # Why `manifest` holds what it holds: an empty dict alone cannot say whether
+    # the Skill declared nothing, failed to parse, or was never there at all.
+    # Additive -- `manifest` keeps its type and contents. See
+    # skillspector.manifest_status.
+    manifest_status: ManifestStatus
     previous_manifest: dict[str, object] | None
 
     # Accumulated canonical findings. Same-ID meta updates replace in place.
