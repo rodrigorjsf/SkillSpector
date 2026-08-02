@@ -4,26 +4,36 @@ Status: accepted
 
 A Behavior Snapshot is a committed, canonical projection of one Scan, compared by a blocking test so
 that a change to existing behavior surfaces as a reviewable file diff. What it projects *is* the
-project's working definition of observable behavior, so the choice is worth recording: once 24
-snapshots are committed, changing the projection means regenerating all of them and losing the
+project's working definition of observable behavior, so the choice is worth recording: with 26
+snapshots committed, changing the projection means regenerating all of them and losing the
 ability to say whether a diff was behavior or reformatting.
 
 The projection is taken from the state `graph.invoke` returns — never from rendered report text,
 which injects the wall clock and the absolute input path.
 
-**Ten state keys are projected:** `findings`, `risk_score`, `risk_severity`, `risk_recommendation`,
-`component_metadata`, `has_executable_scripts`, `manifest`, `manifest_status`,
-`analysis_completeness`, `sarif_report`.
+**Eleven state keys are projected:** `findings`, `risk_score`, `risk_severity`,
+`risk_recommendation`, `component_metadata`, `has_executable_scripts`, `manifest`,
+`manifest_status`, `framework`, `analysis_completeness`, `sarif_report`.
 
-**One of them is carried conditionally.** `manifest_status` (issue #11) is dropped from the
-projection when it holds `present`, so a Skill that declares a Manifest keeps the snapshot it had
-before the status existed. The alternative — projecting it unconditionally — would have regenerated
-all 24 snapshots for a change that alters nothing about 23 of them, and destroyed the evidence that
-the change was additive. The omission is not a hole in the gate: a Skill whose Manifest regressed to
-any other status *gains* the key, and the byte-compare fails on its appearance. The rule lives in
-`OMITTED_WHEN` in `tests/behavior/projection.py`, keyed by state key and by the one value it drops,
-and `test_the_conditionally_carried_key_is_carried_by_some_fixture_and_not_others` holds it
-non-vacuous — one fixture must carry the key and another must not.
+**Two of them are carried conditionally**, each dropped at the one value that was the state of the
+world before the key existed. `manifest_status` (issue #11) is dropped when it holds `present`, so a
+Skill that declares a Manifest keeps the snapshot it had before the status existed. The alternative —
+projecting it unconditionally — would have regenerated all 24 snapshots for a change that alters
+nothing about 23 of them, and destroyed the evidence that the change was additive. The omission is
+not a hole in the gate: a Skill whose Manifest regressed to any other status *gains* the key, and the
+byte-compare fails on its appearance. The rule lives in `OMITTED_WHEN` in
+`tests/behavior/projection.py`, keyed by state key and by the one value it drops, and
+`test_the_conditionally_carried_key_is_carried_by_some_fixture_and_not_others` holds it non-vacuous —
+one fixture must carry the key and another must not.
+
+`framework` (issue #21) joins on the same mechanism, dropped when it holds `agent_skills`. That is
+the omitted value because it is what *every* input scanned before Framework detection existed detects
+as — measured, not assumed — so the key is absent from all 24 snapshots that predate it and none of
+them changed. Detection would otherwise have no regression guard at all: not projecting the key would
+leave a future change that flips an existing fixture to another Framework invisible to the gate,
+while projecting it unconditionally would have rewritten the whole corpus to record a value that is
+the same everywhere. The two `*_detection` fixtures added by #21 are what keep the rule non-vacuous
+for this key — they are the only snapshots that carry it.
 
 **Four are excluded, each for a stated reason:** `model_config` is derived from environment variables
 and would make a snapshot machine-specific; `report_body` carries both the timestamp and the absolute
