@@ -57,11 +57,15 @@ All targets assume the virtual environment is **already created and activated**.
 | `make install-dev` | Install the package with development dependencies |
 | `make langgraph-dev` | Run LangGraph dev server (opens Studio at `LANGGRAPH_STUDIO_URL`) |
 | `make test` | Run tests |
+| `make test-unit` | Run the unit suite, which includes the behavior gate (no LLM calls, no credentials) |
+| `make update-snapshots` | Rewrite the committed behavior snapshots — only when a behavior change is intended, and always in its own commit |
 | `make test-cov` | Run tests with coverage report (HTML + terminal) |
 | `make lint` | Run linters (ruff only) |
 | `make format` | Format code with ruff (check + fix, then format) |
 | `make clean` | Remove build artifacts and cache files |
 | `make build` | Build the package |
+
+**The behavior gate.** `make test-unit` scans every fixture directory with the LLM disabled and compares a canonical projection of each Scan against a committed snapshot in [`tests/behavior/snapshots/`](../tests/behavior/snapshots/). A failure means behavior on an existing input changed. If the change was intended, run `make update-snapshots` and commit the regenerated files on their own, so a reviewer judges the behavior diff directly. What the gate cannot see is stated in [`tests/behavior/COVERAGE_LIMITS.md`](../tests/behavior/COVERAGE_LIMITS.md).
 
 ---
 
