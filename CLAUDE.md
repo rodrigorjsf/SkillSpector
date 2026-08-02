@@ -75,9 +75,13 @@ being implemented. Every Ticket is implemented through the `/implement` skill, n
    so nothing is cleaned up for you. Then edit the Ticket issue: tick its acceptance-criteria
    checkboxes, and comment whatever the Ticket did not anticipate — a rejected approach, a discovered
    constraint, a deferred follow-up.
-4. **Close out the Spec.** When every Ticket is merged into the Umbrella Branch, update the parent
-   issue, then open a PR from the Umbrella Branch into `main`. **A human merges that PR — an agent
-   never does.**
+4. **Close out the Spec.** When every Ticket is merged into the Umbrella Branch, audit the parent's
+   stories for gaps no Ticket owned, comment that audit on the parent issue, then open a PR from the
+   Umbrella Branch into `main`. **A human merges that PR — an agent never does.**
+5. **Close the parent after the merge.** A Spec parent does not close itself: merging the Umbrella
+   PR leaves it open. Once `main` carries the work, verify it there, delete the Umbrella Branch local
+   and remote, file whatever the audit surfaced as its own issue, and close the parent referencing
+   the merge commit. A Spec is not done while its parent is open.
 
 Within a Spec, the Umbrella Branch is the only branch that targets `main` — a Ticket branch never
 does. **Outside a Spec** this workflow does not apply: standalone work such as a documentation
