@@ -55,7 +55,7 @@ from skillspector.inspection_ledger import (
     inspection_work_id,
     ledger_event,
 )
-from skillspector.langchain4j import signals
+from skillspector.langchain4j import signals, vocabulary
 from skillspector.logging_config import get_logger
 from skillspector.models import Finding
 from skillspector.nodes.analyzers.pattern_defaults import (
@@ -102,15 +102,15 @@ _WORKDIR_MESSAGE = (
 # What a non-literal argument means depends on which one it is, so the Finding
 # says so rather than making every unresolved argument read the same.
 _UNRESOLVED_MESSAGES = {
-    "content": (
+    vocabulary.CONTENT_SETTER: (
         "Skill content is not statically resolvable, so the instruction surface the model reads "
         "was not scanned. It exists in no file this Scan could open."
     ),
-    "name": (
+    vocabulary.NAME_SETTER: (
         "The Skill name is built dynamically, so the Scan cannot say which Skill this definition "
         "declares."
     ),
-    "description": (
+    vocabulary.DESCRIPTION_SETTER: (
         "The Skill description is built dynamically, so the text that decides when this Skill "
         "activates was not scanned."
     ),
@@ -128,7 +128,7 @@ _WIRING_MESSAGE = (
     "executes arbitrary commands in the host process with no sandboxing or privilege restriction."
 )
 _DECLARATION_MESSAGE = (
-    f"The build file declares {signals.SHELL_ARTIFACT_ID}, putting LangChain4j's unsandboxed "
+    f"The build file declares {vocabulary.SHELL_ARTIFACT_ID}, putting LangChain4j's unsandboxed "
     "shell mode on the classpath where any wiring can reach it."
 )
 
@@ -268,14 +268,14 @@ def _tool_surface_findings(path: str, source: str) -> list[Finding]:
     for rule_id, receiver, setter, message in (
         (
             _MCP_FILTER_RULE_ID,
-            tool_surface.MCP_TOOL_PROVIDER,
-            tool_surface.TOOL_FILTER_SETTER,
+            vocabulary.MCP_TOOL_PROVIDER,
+            vocabulary.TOOL_FILTER_SETTER,
             _MCP_FILTER_MESSAGE,
         ),
         (
             _WORKDIR_RULE_ID,
-            tool_surface.SHELL_COMMAND_CONFIG,
-            tool_surface.WORKING_DIRECTORY_SETTER,
+            vocabulary.SHELL_COMMAND_CONFIG,
+            vocabulary.WORKING_DIRECTORY_SETTER,
             _WORKDIR_MESSAGE,
         ),
     ):
@@ -299,7 +299,7 @@ def _skill_definition_findings(path: str, source: str) -> list[Finding]:
 
     findings: list[Finding] = []
     for definition in skill_definitions.find_skill_definitions(source):
-        name_argument = definition.argument("name")
+        name_argument = definition.argument(vocabulary.NAME_SETTER)
         skill_name = name_argument.value if name_argument else None
         for argument in definition.arguments:
             if argument.value is None:
@@ -313,7 +313,7 @@ def _skill_definition_findings(path: str, source: str) -> list[Finding]:
                         severity=_UNRESOLVED_SEVERITY,
                     )
                 )
-            elif argument.setter == "content":
+            elif argument.setter == vocabulary.CONTENT_SETTER:
                 findings.extend(_scan_resolved_content(path, source, skill_name, argument))
 
     # A loader whose path is not a literal is the same silence in another shape:

@@ -34,7 +34,7 @@ from skillspector.langchain4j import java_parser
 
 # The type that selects shell mode. ``Skills`` is the safe sibling; the choice
 # between them is a plain type reference, which is why it is statically visible.
-_SHELL_SKILLS_TYPE: Final[str] = "ShellSkills"
+from skillspector.langchain4j.vocabulary import SHELL_SKILLS_TYPE
 
 # A bare name in Java source is one of these two node types, depending on
 # whether it appears in type position (``ShellSkills skills = ...``) or in
@@ -61,7 +61,7 @@ def find_shell_skills_usage(source: str) -> int | None:
     for node in java_parser.walk(root):
         if node.type not in _NAME_NODE_TYPES:
             continue
-        if java_parser.text(node) != _SHELL_SKILLS_TYPE:
+        if java_parser.text(node) != SHELL_SKILLS_TYPE:
             continue
         if java_parser.has_ancestor(node, _IMPORT_DECLARATION):
             if import_line is None:

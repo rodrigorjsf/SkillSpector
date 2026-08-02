@@ -25,6 +25,12 @@ them: detection asks "is this tree LangChain4j at all", this module asks "which
 of its files do I open". The two questions drift apart as later Rules land, and
 this repository merges upstream, so a private helper of a phase-1 module is the
 wrong thing to couple to.
+
+That decoupling is about the two *predicates*, not about the words they are
+written in. Both modules read their LangChain4j spellings from
+:mod:`skillspector.langchain4j.vocabulary`, because the spelling of an artifact
+id is one fact rather than two, and a rename that reached only one of them would
+leave the other matching nothing in silence.
 """
 
 from __future__ import annotations
@@ -32,6 +38,12 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from typing import Final
+
+# Its presence on the classpath is the capability: upstream documents shell
+# execution as running "without any sandboxing, containerization, or privilege
+# restriction". Imported rather than spelled here -- ``vocabulary`` is the
+# single home for anything a LangChain4j release can rename.
+from skillspector.langchain4j.vocabulary import SHELL_ARTIFACT_ID
 
 JAVA_SUFFIX: Final[str] = ".java"
 
@@ -48,11 +60,6 @@ _XML_COMMENT: Final[re.Pattern[str]] = re.compile(r"<!--.*?-->", re.DOTALL)
 _GRADLE_BLOCK_COMMENT: Final[re.Pattern[str]] = re.compile(r"/\*.*?\*/", re.DOTALL)
 _GRADLE_LINE_COMMENT: Final[re.Pattern[str]] = re.compile(r"//[^\n]*")
 _NON_NEWLINE: Final[re.Pattern[str]] = re.compile(r"[^\n]")
-
-# The Maven artifact id of LangChain4j's shell mode. Its presence on the
-# classpath is the capability: upstream documents shell execution as running
-# "without any sandboxing, containerization, or privilege restriction".
-SHELL_ARTIFACT_ID: Final[str] = "langchain4j-experimental-skills-shell"
 
 
 def _basename(path: str) -> str:

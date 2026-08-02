@@ -79,6 +79,18 @@ from collections.abc import Iterable, Mapping
 from enum import StrEnum
 from typing import Final
 
+# Detection and Analyzer applicability stay separate *predicates* -- "is this
+# tree LangChain4j at all" versus "which of its files do I open" -- and
+# ``skillspector.langchain4j.signals`` records why. They do not stay separate
+# vocabularies: the spelling of a group id is one fact, and a rename reaching
+# only one of the two would leave the other matching nothing in silence. The
+# module is parser-free, so importing it here costs detection nothing.
+from skillspector.langchain4j.vocabulary import (
+    CLASSPATH_SKILL_LAYOUT,
+    GROUP_COORDINATE,
+    IMPORT_PREFIX,
+)
+
 
 class Framework(StrEnum):
     """The Framework a scanned tree is written against.
@@ -100,16 +112,18 @@ _JVM_BUILD_FILES: Final[tuple[str, ...]] = ("pom.xml",)
 _JVM_BUILD_PREFIX: Final[str] = "build.gradle"
 _JVM_SOURCE_SUFFIXES: Final[tuple[str, ...]] = (".java", ".kt")
 
-# The Maven group id, as it appears in a build file's dependency block.
-_LANGCHAIN4J_COORDINATE: Final[re.Pattern[str]] = re.compile(r"dev\.langchain4j")
-# An import of the package, Java (optionally static) or Kotlin. Anchored to the
+# The Maven group id, as it appears in a build file's dependency block. Composed
+# from the inventoried spelling rather than written out, so a rename is a
+# one-file edit and the enforcement test can prove no second copy exists.
+_LANGCHAIN4J_COORDINATE: Final[re.Pattern[str]] = re.compile(re.escape(GROUP_COORDINATE))
+# An import of the library, Java (optionally static) or Kotlin. Anchored to the
 # start of a line so a mention inside a string or a comment tail is not a
 # signal.
 _LANGCHAIN4J_IMPORT: Final[re.Pattern[str]] = re.compile(
-    r"^\s*import\s+(?:static\s+)?dev\.langchain4j\.", re.MULTILINE
+    rf"^\s*import\s+(?:static\s+)?{re.escape(IMPORT_PREFIX)}", re.MULTILINE
 )
 # The layout a LangChain4j project keeps its Skills in.
-_LANGCHAIN4J_SKILL_LAYOUT: Final[str] = "src/main/resources/skills/"
+_LANGCHAIN4J_SKILL_LAYOUT: Final[str] = CLASSPATH_SKILL_LAYOUT
 
 
 # -- Deep Agents signals ---------------------------------------------------- #
