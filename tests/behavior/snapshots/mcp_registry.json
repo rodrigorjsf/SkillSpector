@@ -271,6 +271,7 @@
   "findings": [],
   "has_executable_scripts": false,
   "manifest": {},
+  "manifest_status": "absent",
   "risk_recommendation": "SAFE",
   "risk_score": 0,
   "risk_severity": "LOW",

@@ -37,6 +37,7 @@ from skillspector.inspection_ledger import (
     ledger_event,
 )
 from skillspector.logging_config import get_logger
+from skillspector.manifest_status import ManifestStatus
 from skillspector.state import SkillspectorState
 
 logger = get_logger(__name__)
@@ -250,11 +251,16 @@ def _read_file_cache(
     return file_cache, ledger_events
 
 
-def _parse_manifest(skill_dir: Path) -> dict[str, object]:
+def _parse_manifest(skill_dir: Path) -> tuple[dict[str, object], ManifestStatus]:
     """Parse SKILL.md or skill.md YAML frontmatter into a manifest dict.
 
     Returns dict with name, description, triggers (list), permissions (list),
     allowed-tools (list), parameters (list). Returns {} if no file or parse fails.
+
+    The second element says *why* the dict holds what it holds, so an empty
+    manifest stops being an overloaded sentinel -- see
+    ``skillspector.manifest_status``. Every return path below carries its own
+    status; none falls through to a default.
     """
     for name in ("SKILL.md", "skill.md"):
         path = skill_dir / name
@@ -264,20 +270,20 @@ def _parse_manifest(skill_dir: Path) -> dict[str, object]:
             content = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             logger.debug("Could not read manifest file: %s", name)
-            return {}
+            return {}, ManifestStatus.UNREADABLE
         if not content.startswith("---"):
-            return {}
+            return {}, ManifestStatus.UNPARSEABLE
         end_match = re.search(r"\n---\s*\n", content[3:])
         if not end_match:
-            return {}
+            return {}, ManifestStatus.UNPARSEABLE
         frontmatter = content[3 : end_match.start() + 3]
         try:
             data = yaml.safe_load(frontmatter)
         except yaml.YAMLError:
             logger.debug("Manifest parse failed for %s", name)
-            return {}
+            return {}, ManifestStatus.UNPARSEABLE
         if not isinstance(data, dict):
-            return {}
+            return {}, ManifestStatus.UNPARSEABLE
         manifest: dict[str, object] = {}
         if "name" in data:
             manifest["name"] = data["name"]
@@ -305,8 +311,13 @@ def _parse_manifest(skill_dir: Path) -> dict[str, object]:
         manifest["parameters"] = (
             [p for p in parameters if isinstance(p, dict)] if isinstance(parameters, list) else []
         )
-        return manifest
-    return {}
+        # A mapping always yields the four list keys, so "did the Skill actually
+        # declare anything" is a question about the values, not the keys. Read
+        # off the manifest itself rather than a second list of field names,
+        # which a later field would have to be added to twice.
+        declared = any(manifest.values())
+        return manifest, (ManifestStatus.PRESENT if declared else ManifestStatus.EMPTY)
+    return {}, ManifestStatus.ABSENT
 
 
 def build_context(state: SkillspectorState) -> dict[str, object]:
@@ -320,7 +331,7 @@ def build_context(state: SkillspectorState) -> dict[str, object]:
 
     components, discovery_events = _walk_skill_files(skill_dir)
     file_cache, cache_events = _read_file_cache(skill_dir, components)
-    manifest = _parse_manifest(skill_dir)
+    manifest, manifest_status = _parse_manifest(skill_dir)
     component_metadata, has_executable_scripts = _build_component_metadata(
         skill_dir, components, file_cache
     )
@@ -331,6 +342,7 @@ def build_context(state: SkillspectorState) -> dict[str, object]:
         "inspection_ledger": [*discovery_events, *cache_events],
         "ast_cache": {},
         "manifest": manifest,
+        "manifest_status": manifest_status,
         "previous_manifest": None,
         "model_config": build_model_config(),
         "component_metadata": component_metadata,

@@ -393,6 +393,32 @@ the entire repository including `target/`, and whose risk score is computed over
 Every per-skill signal — name, description, `allowed-tools` — is absent not because the repo
 lacks skills but because the root has no `SKILL.md`.
 
+**Measured, not hypothesized — and the defect is wider than the no-file case.** Issue #11
+reproduced the first row on four fixture directories in this repository, with `use_llm=False` and no
+credentials. Two of them return a scored MEDIUM verdict while reporting an empty manifest:
+
+| Target | `manifest` | components | findings | risk |
+|---|---|---:|---:|---:|
+| `tests/fixtures/mcp_registry` | `{}` | 2 | 0 | 0 (LOW) |
+| `tests/fixtures/sdi` | `{}` | 10 | 8 | **48 (MEDIUM)** |
+| `tests/fixtures/sqp` | `{}` | 10 | 3 | **48 (MEDIUM)** |
+| `tests/fixtures/ssd` | `{}` | 5 | 0 | 0 (LOW) |
+
+Triage then built five control directories differing only in their `SKILL.md` — absent, no fence,
+`---\n---`, a frontmatter list rather than a mapping, and invalid YAML — and **all five produced a
+byte-identical signature**: `manifest == {}`, with `manifest_absent` as the Inspection Ledger reason
+code. The empty manifest was an overloaded sentinel for five distinct causes, not one, and the
+absence of a Skill was indistinguishable from a Skill whose declaration failed to parse.
+
+**Fixed additively.** A Scan now carries `manifest_status` beside `manifest`
+(`src/skillspector/manifest_status.py`), taking one of `present`, `empty`, `unparseable`,
+`unreadable`, `absent`. Every return path of the manifest parser maps to exactly one of them, and the
+report renders the status for every value but `present` — so a reader can tell from the output that
+the scanned directory declared no Skill. `manifest` itself is unchanged in type and contents for
+every input, which is why 23 of the 24 committed Behavior Snapshots stayed byte-identical and only
+`mcp_registry` regenerated. This makes the absence *reportable*; it does not build discovery on top
+of it, which remains phase 7 below.
+
 Required work:
 
 1. **Deep skill discovery** — find `SKILL.md` at any depth under conventional roots

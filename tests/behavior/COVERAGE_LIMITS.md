@@ -48,10 +48,18 @@ confirmed clean. Full per-fixture numbers are in the #8 close-out comment.
   revisited rather than quietly becoming false.
 - **Suppression is unguarded.** `suppressed_findings` is empty in every fixture and
   `filtered_findings` is byte-identical to `findings` throughout, so no fixture exercises a Baseline.
-- **The anonymous-Skill failure mode is frozen, not fixed.** `mcp_registry`'s snapshot records a
+- **The anonymous-Skill failure mode is reported, not resolved.** `mcp_registry`'s snapshot records a
   directory with no `SKILL.md` scanning as one Skill with an empty Manifest and a Risk Score of 0.
-  That is current behavior and the gate holds it still; #11 tracks changing it, and will land as a
-  visible diff on this snapshot.
+  #11 landed as a visible diff on exactly that snapshot: the Scan now also reports
+  `manifest_status: absent`, so the report says *why* the Manifest is empty. The Scan still returns a
+  scored verdict for a directory that is not a Skill — changing that was explicitly out of #11's
+  scope, and no fixture guards it.
+- **`manifest_status` is guarded in one direction only.** It is the one projected key carried
+  conditionally: dropped when it holds `present` (ADR 0003), so 23 of the 24 snapshots carry no
+  `manifest_status` byte at all. A Skill whose Manifest regressed to any other status still fails the
+  byte compare, because the key would appear. The reverse — `mcp_registry` reverting to `present` —
+  is caught by its own snapshot, and by nothing else. A test holds the rule non-vacuous by requiring
+  that some fixture carry the key and some fixture not.
 - **SARIF is no longer a coverage limit.** It was previously listed here as unguarded on the grounds
   that it is derived and reintroduces the timestamp; the timestamp claim was measured false, and
   `sarif_report` is in the projection minus `tool.driver.version` (ADR 0003).
@@ -64,12 +72,16 @@ dependent), `report_body` (wall clock plus absolute path), `skill_path` and `tem
 
 - **Report rendering is unguarded.** `report_body` is where the Markdown and JSON report text is
   produced. A change to phrasing, section order, or the JSON report shape does not move the snapshot.
+  This limit became load-bearing with #11: the Manifest status reaches a reader only through
+  `report_body` — `skill.manifest_status` in the JSON report and the `Manifest:` line in the terminal
+  and Markdown ones — so none of that rendering is behind the gate. `tests/nodes/test_manifest_status`
+  covers it instead.
 - **Input resolution is unguarded.** `skill_path` and `temp_dir_for_cleanup` are what `resolve_input`
   produces for a git URL, a zip, or a single file. The gate only ever scans a local directory.
 - **Model selection is unguarded**, by construction. That is the point of excluding it, and the test
   suite demonstrates the exclusion by projecting identically under two provider settings.
 
-State keys outside the nine-key allow-list are likewise unguarded, notably `inspection_ledger`,
+State keys outside the ten-key allow-list are likewise unguarded, notably `inspection_ledger`,
 `analyzer_status_events`, `effective_finding_ids`, `filtered_findings`, `file_cache`, and
 `llm_call_log`. `analysis_completeness` is projected, so an Analyzer's *status* is guarded even
 though the ledger row behind it is not — that is what gives

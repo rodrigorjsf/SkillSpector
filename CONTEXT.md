@@ -20,6 +20,11 @@ _Avoid_: asset, resource, artifact
 The declared metadata of a Skill — its name, description, and the tools it claims it may use.
 _Avoid_: frontmatter, header, config
 
+**Manifest Status**:
+Why a Scan's Manifest holds what it holds — present, empty, unparseable, unreadable, or absent
+because the scanned directory holds no Skill at all. Reported beside the Manifest, never inside it.
+_Avoid_: manifest state, parse result, manifest error
+
 **Framework**:
 The convention a Skill is written against, which determines how its definition is located and
 parsed. Agent Skills, LangChain4j, and Deep Agents are different Frameworks.

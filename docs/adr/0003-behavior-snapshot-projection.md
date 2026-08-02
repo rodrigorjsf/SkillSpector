@@ -11,8 +11,19 @@ ability to say whether a diff was behavior or reformatting.
 The projection is taken from the state `graph.invoke` returns — never from rendered report text,
 which injects the wall clock and the absolute input path.
 
-**Nine state keys are projected:** `findings`, `risk_score`, `risk_severity`, `risk_recommendation`,
-`component_metadata`, `has_executable_scripts`, `manifest`, `analysis_completeness`, `sarif_report`.
+**Ten state keys are projected:** `findings`, `risk_score`, `risk_severity`, `risk_recommendation`,
+`component_metadata`, `has_executable_scripts`, `manifest`, `manifest_status`,
+`analysis_completeness`, `sarif_report`.
+
+**One of them is carried conditionally.** `manifest_status` (issue #11) is dropped from the
+projection when it holds `present`, so a Skill that declares a Manifest keeps the snapshot it had
+before the status existed. The alternative — projecting it unconditionally — would have regenerated
+all 24 snapshots for a change that alters nothing about 23 of them, and destroyed the evidence that
+the change was additive. The omission is not a hole in the gate: a Skill whose Manifest regressed to
+any other status *gains* the key, and the byte-compare fails on its appearance. The rule lives in
+`OMITTED_WHEN` in `tests/behavior/projection.py`, keyed by state key and by the one value it drops,
+and `test_the_conditionally_carried_key_is_carried_by_some_fixture_and_not_others` holds it
+non-vacuous — one fixture must carry the key and another must not.
 
 **Four are excluded, each for a stated reason:** `model_config` is derived from environment variables
 and would make a snapshot machine-specific; `report_body` carries both the timestamp and the absolute

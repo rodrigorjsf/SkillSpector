@@ -35,7 +35,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-# The nine state keys the snapshot projects. See ADR 0003.
+# The ten state keys the snapshot projects. See ADR 0003.
 PROJECTED_STATE_KEYS: tuple[str, ...] = (
     "findings",
     "risk_score",
@@ -44,9 +44,17 @@ PROJECTED_STATE_KEYS: tuple[str, ...] = (
     "component_metadata",
     "has_executable_scripts",
     "manifest",
+    "manifest_status",
     "analysis_completeness",
     "sarif_report",
 )
+
+# The one projected key carried conditionally, mirroring the report: a Manifest
+# that parsed is reported exactly as it was before the status existed, so the
+# key is dropped when it holds this value. Not a gate hole -- a Skill whose
+# Manifest regressed to any other status gains the key, and the byte-compare
+# fails on its appearance.
+OMITTED_WHEN: Mapping[str, str] = {"manifest_status": "present"}
 
 # State keys deliberately kept out, each with the reason it is out.
 EXCLUDED_STATE_KEYS: Mapping[str, str] = {
@@ -234,8 +242,12 @@ def project_scan_state(state: Mapping[str, Any]) -> dict[str, Any]:
     Pure: the input is not mutated, and the result depends on nothing but it.
     A projected key absent from the state is absent from the result -- a key that
     stops being emitted is itself a behavior change and must show as a diff.
+    ``OMITTED_WHEN`` drops one key at one value, for the reason recorded there.
     """
     projection = {key: _to_plain(state[key]) for key in PROJECTED_STATE_KEYS if key in state}
+    for key, omitted_value in OMITTED_WHEN.items():
+        if projection.get(key) == omitted_value:
+            del projection[key]
     return _sort(_strip(projection), "$")
 
 

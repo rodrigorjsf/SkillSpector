@@ -205,14 +205,17 @@ def test_the_snapshot_layout_mirrors_the_fixture_layout() -> None:
 
 
 def test_mcp_registry_is_in_the_corpus_without_a_manifest() -> None:
-    """The anonymous-Skill result is frozen, not fixed -- see #11.
+    """The anonymous-Skill result now says why the Manifest is empty -- see #11.
 
-    ``mcp_registry`` bears no ``SKILL.md`` and today scans as one Skill with an
-    empty Manifest. The gate holds that still so the fix lands as a visible diff.
+    ``mcp_registry`` bears no ``SKILL.md``. Its Manifest stays empty, because the
+    fix is additive; what changed is that the snapshot now records that the
+    emptiness is an absent Skill rather than a Skill declaring nothing.
     """
     assert "mcp_registry" in proj.CORPUS_NAMES
     assert not (proj.CORPUS["mcp_registry"] / "SKILL.md").exists()
-    assert proj.load_snapshot("mcp_registry")["manifest"] == {}
+    snapshot = proj.load_snapshot("mcp_registry")
+    assert snapshot["manifest"] == {}
+    assert snapshot["manifest_status"] == "absent"
 
 
 # --------------------------------------------------------------------------- #
@@ -222,10 +225,26 @@ def test_mcp_registry_is_in_the_corpus_without_a_manifest() -> None:
 
 @CORPUS_PARAMS
 def test_committed_snapshot_carries_the_projected_keys_only(fixture: str) -> None:
-    """Exactly the nine ADR 0003 keys; none of the four excluded ones."""
+    """The ADR 0003 keys, less any conditionally carried one; none excluded."""
     snapshot = proj.load_snapshot(fixture)
-    assert sorted(snapshot) == sorted(proj.PROJECTED_STATE_KEYS)
+    assert set(snapshot) <= set(proj.PROJECTED_STATE_KEYS)
+    assert set(proj.PROJECTED_STATE_KEYS) - set(snapshot) <= set(proj.OMITTED_WHEN)
     assert not set(snapshot) & set(proj.EXCLUDED_STATE_KEYS)
+
+
+def test_the_conditionally_carried_key_is_carried_by_some_fixture_and_not_others() -> None:
+    """The omission rule is a real partition of the corpus, not a dead branch.
+
+    Without both halves the rule would be vacuous: a key no snapshot carries
+    proves nothing about a Scan whose Manifest is not ``present``, and a key
+    every snapshot carries proves nothing about the omission.
+    """
+    for key, omitted_value in proj.OMITTED_WHEN.items():
+        carried = {name for name in proj.CORPUS_NAMES if key in proj.load_snapshot(name)}
+        assert carried, f"no snapshot carries {key}"
+        assert carried != set(proj.CORPUS_NAMES), f"every snapshot carries {key}"
+        for name in carried:
+            assert proj.load_snapshot(name)[key] != omitted_value
 
 
 @CORPUS_PARAMS
