@@ -63,6 +63,43 @@ _GRADLE_BLOCK_COMMENT: Final[re.Pattern[str]] = re.compile(r"/\*.*?\*/", re.DOTA
 _GRADLE_LINE_COMMENT: Final[re.Pattern[str]] = re.compile(r"//[^\n]*")
 _NON_NEWLINE: Final[re.Pattern[str]] = re.compile(r"[^\n]")
 
+
+def _refusal_subtree(tag: str, enclosing: str) -> re.Pattern[str]:
+    """Match one XML subtree that names an artifact in order to *refuse* it.
+
+    A plain ``<tag>.*?</tag>`` pairs an **unclosed** opening tag with the next
+    closing tag anywhere later in the file and blanks every declaration between
+    them -- trading a false positive for the false negative issue #45 exists to
+    prevent. So the region is tempered twice: it may cross neither a second
+    ``<tag`` opening nor the close of *enclosing*, the element the subtree
+    always lives inside. An unclosed tag then matches nothing that reaches past
+    its own element, and the build file loses the blanking rather than a
+    Finding.
+
+    What survives both tempers is an unclosed tag and an orphan close inside one
+    *enclosing* element, with a declaration between them. A textual scan cannot
+    tell that apart from a well-formed subtree containing the same line, and
+    neither can a reader.
+    """
+    return re.compile(
+        rf"<{tag}\b(?:(?!<{tag}\b|</{enclosing}\b).)*?</{tag}\s*>",
+        re.DOTALL,
+    )
+
+
+# The two Maven subtrees that name an artifact in order to refuse it: a
+# dependency's ``<exclusions>``, and the Enforcer plugin's
+# ``<bannedDependencies>``. Both say in XML what ``_XML_COMMENT`` already blanks
+# when it is said in a comment.
+#
+# Blanking all of ``<bannedDependencies>`` takes its ``<includes>`` with it --
+# the exception list that allows a banned artifact back. That is the right way
+# round: an artifact allowed back through an Enforcer exception is still not
+# *declared* by this build file, and reading it as one would restore the
+# inversion for the narrower case.
+_XML_EXCLUSIONS: Final[re.Pattern[str]] = _refusal_subtree("exclusions", "dependency")
+_XML_BANNED_DEPENDENCIES: Final[re.Pattern[str]] = _refusal_subtree("bannedDependencies", "rules")
+
 # Compiled here rather than in ``vocabulary``, which stays import-free.
 _SHELL_ARTIFACT: Final[re.Pattern[str]] = re.compile(SHELL_ARTIFACT_PATTERN)
 
@@ -79,6 +116,11 @@ def _basename(path: str) -> str:
 def is_java_source(path: str) -> bool:
     """Whether *path* names a Java compilation unit."""
     return path.endswith(JAVA_SUFFIX)
+
+
+def _is_maven_build_file(path: str) -> bool:
+    """Whether *path* names a Maven build file, whose syntax is XML."""
+    return _basename(path) in _JVM_BUILD_FILES
 
 
 def is_jvm_build_file(path: str) -> bool:
@@ -125,19 +167,47 @@ def applicable_files(file_cache: Mapping[str, str]) -> dict[str, str]:
     }
 
 
-def _without_comments(path: str, content: str) -> str:
-    """Blank out *content*'s comments, leaving every newline where it was.
+def _blanked(match: re.Match[str]) -> str:
+    """Replace a matched region with spaces, leaving every newline where it was.
 
     Line numbers survive because only non-newline characters are replaced, so a
     match found afterwards still reports the line the reader sees.
     """
+    return _NON_NEWLINE.sub(" ", match.group(0))
+
+
+def _without_comments(path: str, content: str) -> str:
+    """Blank out *content*'s comments, leaving every newline where it was."""
     patterns = (
         (_XML_COMMENT,)
-        if _basename(path) in _JVM_BUILD_FILES
+        if _is_maven_build_file(path)
         else (_GRADLE_BLOCK_COMMENT, _GRADLE_LINE_COMMENT)
     )
     for pattern in patterns:
-        content = pattern.sub(lambda match: _NON_NEWLINE.sub(" ", match.group(0)), content)
+        content = pattern.sub(_blanked, content)
+    return content
+
+
+def _without_refusals(path: str, content: str) -> str:
+    """Blank out the Maven subtrees that name an artifact only to refuse it.
+
+    Maven-only, because the two subtrees are Maven's. Gradle spells the same
+    intent as ``exclude group:``/``module:`` on a coordinate line, which is a
+    different shape and is not blanked -- so a Gradle build file that refuses
+    the shell module still raises the Finding this function exists to stop,
+    issue #68.
+
+    Run *after* ``_without_comments``: a commented-out ``<exclusions>`` is
+    already spaces by then and cannot pair with a live closing tag.
+
+    Textual, like everything else here. Reading the element nesting would need
+    the XML parser this module exists without, and would buy nothing the
+    tempered patterns do not already give.
+    """
+    if not _is_maven_build_file(path):
+        return content
+    for pattern in (_XML_EXCLUSIONS, _XML_BANNED_DEPENDENCIES):
+        content = pattern.sub(_blanked, content)
     return content
 
 
@@ -170,10 +240,15 @@ def shell_artifact_declarations(file_cache: Mapping[str, str]) -> dict[str, Shel
     does not satisfy it -- ``docs/adr/0007-l4j-shell-survives-the-graduation-rename.md``
     records why the match is a pattern rather than an enumeration of spellings.
 
-    Comments are blanked first, so a build file that names the artifact only to
-    say it was *removed* is not read as declaring it -- a textual scan cannot
-    tell the two apart, and would report both the false positive and the
-    comment's line as the location.
+    A build file that names the artifact only to say it is *not* taken is not
+    read as declaring it -- a textual scan cannot tell the two apart, and would
+    report the false positive at the refusing line, flagging the reader HIGH for
+    the one action that removes the risk. Three spellings say it: a comment, a
+    dependency's ``<exclusions>`` subtree, and Enforcer's
+    ``<bannedDependencies>``. All three are blanked before matching, comments
+    first so a commented-out subtree cannot pair with a live closing tag.
+    Gradle's ``exclude group:``/``module:`` form is not among them, so the same
+    inversion is still live for a Gradle build file -- issue #68.
 
     One declaration per file: the first live one. A second in the same build
     file is the same capability, and pointing at both would add noise rather
@@ -181,7 +256,8 @@ def shell_artifact_declarations(file_cache: Mapping[str, str]) -> dict[str, Shel
     """
     declarations: dict[str, ShellDeclaration] = {}
     for path, content in jvm_build_files(file_cache).items():
-        for number, line in enumerate(_without_comments(path, content).splitlines(), start=1):
+        matchable = _without_refusals(path, _without_comments(path, content))
+        for number, line in enumerate(matchable.splitlines(), start=1):
             match = _SHELL_ARTIFACT.search(line)
             if match is not None:
                 declarations[path] = ShellDeclaration(line=number, artifact_id=match.group(0))

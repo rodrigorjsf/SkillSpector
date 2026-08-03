@@ -113,6 +113,26 @@ identically, so the widening neither caused nor worsened it. Left as a strict `x
 desired behaviour, so the suite carries the defect rather than the repository forgetting it, and
 filed as issue #64.
 
+**Fixed for Maven, by issue #64.** `shell_artifact_declarations` now blanks two subtrees alongside
+the comments it already blanked: a dependency's `<exclusions>` and Enforcer's
+`<bannedDependencies>`. The strict `xfail` above is gone and the test asserts the behaviour directly.
+The patterns are *tempered twice*, and the second temper is the one that matters. A plain
+`<exclusions>.*?</exclusions>` pairs an unclosed opening tag with the next close anywhere later in
+the file and blanks every declaration between them — trading this false positive for the false
+negative issue #45 existed to fix. Refusing to cross a second `<exclusions` opening is not enough on
+its own: when nothing re-opens the tag, the stray close still pairs. So the region also refuses to
+cross `</dependency>`, the element an `<exclusions>` subtree always lives inside — and
+`</rules>` for `<bannedDependencies>`. Measured on the malformed pom the test drives: the shipped
+pattern reports the declaration at its line, while both the naive and the opening-only-tempered
+patterns report nothing.
+
+What survives both tempers is an unclosed tag and an orphan close inside *one* `<dependency>`, with a
+declaration between them. A textual scan cannot tell that apart from a well-formed subtree containing
+the same line, and neither can a reader; it is accepted rather than fixed.
+
+Gradle's `exclude group:`/`module:` form is a coordinate line rather than a subtree, is not blanked,
+and therefore still carries the inversion — issue #68.
+
 ## What the report says when a Rule stops matching
 
 Nothing, and deliberately.
