@@ -184,7 +184,14 @@ no I/O and cannot fail a scan.
 ### 3.3 Proposed analyzer nodes
 
 Four new nodes, appended to `ANALYZER_NODE_IDS` after `semantic_quality_policy` so existing
-ordering is preserved:
+ordering is preserved.
+
+Two of them now exist. `framework_langchain4j` ships all five of its Rules (#28, #30, #31).
+`framework_deepagents` is wired and reports its status (#70) but carries **none** of the Rules its
+row proposes; they are issues #71–#74, and the shape they take is
+[ADR 0008](adr/0008-deepagents-analyzer-resolves-one-module-deep.md)'s rather than this row's — it
+collapsed the first three into one composed verdict per Skill source path. Read the row as the
+original proposal, not as what is running.
 
 | Node id | Gate | Rules |
 |---------|------|-------|
@@ -540,7 +547,7 @@ Ordered by value-to-risk. Each phase is independently shippable and independentl
 |-------|---------|----------------------|
 | **0** | This document + [`docs/references/`](references/README.md) | Yes — docs only |
 | **1** | ~~`detect_framework` + `framework` state key~~ **Done** (#21) — no analyzer read it at the time; `framework_langchain4j` does now. Unit tests assert correct detection on new fixtures and `"agent_skills"` on every existing fixture | Yes |
-| **2** | `framework_deepagents` analyzer, gated. Cheapest — reuses Python AST | Yes, via gate |
+| **2** | `framework_deepagents` analyzer, gated. Cheapest — reuses Python AST. **Started** (#58): the analyzer is wired and reports its status (#70); its rules are sliced as #71–#74, and the vocabulary stability measurement as #75 | Yes, via gate |
 | **3** | `structure_agent_skills_spec` behind `--spec-checks` (default `off`), plus the advisory-section rendering in [§3.5](#35-spec-conformance-rules-and-scoring) | Yes, via opt-in |
 | **4** | ~~**Dependency decision:** accept `tree-sitter` + `tree-sitter-java`~~ **Done** (#23) — accepted in [ADR 0001](adr/0001-tree-sitter-for-java-parsing.md), both ship `cp39-abi3` wheels | N/A |
 | **5** | ~~LangChain4j fixture~~ **Done** (#28, extended by #30 and #31) — `tests/fixtures/langchain4j_shell_skill/` | Yes — test data only |
@@ -647,18 +654,28 @@ record of what was open.
 
 ## 9. Recommended next step
 
-**Start phase 2 — the `framework_deepagents` analyzer.** It is the cheapest remaining analyzer,
-reusing the Python AST machinery the repository already has, and it is the last Framework named in
-[§3.2](#32-framework-detection) with no analyzer behind it. Spec conformance (phase 3) follows.
+**Continue phase 2 — the Rules of the `framework_deepagents` analyzer.** The analyzer itself is
+wired and gated (#70): it reports one status row on every Deep Agents Scan and carries no Rule.
+What remains is #71–#74, the four Rules [ADR 0008](adr/0008-deepagents-analyzer-resolves-one-module-deep.md)
+scoped, and #75, the vocabulary stability measurement. Spec conformance (phase 3) follows.
 
-What it reports when it has nothing to do is already decided, in
+What it reports when it has nothing to do was already decided, in
 [ADR 0006](adr/0006-langchain4j-applicability-is-what-it-opens.md): applicability is one predicate
-over the Components the analyzer opens — for Deep Agents, Python sources and Python requirement
-files — with both the gate and the planned work derived from that single result. A Framework
-mismatch is silent; a matching Framework that opens nothing reports `not_applicable`; a matching
-Framework that opens something reports `completed`, even with no Findings. Copy that shape rather
-than re-deciding it, and copy the vocabulary module of
-[ADR 0005](adr/0005-langchain4j-upstream-vocabulary.md) alongside it.
+over the Components the analyzer opens — for Deep Agents, Python sources, Python requirement files
+and every `SKILL.md`, widened from this section's original two by
+[ADR 0008 §3](adr/0008-deepagents-analyzer-resolves-one-module-deep.md) — with both the gate and the
+planned work derived from that single result. A Framework mismatch is silent; a matching Framework
+that opens nothing reports `not_applicable`; a matching Framework that opens something reports
+`completed`, even with no Findings. That shape shipped in #70 rather than being re-decided, and the
+vocabulary module of [ADR 0005](adr/0005-langchain4j-upstream-vocabulary.md) shipped alongside it as
+`src/skillspector/deepagents/vocabulary.py`.
+
+One thing #70 measured that this section did not anticipate: on a Deep Agents Scan the
+`not_applicable` branch is **unreachable**. Every signal §3.2 detects Deep Agents by is a Python
+module or a Python requirement file, and both are inside the applicability predicate, read from the
+same `file_cache`. The branch is kept because ADR 0006 makes it the shape of an applicability gate,
+and later Rules only widen the predicate — but it is exercised from synthetic state, not from a
+tree.
 
 The **LangChain4j-in-CI increment is done.** Issue #23, sliced into #28–#31, landed phases 4–7 as
 one deliverable: `tree-sitter` accepted as a dependency, a LangChain4j application fixture, the

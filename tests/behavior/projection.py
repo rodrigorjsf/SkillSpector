@@ -287,11 +287,14 @@ FIXTURES_DIR = _BEHAVIOR_DIR.parent / "fixtures"
 # which is the baseline later phases measure against. Adding new inputs is not a
 # behavior change on existing ones, so the gate's promise holds.
 #
-# ``langchain4j_detection`` has since moved off that baseline, deliberately and
-# once: #52 made the Analyzer report the build file it opens, so its snapshot
-# now carries a ``framework_langchain4j`` row. ``deepagents_detection`` still
-# holds the pre-Analyzer baseline, and will until the Deep Agents Analyzer
-# lands.
+# Both have since moved off that baseline, deliberately and once each.
+# ``langchain4j_detection`` moved at #52, which made the Analyzer report the
+# build file it opens, so its snapshot now carries a ``framework_langchain4j``
+# row. ``deepagents_detection`` moved at #70, which wired the Deep Agents
+# Analyzer up carrying no Rules at all -- precisely so the behavioral cost of a
+# gated Framework Analyzer could be read in isolation. It is one added
+# ``framework_deepagents`` row over the requirement file, and nothing else: no
+# Finding, no limitation, and the same coverage as before.
 #
 # ``langchain4j_shell_skill`` (#28) is the first fixture a Framework Analyzer
 # actually reads: a LangChain4j application whose Skill sits at

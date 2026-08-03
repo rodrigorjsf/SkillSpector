@@ -46,7 +46,7 @@ What SkillSpector-Polyglot does with a scanned tree depends on the framework it 
 |---|---|---|---|---|
 | **Agent Skills** (Claude Code, Codex CLI, Gemini CLI, …) | any | default | — (the full 68-pattern base catalog applies) | **Shipped** — upstream behavior, unchanged |
 | **LangChain4j** | Java / Kotlin | `langchain4j` Maven coordinate, `dev.langchain4j` import, or `src/main/resources/skills/` layout | 5 rules — `L4J-SHELL`, `L4J-UNRESOLVED`, `L4J-TOOL-DESC`, `L4J-MCP-FILTER`, `L4J-WORKDIR` | **Shipped** |
-| **Deep Agents** | Python | `deepagents` distribution, `import deepagents`, or `create_deep_agent(` | none yet | **Detected only** — the analyzer is designed, not built ([design](docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md), [shape](docs/adr/0008-deepagents-analyzer-resolves-one-module-deep.md)) |
+| **Deep Agents** | Python | `deepagents` distribution, `import deepagents`, or `create_deep_agent(` | none yet | **Analyzer reports, no rules yet** — `framework_deepagents` opens the Python sources, Python requirement files and `SKILL.md` files of the scan and reports one status row; the rules are designed, not built ([design](docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md), [shape](docs/adr/0008-deepagents-analyzer-resolves-one-module-deep.md)) |
 
 The base catalog — prompt injection, data exfiltration, privilege escalation, supply chain, taint
 tracking, YARA signatures, MCP least privilege, and the rest — applies to **every** framework. The
@@ -54,9 +54,11 @@ rows above add to it; they never replace it. Full rule tables are in
 [Vulnerability Patterns](#vulnerability-patterns).
 
 **Deep Agents, precisely:** a Deep Agents project is detected and reported as such, and its
-`SKILL.md` files are scanned by the base catalog like any other skill. What does not exist yet is a
-`framework_deepagents` analyzer contributing Python-specific rules. Do not read "Detected" as
-"covered by dedicated rules".
+`SKILL.md` files are scanned by the base catalog like any other skill. The `framework_deepagents`
+analyzer exists and says so — the scan report now carries a row naming which components it opened,
+so an absence of Deep Agents findings is distinguishable from an absence of inspection. What does
+not exist yet is any Python-specific rule behind it: the analyzer emits no findings at all. Do not
+read that row as "covered by dedicated rules".
 
 ## Who this is for
 
