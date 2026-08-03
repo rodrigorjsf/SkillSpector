@@ -9,7 +9,17 @@ and ledger rows exist in committed snapshots: **how far it resolves a value befo
 boundary, how many Findings the absence of a write restriction produces, and which Components its
 Applicability opens.**
 
-No code implements this yet. This record is the input to the Spec that will.
+This record was written as the input to the Spec that would implement it. Issue #70 has since landed
+the Analyzer itself — the gate, the Applicability predicate of §3, the status reporting and the
+vocabulary module — carrying no Rule at all. The Rules of §1 and §2 are issues #71–#74, and the
+stability measurement named under Consequences is #75.
+
+One thing #70 measured that this record did not anticipate: with the Applicability set of §3, the
+Analyzer's `not_applicable` branch is **unreachable through the graph**. Every signal
+`skillspector.framework` detects Deep Agents by is a Python module or a Python requirement file, and
+both are inside the predicate, read from the `file_cache` that `build_context` derived `framework`
+from in the same return. The branch is kept — ADR 0006 makes it the shape of an Applicability gate
+rather than an observed case — and is exercised from synthetic state.
 
 ## What is being judged, and why a token match is wrong
 

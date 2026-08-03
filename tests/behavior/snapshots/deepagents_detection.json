@@ -24,6 +24,15 @@
         "unaccounted": 0
       },
       {
+        "analyzer_id": "framework_deepagents",
+        "completed": 1,
+        "failed": 0,
+        "planned_work": 1,
+        "skipped": 0,
+        "status": "completed",
+        "unaccounted": 0
+      },
+      {
         "analyzer_id": "mcp_least_privilege",
         "completed": 0,
         "failed": 0,

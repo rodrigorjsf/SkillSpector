@@ -21,6 +21,9 @@ from skillspector.nodes.analyzers.behavioral_ast import node as behavioral_ast_n
 from skillspector.nodes.analyzers.behavioral_taint_tracking import (
     node as behavioral_taint_tracking_node,
 )
+from skillspector.nodes.analyzers.framework_deepagents import (
+    node as framework_deepagents_node,
+)
 from skillspector.nodes.analyzers.framework_langchain4j import (
     node as framework_langchain4j_node,
 )
@@ -107,6 +110,7 @@ ANALYZER_NODE_IDS: list[str] = [
     # Fork-added Framework Analyzers keep to the end of the list, so an upstream
     # merge that appends its own id does not have to reorder this one.
     "framework_langchain4j",
+    "framework_deepagents",
 ]
 
 ANALYZER_NODES = {
@@ -134,6 +138,7 @@ ANALYZER_NODES = {
     "semantic_developer_intent": semantic_developer_intent_node,
     "semantic_quality_policy": semantic_quality_policy_node,
     "framework_langchain4j": framework_langchain4j_node,
+    "framework_deepagents": framework_deepagents_node,
 }
 
 __all__ = ["ANALYZER_NODE_IDS", "ANALYZER_NODES"]
