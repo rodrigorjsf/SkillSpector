@@ -121,6 +121,7 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - Fork Actions need the Actions-tab enable button clicked once; only a human can.
 - Squash-merge Ticket PRs; DCO checks every merge commit inside the PR range.
 - `CONTEXT.md` `_Avoid_` terms bind docstrings and test names, not just prose.
+- `CONTEXT.md` entries define terms only; symbol names belong in `DEVELOPMENT.md`.
 - Link sub-issues via `gh api -F sub_issue_id=<id>`; `-f` sends a string and 422s.
 - Prove a snapshot change additive with `git status` after `make update-snapshots`.
 - Corpus counts are prose in six files; grep the phrasing, not just the number.
