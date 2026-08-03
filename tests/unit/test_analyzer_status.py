@@ -290,14 +290,31 @@ class TestNonLimitingSubset:
         assert completeness["limitations"] == [f"Analyzer behavioral_ast status: {status.value}."]
         assert completeness["is_complete"] is False
 
+    @pytest.mark.parametrize("status", sorted(NON_LIMITING_STATUSES, key=lambda s: s.value))
+    def test_a_member_of_the_subset_states_nothing(self, status: AnalyzerStatus) -> None:
+        # The control for the assertion above, and the only test of the one
+        # comparison this change altered -- ``finalize_ledger`` now reads a
+        # ``str`` against a ``frozenset`` of members. Without it, a
+        # finalization calling *every* status limiting would look just as
+        # green.
+        completeness, _ = finalize_ledger(
+            {
+                "components": [],
+                "analyzer_status_events": [
+                    analyzer_status_event(analyzer_id="behavioral_ast", status=status)
+                ],
+            }
+        )
+        assert completeness["limitations"] == []
+        assert completeness["is_complete"] is True
+
 
 class TestMalformedStatus:
     """``"unknown"`` is deliberately not a member -- the decision #47 asked for.
 
-    Declaring it would make it emittable through the factory, which is the
-    opposite of closing the set; raising would make finalization crash on the
-    one input class it exists to survive. So it stays a fallback, outside the
-    set and outside the non-limiting subset, and this is what it does.
+    Why it is not, and why raising was rejected, is recorded beside
+    ``_MALFORMED_ANALYZER_STATUS`` in ``skillspector.inspection_ledger``. What
+    follows is what the decision does.
     """
 
     def test_a_status_less_event_is_limiting_rather_than_fatal(self) -> None:
