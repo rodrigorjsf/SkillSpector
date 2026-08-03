@@ -173,9 +173,9 @@ There are no conditional edges: after `resolve_input` → `build_context`, all a
 | `mcp_least_privilege.py`, `mcp_tool_poisoning.py` | MCP analyzers (LP1–LP4 least-privilege; TP1–TP4 tool poisoning) |
 | `mcp_rug_pull.py` | MCP rug-pull analyzer (RP1–RP3): detects manifest/tool-definition changes between scans |
 | `semantic_security_discovery.py`, `semantic_developer_intent.py`, `semantic_quality_policy.py` | Semantic (LLM) analyzers; emit findings only when `use_llm` is enabled |
-| `framework_langchain4j.py` | Gated LangChain4j analyzer (L4J-SHELL): reports unsandboxed shell mode. Declines silently on every other Framework |
+| `framework_langchain4j.py` | Gated LangChain4j analyzer (L4J-SHELL, L4J-UNRESOLVED, L4J-TOOL-DESC, L4J-MCP-FILTER, L4J-WORKDIR). Declines silently on every other Framework; on its own it always reports a status |
 | **langchain4j/** | |
-| `signals.py` | Parser-free: which files are Java or JVM build files, and the comment-aware build-file scan the analyzer gates on |
+| `signals.py` | Parser-free: `applicable_files`, the predicate the analyzer gates on, plus the comment-aware build-file scan behind `L4J-SHELL` |
 | `java_parser.py` | The tree-sitter binding for Java. Importing this imports tree-sitter, so analyzers import it lazily |
 | `shell_skills.py` | Finds `ShellSkills` in Java source |
 
@@ -298,6 +298,8 @@ Return `{"findings": []}`. All analyzer nodes are currently implemented; use thi
 ### Gated Framework analyzers
 
 An analyzer that only applies to one Framework gates on `state["framework"]` as its **first statement** and returns a bare `{"findings": []}` otherwise — no ledger event, no analyzer status event. That total silence is [ADR 0002](adr/0002-gated-analyzers-decline-silently.md): `finalize_ledger` builds `analyzer_statuses` from whatever status events arrive, so a `not_applicable` row would appear in `analysis_completeness` for every existing scan and churn every behavior snapshot. The gate is a convention with no enforcement; the snapshot test is what catches a breach.
+
+That silence is the *Framework* gate only. Past it, the analyzer reports an analyzer status on every input, and what it opens is one named predicate — for LangChain4j, `signals.applicable_files`. The gate tests whether that predicate's result is empty and the planned work is derived from the same result, so an opened Component is always a reported Component; an empty result emits `not_applicable` with `LedgerReason.NO_APPLICABLE_FILES` and no ledger event. Do not write the applicability test and the work plan as two expressions — they drifted apart once already, which is [ADR 0006](adr/0006-langchain4j-applicability-is-what-it-opens.md).
 
 Anything the analyzer needs that is not a base dependency is imported **inside** the node, not at module top. A module-level import of an absent dependency breaks importing the registry itself; inside the node the failure reaches `guard_analyzer_node`, which records the analyzer as `failed` with a fatal ledger exception, so the scan exits non-zero and says why. Do not wrap that import in `try`/`except` — swallowing it is the silent failure the ordering exists to prevent. See [framework_langchain4j.py](../src/skillspector/nodes/analyzers/framework_langchain4j.py).
 

@@ -282,10 +282,16 @@ FIXTURES_DIR = _BEHAVIOR_DIR.parent / "fixtures"
 # including the anonymous-Skill result #11 tracks changing.
 #
 # ``deepagents_detection`` and ``langchain4j_detection`` (#21) bear none either.
-# They are here deliberately: their snapshots freeze what a Scan of a
-# Framework-bearing directory produces *before* any Framework Analyzer exists,
+# They are here deliberately: their snapshots froze what a Scan of a
+# Framework-bearing directory produced *before* any Framework Analyzer existed,
 # which is the baseline later phases measure against. Adding new inputs is not a
 # behavior change on existing ones, so the gate's promise holds.
+#
+# ``langchain4j_detection`` has since moved off that baseline, deliberately and
+# once: #52 made the Analyzer report the build file it opens, so its snapshot
+# now carries a ``framework_langchain4j`` row. ``deepagents_detection`` still
+# holds the pre-Analyzer baseline, and will until the Deep Agents Analyzer
+# lands.
 #
 # ``langchain4j_shell_skill`` (#28) is the first fixture a Framework Analyzer
 # actually reads: a LangChain4j application whose Skill sits at

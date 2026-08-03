@@ -22,19 +22,41 @@ Analyzer whose gate does not open plans no Work Item, so there is no unaccounted
 work -- and it is what keeps a Scan of an Agent Skills Skill byte-for-byte
 unchanged by this module's existence.
 
-Two Rules today.
+On a LangChain4j Scan it always reports exactly one Analyzer Status, and what it
+opens is one predicate: ``signals.applicable_files``, the Java compilation units
+and JVM build files of the Scan. Both the gate and the planned work derive from
+that single result, so the Analyzer cannot open a Component it does not report.
+``docs/adr/0006-langchain4j-applicability-is-what-it-opens.md`` records why.
+
+Five Rules today.
 
 ``L4J-SHELL`` (HIGH). LangChain4j's shell mode hands the model a single
 ``run_shell_command`` tool that runs in the host process with no sandboxing,
 containerization or privilege restriction; upstream documents it as unsafe. It
 is the risk that scheduled the Java track ahead of Deep Agents in
-``docs/adr/0004-langchain4j-before-deepagents.md``.
+``docs/adr/0004-langchain4j-before-deepagents.md``. It fires on the wiring that
+reaches shell mode, and on a build file that declares the shell module -- either
+one alone, because neither implies the other.
 
 ``L4J-UNRESOLVED`` (MEDIUM). A Java-defined Skill's content, name, description
 or loader path can be assembled at runtime, and then the instruction text the
 model reads exists in no file this Scan can open. Resolving arbitrary Java
 dataflow is out of scope; reporting the boundary is not. Silence there would let
 the report read as clean on the one surface that was never examined.
+
+``L4J-TOOL-DESC`` (MEDIUM). A ``@Tool`` description that instructs the model
+rather than describing the tool is a prompt-injection surface sitting in an
+annotation.
+
+``L4J-MCP-FILTER`` (MEDIUM). An ``McpToolProvider`` built without a tool filter
+hands the agent every tool its MCP server exposes rather than a scoped subset.
+
+``L4J-WORKDIR`` (MEDIUM). A shell command configuration built without a working
+directory runs commands wherever the JVM happens to be -- usually the
+application root.
+
+Only the first is about shell mode; the other four apply to any LangChain4j
+application, Tool mode included.
 
 What *is* resolvable -- a text block, a string literal, a same-unit constant --
 is scanned by the existing content Analyzers, so a Skill body written in Java
@@ -50,6 +72,7 @@ from typing import TYPE_CHECKING
 from skillspector.framework import Framework
 from skillspector.inspection_ledger import (
     LedgerOutcome,
+    LedgerReason,
     PlannedWorkTarget,
     analyzer_status_event,
     inspection_work_id,
@@ -352,41 +375,58 @@ def _planned_target(path: str) -> PlannedWorkTarget:
 
 
 def _decline() -> AnalyzerNodeResponse:
-    """Return the empty response a gated Analyzer declines with."""
+    """Return the empty response a Framework-mismatched Analyzer declines with.
+
+    Decline is now this one case. A LangChain4j Scan never reaches here: when
+    there is nothing applicable it reports ``not_applicable`` instead, which
+    states something that happened rather than saying nothing.
+    """
     return {"findings": []}
 
 
 def node(state: SkillspectorState) -> AnalyzerNodeResponse:
-    """Report LangChain4j shell mode on a LangChain4j Scan; decline on any other."""
+    """Report what this Analyzer opened on a LangChain4j Scan; decline on any other."""
     if state.get("framework") != Framework.LANGCHAIN4J:
         return _decline()
 
     file_cache: Mapping[str, str] = state.get("file_cache") or {}
-    java_sources = signals.java_sources(file_cache)
-    shell_declarations = signals.shell_artifact_declaration_lines(file_cache)
 
-    # Applicability, second and last gate. With no Java to parse and no build
-    # file already naming the shell module, this Analyzer holds nothing it can
-    # inspect. It declines in the same total silence as a Framework mismatch.
+    # Applicability, second and last gate, and the one predicate the accounting
+    # below is derived from. A Component this Analyzer opens is a Java
+    # compilation unit or a JVM build file; a LangChain4j tree holding neither
+    # -- Skills reached through the classpath layout, or a Kotlin-only import --
+    # is one it opens nothing in.
     #
-    # ADR 0002 *deferred* rather than approved that silence: it names a matching
-    # Framework with nothing applicable as the case that should eventually carry
-    # a `not_applicable` status, because unlike a gate mismatch it does have
-    # planned work. Emitting one today would add a row to `analysis_completeness`
-    # for `tests/fixtures/langchain4j_detection`, whose committed Behavior
-    # Snapshot this increment must leave byte-identical. Reopen with the status,
-    # and regenerate that snapshot deliberately, when the gate stops being the
-    # thing holding it shut.
-    if not java_sources and not shell_declarations:
-        logger.info("%s: no Java and no shell declaration, declining", ANALYZER_ID)
-        return _decline()
+    # It says so rather than falling silent. Silence here is the confusion the
+    # Inspection Ledger exists to eliminate, on exactly the input it was built
+    # to disambiguate: a reader could not tell whether the Analyzer ran and
+    # approved the repository or never engaged with it. ADR 0002's silence is
+    # for the Framework mismatch above, where there is no planned work at all;
+    # ADR 0006 closes the deferral it left open here.
+    applicable = signals.applicable_files(file_cache)
+    if not applicable:
+        logger.info("%s: nothing applicable, reporting not_applicable", ANALYZER_ID)
+        return {
+            "findings": [],
+            "analyzer_status_events": [
+                analyzer_status_event(
+                    analyzer_id=ANALYZER_ID,
+                    status="not_applicable",
+                    reason=LedgerReason.NO_APPLICABLE_FILES,
+                )
+            ],
+        }
+
+    # Narrowed from the same result the gate tested, never recomputed from
+    # `file_cache`: two definitions of "applicable" eight lines apart are what
+    # ADR 0006 exists to prevent recurring.
+    java_sources = signals.java_sources(applicable)
+    shell_declarations = signals.shell_artifact_declaration_lines(applicable)
 
     # Every file opened gets a row, whether or not it yielded a Finding: once
     # this Analyzer runs, an absence of Findings must be distinguishable from an
     # absence of inspection.
-    inspected: dict[str, list[Finding]] = {
-        path: [] for path in (*java_sources, *signals.jvm_build_files(file_cache))
-    }
+    inspected: dict[str, list[Finding]] = {path: [] for path in applicable}
 
     # The parser enters here and nowhere earlier. At module top an absent
     # tree-sitter would break importing the analyzer registry itself; inside the
@@ -406,8 +446,11 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
         inspected[path].extend(_skill_definition_findings(path, source))
         inspected[path].extend(_tool_surface_findings(path, source))
 
+    # Indexed rather than `setdefault`: a declaring build file is an applicable
+    # file, so it already has a row. A KeyError here would mean the two had
+    # drifted apart again.
     for path, declaration_line in shell_declarations.items():
-        inspected.setdefault(path, []).append(
+        inspected[path].append(
             _finding(
                 _RULE_ID, path, declaration_line, _DECLARATION_MESSAGE, _DECLARATION_CONFIDENCE
             )

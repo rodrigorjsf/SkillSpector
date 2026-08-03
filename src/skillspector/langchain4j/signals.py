@@ -16,9 +16,10 @@
 """Which files of a Scan the LangChain4j Analyzer inspects, and cheap signals over them.
 
 Deliberately parser-free. The Analyzer decides whether it is applicable at all
-before importing tree-sitter, and that decision is made here -- so a Scan the
-Analyzer declines never loads a parser, and an installation missing one still
-declines quietly on every input the Analyzer does not own.
+before importing tree-sitter, and that decision is made here -- so a Scan with
+nothing applicable reports ``not_applicable`` without ever loading a parser, and
+an installation missing one still declines quietly on every input the Analyzer
+does not own.
 
 The file predicates mirror ``skillspector.framework``'s rather than importing
 them: detection asks "is this tree LangChain4j at all", this module asks "which
@@ -96,6 +97,28 @@ def java_sources(file_cache: Mapping[str, str]) -> dict[str, str]:
 def jvm_build_files(file_cache: Mapping[str, str]) -> dict[str, str]:
     """The readable Maven and Gradle build files of a Scan, by path."""
     return {path: content for path, content in file_cache.items() if is_jvm_build_file(path)}
+
+
+def applicable_files(file_cache: Mapping[str, str]) -> dict[str, str]:
+    """The Components the LangChain4j Analyzer opens, by path.
+
+    Applicability is this one predicate: a Java compilation unit or a JVM build
+    file, whether or not the build file declares the shell module. The Analyzer
+    gates on this result being empty and derives its planned work from the same
+    result, so what it opens and what it reports opening cannot disagree -- the
+    drift ``docs/adr/0006-langchain4j-applicability-is-what-it-opens.md``
+    records, where a build file with no shell declaration was opened by the
+    accounting and closed out by the gate.
+
+    Named for the word the Ledger already uses: an Analyzer with none of these
+    reports ``no_applicable_files``, so the code and the report describe
+    applicability in one vocabulary rather than two.
+    """
+    return {
+        path: content
+        for path, content in file_cache.items()
+        if is_java_source(path) or is_jvm_build_file(path)
+    }
 
 
 def _without_comments(path: str, content: str) -> str:
