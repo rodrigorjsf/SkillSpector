@@ -792,6 +792,68 @@ class TestTheFindingReachesTheReport:
         assert completeness["execution_successful"] is True
 
 
+class TestTheToolModeFixtureCarriesNoShellSpelling:
+    """``langchain4j_tool_mode`` is a negative control only while its tree stays clean.
+
+    Its Behavior Snapshot proves ``L4J-SHELL`` stayed silent on it. That alone
+    cannot say *why*: a Rule that quietly stopped matching looks exactly like a
+    tree with nothing to match. Reading the fixture's own bytes is what separates
+    the two, so the silence is evidence of the absent capability rather than of
+    an absent Rule.
+
+    Spelled from ``vocabulary`` rather than inline, so an upstream rename moves
+    this guard along with the Rules it guards.
+    """
+
+    @staticmethod
+    def _forbidden() -> tuple[str, ...]:
+        from skillspector.langchain4j import vocabulary
+
+        return (
+            vocabulary.SHELL_SKILLS_TYPE,
+            vocabulary.SHELL_COMMAND_CONFIG,
+            vocabulary.SHELL_ARTIFACT_ID,
+        )
+
+    @staticmethod
+    def _sources(fixture: str) -> dict[str, str]:
+        from tests.behavior.projection import FIXTURES_DIR
+
+        return {
+            str(path.relative_to(FIXTURES_DIR / fixture)): path.read_text(encoding="utf-8")
+            for path in sorted((FIXTURES_DIR / fixture).rglob("*"))
+            if path.is_file()
+        }
+
+    def test_no_file_in_the_tree_names_one(self) -> None:
+        for path, content in self._sources("langchain4j_tool_mode").items():
+            for spelling in self._forbidden():
+                assert spelling not in content, f"{path} names {spelling}"
+
+    def test_the_shell_fixture_names_all_three(self) -> None:
+        """The control, without which the assertion above is vacuous.
+
+        Two mutations were run against this pair before it was trusted. Planting
+        ``ShellSkills`` in the Tool mode tree turns the test above red, as it
+        should. Emptying the inventory does not -- a ``for`` loop over nothing
+        asserts nothing, and *both* tests passed until the count below was added.
+        The count is therefore the assertion, not decoration: it is what makes an
+        inventory that stopped naming anything fail rather than pass silently.
+
+        The sibling fixture is a LangChain4j application that really does reach
+        shell mode, so a constant renamed to a spelling no fixture carries fails
+        here too.
+        """
+        forbidden = self._forbidden()
+        shell_sources = self._sources("langchain4j_shell_skill")
+
+        assert len(forbidden) == 3
+        for spelling in forbidden:
+            assert any(spelling in content for content in shell_sources.values()), (
+                f"no file in langchain4j_shell_skill names {spelling}"
+            )
+
+
 class TestFullFileContent:
     """The Analyzer reads ``file_cache`` directly, so no per-file cap applies."""
 

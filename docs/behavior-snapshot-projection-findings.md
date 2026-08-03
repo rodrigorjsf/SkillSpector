@@ -15,6 +15,14 @@ scanned as targets in their own right (§7), for **27 total**. Sizes in §5 are 
 **Decided:** the corpus for the gate is the **24 leaves**. The three family parents stay out — they
 are fixture-layout containers, not Skills. #8 inherits 24, not 11.
 
+**Every figure in this document was measured on that 24-leaf corpus, on the date above, and has not
+been re-run since.** The corpus has grown — 27 leaves by #28, 28 by #53 — so the counts here name
+the corpus of 2026-08-01 rather than the corpus of today. They are kept as the measurement record
+they are. Note also that the **27** appearing throughout is the 24 leaves *plus the three family
+parents scanned as targets in their own right* (§7), which is a different quantity from the 27 leaf
+scan targets the corpus happened to reach at #28; the two numbers coinciding is a coincidence, not
+a correspondence.
+
 ---
 
 ## 1. Toolchain — the commands that worked
