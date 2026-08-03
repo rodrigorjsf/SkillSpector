@@ -1026,7 +1026,7 @@ class TestTheToolModeFixtureCarriesNoShellSpelling:
             for spelling in self._forbidden():
                 assert spelling not in content, f"{path} names {spelling}"
 
-    def test_no_file_in_the_tree_declares_a_shell_artifact(self) -> None:
+    def test_no_file_in_the_tree_declares_the_shell_module(self) -> None:
         """The dependency half matches a pattern, so the guard has to as well.
 
         Asserting the three literals is no longer the same as asserting the
