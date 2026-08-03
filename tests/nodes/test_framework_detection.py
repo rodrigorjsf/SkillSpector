@@ -42,15 +42,20 @@ from tests.behavior import projection as proj
 FIXTURES_DIR = proj.FIXTURES_DIR
 
 # Every fixture whose Framework is not the default, and what it must detect as.
-# Two carry a bare detection signal and nothing else (issue #21); the third is a
-# LangChain4j application the ``framework_langchain4j`` Analyzer reads. Every
-# fixture outside this mapping predates Framework detection and must keep
-# detecting ``agent_skills`` -- a fixture arriving here by accident rather than
-# by this edit is the drift the assertion below exists to catch.
+# Two carry a bare detection signal and nothing else (issue #21); the other two
+# are LangChain4j applications the ``framework_langchain4j`` Analyzer reads, one
+# in shell mode and one in Tool mode. Every fixture outside this mapping predates
+# Framework detection and must keep detecting ``agent_skills`` -- a fixture
+# arriving here by accident rather than by this edit is the drift the assertion
+# below exists to catch.
+#
+# ``langchain4j_tool_mode`` is the one that proves detection does not rest on the
+# shell artifact: its build file declares only ``dev.langchain4j:langchain4j-skills``.
 DETECTION_FIXTURES: dict[str, Framework] = {
     "langchain4j_detection": Framework.LANGCHAIN4J,
     "deepagents_detection": Framework.DEEPAGENTS,
     "langchain4j_shell_skill": Framework.LANGCHAIN4J,
+    "langchain4j_tool_mode": Framework.LANGCHAIN4J,
 }
 
 # One row per signal, positive and negative: the in-memory ``file_cache`` and
