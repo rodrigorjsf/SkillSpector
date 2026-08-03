@@ -132,6 +132,7 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - A worktree needs its own venv; the main checkout's editable install imports its dirty `src/`.
 - `gh issue view` fails with a projectCards GraphQL error; use `--json`.
 - `gh pr edit` hits the same error; PATCH the body via `gh api` instead.
+- `gh api --jq .body_html` needs `Accept: application/vnd.github.html+json`, else empty.
 - CI only triggers on `main`-targeting PRs; empty `gh pr checks` is not a pass.
 - `make` needs `export PATH="$PWD/.venv/bin:$PATH"`; sourcing `activate.fish` fails in Bash.
 - Empty `git diff` plus `M` status means `core.autocrlf`, not a real change.
