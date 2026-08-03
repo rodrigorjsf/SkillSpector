@@ -112,9 +112,8 @@ stated limitation.
 _Avoid_: analyzer result, run status
 
 **Applicability**:
-Which Components an Analyzer opens. It is one predicate per Analyzer: the gate tests whether its
-result is empty and the Work Items are planned from that same result, so a Component that is opened
-is always a Component that is reported.
+Which Components an Analyzer opens. One Analyzer has one Applicability, so a Component it opens is
+always a Component it reports.
 _Avoid_: eligibility, purview
 
 **Decline**:

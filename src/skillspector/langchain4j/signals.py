@@ -16,9 +16,10 @@
 """Which files of a Scan the LangChain4j Analyzer inspects, and cheap signals over them.
 
 Deliberately parser-free. The Analyzer decides whether it is applicable at all
-before importing tree-sitter, and that decision is made here -- so a Scan the
-Analyzer declines never loads a parser, and an installation missing one still
-declines quietly on every input the Analyzer does not own.
+before importing tree-sitter, and that decision is made here -- so a Scan with
+nothing applicable reports ``not_applicable`` without ever loading a parser, and
+an installation missing one still declines quietly on every input the Analyzer
+does not own.
 
 The file predicates mirror ``skillspector.framework``'s rather than importing
 them: detection asks "is this tree LangChain4j at all", this module asks "which

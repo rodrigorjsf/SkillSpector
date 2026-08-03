@@ -10,8 +10,10 @@ result, so the Analyzer cannot open a Component it does not report.
 Under that definition a Scan whose Framework is LangChain4j **always reports exactly one Analyzer
 Status**. A repository holding a build file gets `completed` with a Work Item for it and no
 Findings. A LangChain4j tree the Analyzer opens nothing in — Skills reached through the classpath
-layout, or a Kotlin-only import — gets `not_applicable` with the `no_applicable_files` reason every
-other Analyzer already uses for that shape.
+layout, or a Kotlin-only import — gets `not_applicable` with `no_applicable_files`, the reason this
+codebase already emits wherever an Analyzer finds no file it can open. (The Analyzers that report
+`not_applicable` for an *absent Manifest* use `manifest_absent`; that is a different shape and keeps
+its own reason.)
 
 The Framework gate is untouched. A Scan of another Framework stays byte-for-byte unchanged by this
 Analyzer's existence, which is [ADR 0002](0002-gated-analyzers-decline-silently.md)'s decision and

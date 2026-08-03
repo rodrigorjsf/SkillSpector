@@ -173,9 +173,9 @@ There are no conditional edges: after `resolve_input` → `build_context`, all a
 | `mcp_least_privilege.py`, `mcp_tool_poisoning.py` | MCP analyzers (LP1–LP4 least-privilege; TP1–TP4 tool poisoning) |
 | `mcp_rug_pull.py` | MCP rug-pull analyzer (RP1–RP3): detects manifest/tool-definition changes between scans |
 | `semantic_security_discovery.py`, `semantic_developer_intent.py`, `semantic_quality_policy.py` | Semantic (LLM) analyzers; emit findings only when `use_llm` is enabled |
-| `framework_langchain4j.py` | Gated LangChain4j analyzer (L4J-SHELL): reports unsandboxed shell mode. Declines silently on every other Framework |
+| `framework_langchain4j.py` | Gated LangChain4j analyzer (L4J-SHELL, L4J-UNRESOLVED, L4J-TOOL-DESC, L4J-MCP-FILTER, L4J-WORKDIR). Declines silently on every other Framework; on its own it always reports a status |
 | **langchain4j/** | |
-| `signals.py` | Parser-free: which files are Java or JVM build files, and the comment-aware build-file scan the analyzer gates on |
+| `signals.py` | Parser-free: `applicable_files`, the predicate the analyzer gates on, plus the comment-aware build-file scan behind `L4J-SHELL` |
 | `java_parser.py` | The tree-sitter binding for Java. Importing this imports tree-sitter, so analyzers import it lazily |
 | `shell_skills.py` | Finds `ShellSkills` in Java source |
 

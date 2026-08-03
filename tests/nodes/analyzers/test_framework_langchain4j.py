@@ -270,9 +270,9 @@ class TestApplicability:
     def test_nothing_applicable_reports_not_applicable_with_the_shared_reason(self) -> None:
         """A LangChain4j tree this Analyzer opens nothing in -- Skills, no JVM files.
 
-        The reason code is the one every other Analyzer already emits for the
-        same shape, so a reader does not have to learn a LangChain4j-specific
-        vocabulary to understand the row.
+        The reason code is the one the codebase already emits wherever an
+        Analyzer finds no file it can open, so a reader does not have to learn a
+        LangChain4j-specific vocabulary to understand the row.
         """
         result = analyzer.node(
             make_state({"src/main/resources/skills/ops-runbook/SKILL.md": "# Ops runbook\n"})
