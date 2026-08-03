@@ -157,3 +157,4 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - JSON report nests findings under `issues`, keyed `id` — not `findings`/`rule_id`.
 - Undo a mutation test by hand; `git checkout --` drops the whole file's edits.
 - Mutate a module constant in a throwaway script instead; nothing to undo.
+- `Closes #N` no-ops in a Ticket PR; only a default-branch merge closes an issue.
