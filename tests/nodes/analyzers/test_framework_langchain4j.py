@@ -134,6 +134,96 @@ SAFE_SKILLS_POM = """<project>
 </project>
 """
 
+# Read from the inventory rather than spelled again: these fixtures are about
+# where the id appears, not about which id it is, and ADR 0007 expects the
+# spelling to change the day the artifact graduates.
+SHELL_ARTIFACT_ID = analyzer.vocabulary.SHELL_ARTIFACT_ID
+
+# Naming the shell artifact to *refuse* it. Both spellings say what the comment
+# in COMMENTED_POM says -- that the capability is not taken -- in XML instead of
+# in a comment. Issue #64.
+EXCLUDING_POM = f"""<project>
+  <dependencies>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-skills</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>dev.langchain4j</groupId>
+          <artifactId>{SHELL_ARTIFACT_ID}</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+  </dependencies>
+</project>
+"""
+
+BANNED_POM = f"""<project>
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <configuration>
+          <rules>
+            <bannedDependencies>
+              <excludes>
+                <exclude>dev.langchain4j:{SHELL_ARTIFACT_ID}</exclude>
+              </excludes>
+            </bannedDependencies>
+          </rules>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+"""
+
+# The declaration is real; the <exclusions> block underneath it bans something
+# else entirely. Suppression scoped to the banning subtree leaves this reported.
+DECLARING_AND_EXCLUDING_POM = f"""<project>
+  <dependencies>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>{SHELL_ARTIFACT_ID}</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+  </dependencies>
+</project>
+"""
+DECLARING_AND_EXCLUDING_POM_LINE = 5
+
+# Malformed on purpose, and in the shape that is hardest to survive: the first
+# <exclusions> is never closed, a real declaration follows it, and the only
+# </exclusions> in the file is an orphan *after* that declaration. A sweep that
+# pairs the two blanks the declaration between them. Nothing else in the file
+# re-opens the tag, so refusing to cross a second opening tag is not enough on
+# its own -- what saves the declaration is refusing to cross </dependency>.
+UNCLOSED_EXCLUSIONS_POM = f"""<project>
+  <dependencies>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-skills</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+        </exclusion>
+    </dependency>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>{SHELL_ARTIFACT_ID}</artifactId>
+    </dependency>
+  </dependencies>
+  </exclusions>
+</project>
+"""
+UNCLOSED_EXCLUSIONS_POM_LINE = 14
+
 
 def make_state(
     file_cache: dict[str, str],
@@ -372,40 +462,64 @@ class TestWhatTheWideningAlsoMatches:
 
         assert shell_findings(analyzer.node(make_state({"pom.xml": prose}))) == []
 
-    @pytest.mark.xfail(
-        reason="Pre-existing: an <exclusion> naming the shell module is the syntactic "
-        "equivalent of the comment _without_comments already blanks, and is not blanked. "
-        "The literal match this pattern replaced reported it identically, so the widening "
-        "neither caused nor worsened it. Issue #64.",
-        strict=True,
-    )
-    def test_an_excluded_shell_module_is_not_a_declaration(self) -> None:
-        """Excluding the shell module is banning the capability, not taking it.
 
-        Reporting it inverts the Finding: the build file is flagged HIGH for the
-        one action that removes the risk. ``shell_artifact_declarations`` already
-        blanks comments so a build file naming the artifact only to say it was
-        *removed* is not read as declaring it; an ``<exclusion>`` says the same
-        thing in XML rather than in a comment.
-        """
-        excluding = (
-            "<project>\n"
-            "  <dependencies>\n"
-            "    <dependency>\n"
-            "      <groupId>dev.langchain4j</groupId>\n"
-            "      <artifactId>langchain4j-skills</artifactId>\n"
-            "      <exclusions>\n"
-            "        <exclusion>\n"
-            "          <groupId>dev.langchain4j</groupId>\n"
-            f"          <artifactId>{analyzer.vocabulary.SHELL_ARTIFACT_ID}</artifactId>\n"
-            "        </exclusion>\n"
-            "      </exclusions>\n"
-            "    </dependency>\n"
-            "  </dependencies>\n"
-            "</project>\n"
+class TestBanningTheModuleIsNotDeclaringIt:
+    """A pom naming the shell artifact to *refuse* it raises nothing.
+
+    Reporting one inverts the Finding: the build file is flagged HIGH for the
+    one action that removes the risk. ``shell_artifact_declarations`` already
+    blanks comments so a build file naming the artifact only to record that it
+    was removed is not read as declaring it; an ``<exclusions>`` subtree and
+    Enforcer's ``<bannedDependencies>`` say the same thing in XML rather than in
+    a comment. Issue #64, recorded in
+    ``docs/adr/0007-l4j-shell-survives-the-graduation-rename.md``.
+
+    The bound on the blanking is the rest of this class: it must not buy the
+    false positive back with a false negative, which is the failure #45 existed
+    to fix.
+    """
+
+    def test_an_excluded_shell_module_is_not_a_declaration(self) -> None:
+        assert shell_findings(analyzer.node(make_state({"pom.xml": EXCLUDING_POM}))) == []
+
+    def test_a_banned_shell_module_is_not_a_declaration(self) -> None:
+        """Enforcer bans by artifact id, in a block shaped like an exclusion."""
+        assert shell_findings(analyzer.node(make_state({"pom.xml": BANNED_POM}))) == []
+
+    def test_a_real_dependency_is_still_reported_at_its_line(self) -> None:
+        """The control: the blanking is scoped to the refusing subtrees, not the file."""
+        findings = shell_findings(analyzer.node(make_state({"pom.xml": SHELL_POM})))
+
+        assert len(findings) == 1
+        assert findings[0].severity == "HIGH"
+        assert findings[0].start_line == SHELL_POM_LINE
+
+    def test_declaring_it_while_excluding_something_else_is_reported(self) -> None:
+        """An unrelated ``<exclusions>`` block does not blank the declaration above it."""
+        findings = shell_findings(
+            analyzer.node(make_state({"pom.xml": DECLARING_AND_EXCLUDING_POM}))
         )
 
-        assert shell_findings(analyzer.node(make_state({"pom.xml": excluding}))) == []
+        assert len(findings) == 1
+        assert findings[0].start_line == DECLARING_AND_EXCLUDING_POM_LINE
+
+    def test_an_unclosed_exclusions_block_does_not_swallow_a_declaration(self) -> None:
+        """The failure mode a naive ``<exclusions>.*?</exclusions>`` sweep would have.
+
+        Pairing an unclosed opening tag with the *next* close anywhere later in
+        the file blanks everything between them -- including a real declaration
+        -- and trades this false positive for the false negative #45 existed to
+        fix. Malformed XML is exactly the input that produces it.
+
+        The fixture is deliberately the hard shape: nothing re-opens the tag
+        between the two, so a pattern tempered only against a second
+        ``<exclusions`` opening still swallows the declaration. Refusing to
+        cross ``</dependency>`` is what saves it.
+        """
+        findings = shell_findings(analyzer.node(make_state({"pom.xml": UNCLOSED_EXCLUSIONS_POM})))
+
+        assert len(findings) == 1, "an unclosed <exclusions> swallowed a real declaration"
+        assert findings[0].start_line == UNCLOSED_EXCLUSIONS_POM_LINE
 
 
 class TestTheFrameworkGate:

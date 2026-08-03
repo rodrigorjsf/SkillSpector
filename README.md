@@ -758,7 +758,7 @@ these rules are inert and the scan is unchanged.
 
 | ID | Pattern | Severity | Description |
 |----|---------|----------|-------------|
-| L4J-SHELL | Unsandboxed Shell Mode | HIGH | `ShellSkills` wiring, or any `langchain4j-…shell…` dependency (`langchain4j-experimental-skills-shell` today), gives the agent arbitrary command execution with no sandbox |
+| L4J-SHELL | Unsandboxed Shell Mode | HIGH | `ShellSkills` wiring, or any `langchain4j-…shell…` dependency (`langchain4j-experimental-skills-shell` today), gives the agent arbitrary command execution with no sandbox. A Maven build file that names the artifact only to *refuse* it — in a comment, a dependency's `<exclusions>`, or Enforcer's `<bannedDependencies>` — is not declaring it and raises nothing. Gradle's `exclude group:`/`module:` form is not recognised as a refusal, so a Gradle build file that excludes the module is still reported |
 | L4J-UNRESOLVED | Unresolvable Skill Content | MEDIUM | A Java-defined Skill's content, name, description, or loader path is built at runtime, so the instruction surface was never scanned |
 | L4J-TOOL-DESC | Instruction-Carrying Tool Description | MEDIUM | A `@Tool` description instructs the model instead of describing the tool — tool poisoning written in Java rather than in an MCP manifest |
 | L4J-MCP-FILTER | Unfiltered MCP Tool Provider | MEDIUM | `McpToolProvider` built without `.toolFilter(...)`, so every tool the server exposes reaches the agent |
