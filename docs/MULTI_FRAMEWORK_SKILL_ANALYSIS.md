@@ -667,7 +667,7 @@ gated `framework_langchain4j` analyzer carrying all five L4J rules, and the Repo
 
 | Rule | Fires on | Severity |
 |------|----------|----------|
-| `L4J-SHELL` | `ShellSkills` wiring, or a declared `langchain4j-experimental-skills-shell` dependency | HIGH |
+| `L4J-SHELL` | `ShellSkills` wiring, or any declared `langchain4j-…shell…` dependency — `langchain4j-experimental-skills-shell` is the only one published, and [ADR 0007](adr/0007-l4j-shell-survives-the-graduation-rename.md) records why the match is wider than it | HIGH |
 | `L4J-UNRESOLVED` | A Skill's content, name, description or loader path built at runtime | MEDIUM |
 | `L4J-TOOL-DESC` | A `@Tool` description that instructs rather than describes | MEDIUM |
 | `L4J-MCP-FILTER` | `McpToolProvider` built without `.toolFilter(...)` | MEDIUM |
