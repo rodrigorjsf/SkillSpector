@@ -36,7 +36,12 @@ containerization or privilege restriction; upstream documents it as unsafe. It
 is the risk that scheduled the Java track ahead of Deep Agents in
 ``docs/adr/0004-langchain4j-before-deepagents.md``. It fires on the wiring that
 reaches shell mode, and on a build file that declares the shell module -- either
-one alone, because neither implies the other.
+one alone, because neither implies the other. The declaration half matches any
+``langchain4j-`` artifact id containing ``shell`` rather than the one spelling
+published to date, so the graduation release that drops ``experimental`` from
+the artifact's name does not silently retire it; the Finding names the spelling
+the build file used. ``docs/adr/0007-l4j-shell-survives-the-graduation-rename.md``
+records the decision and what it deliberately does not solve.
 
 ``L4J-UNRESOLVED`` (MEDIUM). A Java-defined Skill's content, name, description
 or loader path can be assembled at runtime, and then the instruction text the
@@ -151,10 +156,21 @@ _WIRING_MESSAGE = (
     "LangChain4j shell mode is wired here: the agent is given a run_shell_command tool that "
     "executes arbitrary commands in the host process with no sandboxing or privilege restriction."
 )
-_DECLARATION_MESSAGE = (
-    f"The build file declares {vocabulary.SHELL_ARTIFACT_ID}, putting LangChain4j's unsandboxed "
-    "shell mode on the classpath where any wiring can reach it."
-)
+
+
+def _declaration_message(artifact_id: str) -> str:
+    """The ``L4J-SHELL`` message for a build file that declares the shell module.
+
+    Names the spelling *that build file* used rather than the inventoried one.
+    The two are identical for every release published to date; they part company
+    the day the artifact graduates out of ``experimental``, and a Finding naming
+    an artifact id the reader cannot find in their own build file is a Finding
+    they have to second-guess.
+    """
+    return (
+        f"The build file declares {artifact_id}, putting LangChain4j's unsandboxed "
+        "shell mode on the classpath where any wiring can reach it."
+    )
 
 
 def _finding(
@@ -422,7 +438,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
     # `file_cache`: two definitions of "applicable" eight lines apart are what
     # ADR 0006 exists to prevent recurring.
     java_sources = signals.java_sources(applicable)
-    shell_declarations = signals.shell_artifact_declaration_lines(applicable)
+    shell_declarations = signals.shell_artifact_declarations(applicable)
 
     # Every file opened gets a row, whether or not it yielded a Finding: once
     # this Analyzer runs, an absence of Findings must be distinguishable from an
@@ -450,10 +466,14 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
     # Indexed rather than `setdefault`: a declaring build file is an applicable
     # file, so it already has a row. A KeyError here would mean the two had
     # drifted apart again.
-    for path, declaration_line in shell_declarations.items():
+    for path, declaration in shell_declarations.items():
         inspected[path].append(
             _finding(
-                _RULE_ID, path, declaration_line, _DECLARATION_MESSAGE, _DECLARATION_CONFIDENCE
+                _RULE_ID,
+                path,
+                declaration.line,
+                _declaration_message(declaration.artifact_id),
+                _DECLARATION_CONFIDENCE,
             )
         )
 

@@ -38,13 +38,14 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Final
 
 # Its presence on the classpath is the capability: upstream documents shell
 # execution as running "without any sandboxing, containerization, or privilege
 # restriction". Imported rather than spelled here -- ``vocabulary`` is the
 # single home for anything a LangChain4j release can rename.
-from skillspector.langchain4j.vocabulary import SHELL_ARTIFACT_ID
+from skillspector.langchain4j.vocabulary import SHELL_ARTIFACT_PATTERN
 
 JAVA_SUFFIX: Final[str] = ".java"
 
@@ -61,6 +62,9 @@ _XML_COMMENT: Final[re.Pattern[str]] = re.compile(r"<!--.*?-->", re.DOTALL)
 _GRADLE_BLOCK_COMMENT: Final[re.Pattern[str]] = re.compile(r"/\*.*?\*/", re.DOTALL)
 _GRADLE_LINE_COMMENT: Final[re.Pattern[str]] = re.compile(r"//[^\n]*")
 _NON_NEWLINE: Final[re.Pattern[str]] = re.compile(r"[^\n]")
+
+# Compiled here rather than in ``vocabulary``, which stays import-free.
+_SHELL_ARTIFACT: Final[re.Pattern[str]] = re.compile(SHELL_ARTIFACT_PATTERN)
 
 
 def _basename(path: str) -> str:
@@ -137,26 +141,49 @@ def _without_comments(path: str, content: str) -> str:
     return content
 
 
-def shell_artifact_declaration_lines(file_cache: Mapping[str, str]) -> dict[str, int]:
-    """Map each build file that declares LangChain4j's shell module to its line.
+@dataclass(frozen=True)
+class ShellDeclaration:
+    """One build file's declaration of LangChain4j's shell module.
+
+    ``artifact_id`` is the spelling the build file actually used, not the one
+    the inventory records. The two are the same today and are expected to differ
+    the day the artifact graduates out of ``experimental``, which is exactly when
+    a Finding naming the inventoried spelling would be describing a dependency
+    the reader cannot find in their own build file.
+    """
+
+    line: int
+    artifact_id: str
+
+
+def shell_artifact_declarations(file_cache: Mapping[str, str]) -> dict[str, ShellDeclaration]:
+    """Map each build file that declares LangChain4j's shell module to what it declared.
 
     Textual on purpose. Maven declares the artifact id as XML, Gradle as a
     coordinate string, and a Gradle version catalog as TOML; the artifact id
     itself is the one spelling all three share, and no parser is shared.
 
+    Matched as ``SHELL_ARTIFACT_PATTERN`` rather than as the published artifact
+    id, so the Rule survives the graduation rename upstream has signalled by
+    naming the artifact ``experimental``. The pattern is confined to a single
+    hyphenated ``langchain4j-`` token, so the safe sibling ``langchain4j-skills``
+    does not satisfy it -- ``docs/adr/0007-l4j-shell-survives-the-graduation-rename.md``
+    records why the match is a pattern rather than an enumeration of spellings.
+
     Comments are blanked first, so a build file that names the artifact only to
-    say it was *removed* is not read as declaring it -- a substring scan cannot
+    say it was *removed* is not read as declaring it -- a textual scan cannot
     tell the two apart, and would report both the false positive and the
     comment's line as the location.
 
-    One line per file: the first live declaration. A second in the same build
+    One declaration per file: the first live one. A second in the same build
     file is the same capability, and pointing at both would add noise rather
     than a second thing to fix.
     """
-    declarations: dict[str, int] = {}
+    declarations: dict[str, ShellDeclaration] = {}
     for path, content in jvm_build_files(file_cache).items():
         for number, line in enumerate(_without_comments(path, content).splitlines(), start=1):
-            if SHELL_ARTIFACT_ID in line:
-                declarations[path] = number
+            match = _SHELL_ARTIFACT.search(line)
+            if match is not None:
+                declarations[path] = ShellDeclaration(line=number, artifact_id=match.group(0))
                 break
     return declarations

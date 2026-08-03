@@ -136,11 +136,31 @@ SHELL_COMMAND_CONFIG: Final[str] = "RunShellCommandToolConfig"
 WORKING_DIRECTORY_SETTER: Final[str] = "workingDirectory"
 
 # The Maven artifact id of shell mode. Its presence on the classpath is the
-# capability. **The most fragile entry in this file**: the artifact is still
-# named ``experimental``, and the graduation release that drops that prefix
-# would silently kill the dependency signal behind ``L4J-SHELL``. Issue #45 owns
-# what the report should say when that happens.
+# capability. The only spelling ever published: 17 releases, the whole of
+# ``OBSERVED_VERSION_RANGE``.
+#
+# It is also the one entry here that upstream has told us in advance it intends
+# to change -- the artifact is named ``experimental``, and graduation drops that
+# word. So the Rule does not match this literal; it matches
+# ``SHELL_ARTIFACT_PATTERN`` below, which this spelling is one instance of.
+# Kept inventoried because it is what a build file says today, and because the
+# tests that prove the pattern still recognises the published artifact need a
+# name for it.
 SHELL_ARTIFACT_ID: Final[str] = "langchain4j-experimental-skills-shell"
+
+# What ``L4J-SHELL``'s dependency half actually matches: any ``langchain4j-``
+# artifact id whose own name contains ``shell``. Held as pattern *source* rather
+# than a compiled pattern so this module stays import-free, and so the guard in
+# ``tests/unit/test_langchain4j_vocabulary.py`` can read it like any other entry.
+#
+# Deliberately wider than the two spellings a graduation would produce.
+# ``docs/adr/0007-l4j-shell-survives-the-graduation-rename.md`` records the
+# measurement behind that: ``dev.langchain4j`` has never renamed an artifact out
+# of ``experimental``, so the graduated spelling cannot be derived, only guessed
+# -- and a pattern over the capability word needs no guess. The character class
+# is the artifact-id alphabet, so a match is confined to one hyphenated token
+# and ``langchain4j-skills``, the safe sibling, cannot satisfy it.
+SHELL_ARTIFACT_PATTERN: Final[str] = r"langchain4j-[a-z0-9-]*shell[a-z0-9-]*"
 
 
 # -- The tool surface -------------------------------------------------------- #
