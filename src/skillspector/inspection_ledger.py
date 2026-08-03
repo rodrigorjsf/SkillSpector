@@ -85,9 +85,12 @@ NON_LIMITING_STATUSES: Final[frozenset[AnalyzerStatus]] = frozenset(
 # No Analyzer reports it and ``analyzer_status_event`` cannot produce it;
 # declaring it would make it emittable, which is the opposite of closing the
 # set. Raising instead was rejected too: finalization exists to survive
-# malformed accounting, not to crash on it. Being outside
-# ``NON_LIMITING_STATUSES``, a malformed event states a limitation rather than
-# passing as complete. The decision is recorded on #47.
+# malformed accounting, not to crash on it. That holds equally for a bare dict
+# carrying an *undeclared* spelling -- finalization reports what it was given
+# rather than validating a second time. Being outside
+# ``NON_LIMITING_STATUSES``, either shape states a limitation rather than
+# passing as complete. #47 asked for this decision; ``TestMalformedStatus`` in
+# ``tests/unit/test_analyzer_status.py`` holds what it does.
 _MALFORMED_ANALYZER_STATUS: Final = "unknown"
 
 
