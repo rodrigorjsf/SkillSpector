@@ -114,7 +114,7 @@ whoever the user says. Do not manufacture an Umbrella Branch for a single PR.
 ## Agent skills
 
 - Issues are tracked in GitHub Issues — `docs/agents/issue-tracker.md`
-- Triage labels follow the canonical five roles — `docs/agents/triage-labels.md`
+- Triage labels pair one state role from the canonical five with one category — `docs/agents/triage-labels.md`
 - Domain-doc and ADR conventions — `docs/agents/domain.md`
 
 ## References
