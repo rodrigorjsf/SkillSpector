@@ -662,6 +662,31 @@ public class ShellConfig {
             )
         },
     ),
+    Scenario(
+        name="workdir-unset-isolated",
+        asks=(
+            "DISCRIMINATOR. The same configuration with ShellSkills referenced "
+            "nowhere. Is L4J-WORKDIR coupled to L4J-SHELL, or only to the shell "
+            "configuration type?"
+        ),
+        expected=("L4J-WORKDIR",),
+        files={
+            JAVA.format("IsolatedShellConfig"): _java(
+                imports="import dev.langchain4j.skill.shell.RunShellCommandToolConfig;\n",
+                body="""/** The shell tool configured, with shell mode itself wired nowhere here. */
+public class IsolatedShellConfig {
+
+    public static RunShellCommandToolConfig config() {
+        return RunShellCommandToolConfig.builder()
+                .name("run_shell_command")
+                .maxStdOutChars(10_000)
+                .build();
+    }
+}
+""",
+            )
+        },
+    ),
     # -- Nothing applicable --------------------------------------------------- #
     Scenario(
         name="no-applicable-files",

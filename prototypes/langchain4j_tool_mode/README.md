@@ -44,17 +44,22 @@ the LangChain4j Analyzer says nothing about can still trip one of them. It did �
 
 ## Verdict
 
-### 1. `L4J-WORKDIR` cannot be exercised by this fixture, and the Analyzer's docstring is wrong
+### 1. `L4J-WORKDIR` cannot be exercised by this fixture — but it is not coupled to `L4J-SHELL`
 
-`framework_langchain4j.py:58-59` says *"Only the first is about shell mode; the other four
-apply to any LangChain4j application, Tool mode included."* That is false for `L4J-WORKDIR`.
-Its receiver is `vocabulary.SHELL_COMMAND_CONFIG` = `RunShellCommandToolConfig` — the shell
-configuration type the first acceptance criterion forbids from appearing in the tree. The
-`workdir-unset` control fires **`L4J-SHELL` and `L4J-WORKDIR` together**: the second is not
-reachable without the first.
+Its receiver is `vocabulary.SHELL_COMMAND_CONFIG` = `RunShellCommandToolConfig`, the shell
+configuration type the first acceptance criterion forbids from appearing in the tree. **The
+fixture therefore exercises three non-shell Rules, not four** — `L4J-UNRESOLVED`,
+`L4J-TOOL-DESC`, `L4J-MCP-FILTER`.
 
-**The fixture therefore exercises three non-shell Rules, not four** — `L4J-UNRESOLVED`,
-`L4J-TOOL-DESC`, `L4J-MCP-FILTER`. The docstring correction rides the implementation.
+The first reading of the matrix went further and was wrong. `workdir-unset` does fire
+`L4J-SHELL` and `L4J-WORKDIR` together, but that is a property of the scenario, not of the
+Rules: it references `ShellSkills` as well, and `L4J-SHELL`'s wiring arm matches
+`find_shell_skills_usage` — the `ShellSkills` type — not the configuration type.
+`workdir-unset-isolated` is the discriminator, and it fires **`L4J-WORKDIR` alone**. So the
+docstring's claim at `framework_langchain4j.py:58-59` stands: an application can configure the
+shell tool without wiring shell mode, and the Rule reports it.
+
+**No docstring correction is needed.** The constraint is AC 1's, not the Analyzer's.
 
 ### 2. No Rule consumes `find_attached_tools`
 
