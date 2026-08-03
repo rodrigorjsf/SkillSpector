@@ -28,6 +28,18 @@ Framework matches and there was still nothing applicable — was considered and 
 rejected. It is the right shape for reporting a LangChain4j repository with no readable Java, and it
 does not conflict with this decision: that case has planned work.
 
+**That deferral is now closed, and it closed to something narrower than this framing.**
+[ADR 0006](0006-langchain4j-applicability-is-what-it-opens.md) redefined applicability as the set of
+Components an Analyzer opens, and under that definition "the Framework matches and there was still
+nothing applicable" turned out to be two cases rather than one. A LangChain4j repository holding a
+build file with no shell declaration is a repository whose build file the Analyzer *reads*, line by
+line, looking for the shell artifact id — so it now reports `completed` with a Work Item and no
+Findings, not `not_applicable`. Only a tree the Analyzer opens nothing in — Skills reached through
+the classpath layout, or a Kotlin-only import — reports `not_applicable`. The framing above assumed
+the two were one case because the code's own gate conflated them; that conflation was the defect
+ADR 0006 fixed. This record's own decision, silence on a Framework mismatch, is unaffected and
+remains accepted.
+
 ## Consequences
 
 `docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md` §3.1 asserted the opposite — that gated Analyzers "still run
