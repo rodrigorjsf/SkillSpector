@@ -31,16 +31,25 @@ Producing it, and the re-measurement procedure for both Frameworks, is issue #75
 Until that lands this module carries no version range, deliberately, rather than
 carrying an unmeasured one.
 
-Two entries today, and **nothing imports either of them yet**: the Analyzer that
-owns them carries no Rules. Issue #70 placed the module in that slice all the
-same, so the guard is in force from the first Rule rather than retrofitted
-around five, and ADR 0008 makes the module a consequence of the decisions rather
-than of the Rules. An empty inventory was the alternative, and it would have made
-the guard vacuous -- every assertion passing over nothing. So the two below are
-seeded: the spellings that *define* the Framework, the constructor its whole
-surface is configured through and the distribution that provides it, which every
-later Ticket's Rule starts from. Issues #71 through #74 add the rest of the
-inventory ADR 0008 enumerates; none of them writes a spelling anywhere else.
+Issue #70 seeded this module with two spellings while the Analyzer that owns them
+carried no Rule, so the guard would be in force from the first Rule rather than
+retrofitted around five. Issue #71 is that first Rule -- the resolution boundary
+``DA-UNRESOLVED`` -- and it is what starts importing from here. Issues #72
+through #74 add the rest of the inventory ADR 0008 enumerates; none of them
+writes a spelling anywhere else.
+
+**Two sections, because two of these spellings are ordinary English words.**
+``skills`` and ``permissions`` are also an Agent Skills manifest field, a
+repository directory name and a CLI report key, and
+:mod:`skillspector` writes all three as bare literals in modules that have
+nothing to do with Deep Agents -- ``build_context``, ``mcp_least_privilege``,
+``repository_scan``, ``cli``. Making the guard demand those call sites import a
+Deep Agents constant would be wrong rather than strict: they are homonyms, not
+leaks. So the inventory still owns them -- an upstream rename is still one edit
+here -- and the guard's *sweep* exempts them, on evidence rather than on
+assertion: ``tests/unit/test_deepagents_vocabulary.py`` requires each exempted
+spelling to really occur inline elsewhere in the tree, so an exemption that stops
+being a homonym stops being allowed.
 
 **These are a second copy of what :mod:`skillspector.framework` matches on for
 detection, and that is deliberate.** ADR 0008 rejected sharing one inventory
@@ -70,3 +79,40 @@ CREATE_DEEP_AGENT: Final[str] = "create_deep_agent"
 
 # The distribution that provides it, as a Python requirement file spells it.
 DISTRIBUTION: Final[str] = "deepagents"
+
+# -- What the constructor is configured with --------------------------------- #
+
+# The declarative permission rule. Its own keyword arguments are deliberately
+# *not* inventoried: the resolver requires every one of them to resolve to a
+# literal without caring which they are, so it never spells `operations`,
+# `paths` or `mode`. The Rule that reads those three by name is issue #72.
+FILESYSTEM_PERMISSION: Final[str] = "FilesystemPermission"
+
+# The keyword argument that decides whether the Skill files are on disk at all,
+# and therefore whether any writability verdict is knowable.
+BACKEND: Final[str] = "backend"
+
+# The four backends upstream ships. Only `CompositeBackend` is walked into,
+# through `ROUTES`; the other three are recognized so that naming one is a
+# resolved backend rather than an unreadable expression.
+COMPOSITE_BACKEND: Final[str] = "CompositeBackend"
+STORE_BACKEND: Final[str] = "StoreBackend"
+STATE_BACKEND: Final[str] = "StateBackend"
+FILESYSTEM_BACKEND: Final[str] = "FilesystemBackend"
+
+# `CompositeBackend`'s path-prefix map. A route key that is a literal resolves a
+# Skill path without resolving what the path is routed to.
+ROUTES: Final[str] = "routes"
+
+# -- Homonyms: owned here, exempt from the sweep ------------------------------ #
+#
+# Both are ordinary English words this repository already writes inline for
+# unrelated reasons -- an Agent Skills manifest field, a discovery directory
+# name, a CLI report key. See the module docstring: the exemption is asserted
+# against real occurrences elsewhere in the tree, not merely declared.
+
+# The Skill source paths the agent is given.
+SKILLS: Final[str] = "skills"
+
+# The declarative rules that decide what the agent may do to those paths.
+PERMISSIONS: Final[str] = "permissions"

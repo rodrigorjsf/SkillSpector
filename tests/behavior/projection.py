@@ -296,6 +296,12 @@ FIXTURES_DIR = _BEHAVIOR_DIR.parent / "fixtures"
 # ``framework_deepagents`` row over the requirement file, and nothing else: no
 # Finding, no limitation, and the same coverage as before.
 #
+# ``deepagents_runtime_skills`` (#71) is the Deep Agents counterpart to the
+# LangChain4j application fixtures: a Python application tree whose agent picks
+# its Skill sources per request, so the Analyzer reports the resolution boundary
+# rather than a Skill list. Its root bears no ``SKILL.md`` either -- the Skill is
+# nested under ``skills/``, as an application's is.
+#
 # ``langchain4j_shell_skill`` (#28) is the first fixture a Framework Analyzer
 # actually reads: a LangChain4j application whose Skill sits at
 # ``src/main/resources/skills/`` and whose host code wires shell mode. Its root
@@ -307,6 +313,7 @@ FIXTURES_DIR = _BEHAVIOR_DIR.parent / "fixtures"
 # containers holding a family of Skills, not Skills themselves.
 CORPUS_NAMES: tuple[str, ...] = (
     "deepagents_detection",
+    "deepagents_runtime_skills",
     "langchain4j_detection",
     "langchain4j_shell_skill",
     "langchain4j_tool_mode",

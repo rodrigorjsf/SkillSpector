@@ -42,6 +42,7 @@ class PatternCategory(StrEnum):
     ANTI_REFUSAL = "Anti-Refusal"
     SERVER_SIDE_REQUEST_FORGERY = "Server-Side Request Forgery"
     LANGCHAIN4J_FRAMEWORK = "LangChain4j Framework"
+    DEEPAGENTS_FRAMEWORK = "Deep Agents Framework"
 
 
 # Pattern-specific explanations (why the finding is dangerous)
@@ -145,6 +146,8 @@ DEFAULT_EXPLANATIONS: dict[str, str] = {
     "L4J-TOOL-DESC": "A @Tool annotation's description carries instructions rather than describing the tool. The model reads that text as guidance, so an annotation nobody reviews as prose becomes a prompt-injection surface -- tool poisoning expressed in Java rather than in an MCP manifest.",
     "L4J-MCP-FILTER": "An MCP tool provider is built without a tool filter, so every tool the MCP server exposes reaches the agent instead of a scoped subset. The agent's capability is then whatever the server offers, which can widen without any change to this application.",
     "L4J-WORKDIR": "A shell-command tool configuration omits its working directory, so commands run wherever the JVM happened to start -- usually the application root, where source, configuration and credentials sit.",
+    # Deep Agents Framework
+    "DA-UNRESOLVED": "A Deep Agents host configuration carries something that is not statically resolvable -- the Skill source list, the backend, the permission rules, or the store a resolved Skill path is routed to. Resolution stops at the module boundary by design, so what the agent was given, or what it may do to it, exists in no scanned file. This is reported rather than skipped: silence here would let the report read as clean on the one surface never inspected.",
 }
 
 # Rule ID -> category (for report output)
@@ -229,6 +232,8 @@ RULE_ID_TO_CATEGORY: dict[str, str] = {
     "L4J-TOOL-DESC": PatternCategory.LANGCHAIN4J_FRAMEWORK.value,
     "L4J-MCP-FILTER": PatternCategory.LANGCHAIN4J_FRAMEWORK.value,
     "L4J-WORKDIR": PatternCategory.LANGCHAIN4J_FRAMEWORK.value,
+    # Deep Agents Framework
+    "DA-UNRESOLVED": PatternCategory.DEEPAGENTS_FRAMEWORK.value,
 }
 
 # Rule ID -> pattern display name (for report output)
@@ -313,6 +318,8 @@ PATTERN_NAMES: dict[str, str] = {
     "L4J-TOOL-DESC": "Instruction-Carrying Tool Description",
     "L4J-MCP-FILTER": "Unfiltered MCP Tool Provider",
     "L4J-WORKDIR": "Unset Shell Working Directory",
+    # Deep Agents Framework
+    "DA-UNRESOLVED": "Unresolvable Host Configuration",
 }
 
 # Pattern-specific remediations (how to fix the issue)
@@ -416,6 +423,8 @@ DEFAULT_REMEDIATIONS: dict[str, str] = {
     "L4J-TOOL-DESC": "Rewrite the @Tool description so it says what the tool does and nothing more. Directives to the model belong in the Skill content, where they are reviewed as instructions.",
     "L4J-MCP-FILTER": "Add .toolFilter(...) to the McpToolProvider builder and name the tools this agent needs, so a tool added on the server does not silently reach the agent.",
     "L4J-WORKDIR": "Set RunShellCommandToolConfig.workingDirectory to a directory scoped to the task, so commands cannot reach the application root by default.",
+    # Deep Agents Framework
+    "DA-UNRESOLVED": "Name the value in the same module the agent is built in -- a literal list of Skill paths, a module-level constant, a backend constructed there rather than returned by a helper -- so the scanner reads the configuration the agent runs with. Where it genuinely has to be assembled per request, review that code path separately; no static scan can follow it.",
 }
 
 

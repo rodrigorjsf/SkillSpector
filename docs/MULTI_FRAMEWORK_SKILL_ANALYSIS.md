@@ -187,11 +187,12 @@ Four new nodes, appended to `ANALYZER_NODE_IDS` after `semantic_quality_policy` 
 ordering is preserved.
 
 Two of them now exist. `framework_langchain4j` ships all five of its Rules (#28, #30, #31).
-`framework_deepagents` is wired and reports its status (#70) but carries **none** of the Rules its
-row proposes; they are issues #71–#74, and the shape they take is
+`framework_deepagents` is wired and reports its status (#70) and carries the first of its Rules:
+`DA-UNRESOLVED` (#71), the resolution boundary, which the row below does not propose at all. The
+rest are issues #72–#74, and the shape they take is
 [ADR 0008](adr/0008-deepagents-analyzer-resolves-one-module-deep.md)'s rather than this row's — it
-collapsed the first three into one composed verdict per Skill source path. Read the row as the
-original proposal, not as what is running.
+collapsed the first three into one composed verdict per Skill source path, and added the boundary
+that #71 shipped. Read the row as the original proposal, not as what is running.
 
 | Node id | Gate | Rules |
 |---------|------|-------|
@@ -547,7 +548,7 @@ Ordered by value-to-risk. Each phase is independently shippable and independentl
 |-------|---------|----------------------|
 | **0** | This document + [`docs/references/`](references/README.md) | Yes — docs only |
 | **1** | ~~`detect_framework` + `framework` state key~~ **Done** (#21) — no analyzer read it at the time; `framework_langchain4j` does now. Unit tests assert correct detection on new fixtures and `"agent_skills"` on every existing fixture | Yes |
-| **2** | `framework_deepagents` analyzer, gated. Cheapest — reuses Python AST. **Started** (#58): the analyzer is wired and reports its status (#70); its rules are sliced as #71–#74, and the vocabulary stability measurement as #75 | Yes, via gate |
+| **2** | `framework_deepagents` analyzer, gated. Cheapest — reuses Python AST. **Started** (#58): the analyzer is wired and reports its status (#70), and `DA-UNRESOLVED` ships its resolution boundary (#71); the remaining rules are #72–#74, and the vocabulary stability measurement is #75 | Yes, via gate |
 | **3** | `structure_agent_skills_spec` behind `--spec-checks` (default `off`), plus the advisory-section rendering in [§3.5](#35-spec-conformance-rules-and-scoring) | Yes, via opt-in |
 | **4** | ~~**Dependency decision:** accept `tree-sitter` + `tree-sitter-java`~~ **Done** (#23) — accepted in [ADR 0001](adr/0001-tree-sitter-for-java-parsing.md), both ship `cp39-abi3` wheels | N/A |
 | **5** | ~~LangChain4j fixture~~ **Done** (#28, extended by #30 and #31) — `tests/fixtures/langchain4j_shell_skill/` | Yes — test data only |
@@ -654,10 +655,16 @@ record of what was open.
 
 ## 9. Recommended next step
 
-**Continue phase 2 — the Rules of the `framework_deepagents` analyzer.** The analyzer itself is
-wired and gated (#70): it reports one status row on every Deep Agents Scan and carries no Rule.
-What remains is #71–#74, the four Rules [ADR 0008](adr/0008-deepagents-analyzer-resolves-one-module-deep.md)
-scoped, and #75, the vocabulary stability measurement. Spec conformance (phase 3) follows.
+**Continue phase 2 — the remaining Rules of the `framework_deepagents` analyzer.** The analyzer is
+wired and gated (#70) and carries one Rule: `DA-UNRESOLVED` (#71), which resolves a literal and a
+same-module constant and reports every place a host configuration stopped resolving —
+`src/skillspector/deepagents/host_config.py`, the boundary [ADR 0008 §1](adr/0008-deepagents-analyzer-resolves-one-module-deep.md)
+copied from the Java track. What remains is #72–#74, the writability verdict, cross-source Skill-name
+shadowing and subagent Skill inheritance, and #75, the vocabulary stability measurement. Spec
+conformance (phase 3) follows.
+
+The boundary went first on purpose: the writability verdict of #72 needs somewhere to fall when it
+cannot decide, and building that landing place afterwards would mean building it twice.
 
 What it reports when it has nothing to do was already decided, in
 [ADR 0006](adr/0006-langchain4j-applicability-is-what-it-opens.md): applicability is one predicate

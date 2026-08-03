@@ -174,7 +174,7 @@ There are no conditional edges: after `resolve_input` → `build_context`, all a
 | `mcp_rug_pull.py` | MCP rug-pull analyzer (RP1–RP3): detects manifest/tool-definition changes between scans |
 | `semantic_security_discovery.py`, `semantic_developer_intent.py`, `semantic_quality_policy.py` | Semantic (LLM) analyzers; emit findings only when `use_llm` is enabled |
 | `framework_langchain4j.py` | Gated LangChain4j analyzer (L4J-SHELL, L4J-UNRESOLVED, L4J-TOOL-DESC, L4J-MCP-FILTER, L4J-WORKDIR). Declines silently on every other Framework; on its own it always reports a status |
-| `framework_deepagents.py` | Gated Deep Agents analyzer. Carries **no rules yet** (#71–#74 add them): it opens the scan's Python sources, Python requirement files and `SKILL.md` files, gives each a work item, and reports one status. Declines silently on every other Framework |
+| `framework_deepagents.py` | Gated Deep Agents analyzer (DA-UNRESOLVED). It opens the scan's Python sources, Python requirement files and `SKILL.md` files, gives each a work item, and reports one status; #72–#74 add the writability, shadowing and subagent rules. Declines silently on every other Framework |
 | **langchain4j/** | |
 | `signals.py` | Parser-free: `applicable_files`, the predicate the analyzer gates on, plus the comment-aware build-file scan behind `L4J-SHELL` |
 | `java_parser.py` | The tree-sitter binding for Java. Importing this imports tree-sitter, so analyzers import it lazily |
@@ -182,6 +182,7 @@ There are no conditional edges: after `resolve_input` → `build_context`, all a
 | **deepagents/** | |
 | `vocabulary.py` | Every upstream Deep Agents spelling the rules match on, in one place. Guarded by `tests/unit/test_deepagents_vocabulary.py`, which sweeps the whole source tree bar `framework.py` — detection keeps its own copy by [ADR 0008](adr/0008-deepagents-analyzer-resolves-one-module-deep.md) |
 | `signals.py` | Parser-free: `applicable_files`, the one predicate the analyzer gates on and derives its planned work from |
+| `host_config.py` | Reads `create_deep_agent(...)` and `FilesystemPermission(...)` with the stdlib `ast`, resolving a literal and a same-module constant and nothing else. Returns the boundary rather than a guess; `DA-UNRESOLVED` is what the analyzer makes of it |
 
 ---
 

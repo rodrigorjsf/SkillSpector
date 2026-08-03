@@ -29,12 +29,16 @@ folding the spellings into :mod:`skillspector.framework` would make detection an
 the Rules share one inventory, so a single upstream rename would move both at
 once.
 
-Two modules today, and both are parser-free:
+Three modules today:
 
 * :mod:`skillspector.deepagents.vocabulary` is every upstream spelling this
-  package matches on, and nothing else.
+  package matches on, and nothing else. Parser-free.
 * :mod:`skillspector.deepagents.signals` answers which Components of a Scan the
   Analyzer opens. It is the one Applicability predicate ADR 0006 requires.
+  Parser-free.
+* :mod:`skillspector.deepagents.host_config` reads ``create_deep_agent(...)`` and
+  resolves a literal and a same-module constant, and says so rather than
+  guessing when it cannot. ADR 0008 §1 is why the boundary sits exactly there.
 
 The Analyzer reaches for ``ast`` from the standard library, so unlike the
 LangChain4j package there is no import ordering to preserve here: nothing this

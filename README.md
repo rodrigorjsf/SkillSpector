@@ -46,7 +46,7 @@ What SkillSpector-Polyglot does with a scanned tree depends on the framework it 
 |---|---|---|---|---|
 | **Agent Skills** (Claude Code, Codex CLI, Gemini CLI, …) | any | default | — (the full 68-pattern base catalog applies) | **Shipped** — upstream behavior, unchanged |
 | **LangChain4j** | Java / Kotlin | `langchain4j` Maven coordinate, `dev.langchain4j` import, or `src/main/resources/skills/` layout | 5 rules — `L4J-SHELL`, `L4J-UNRESOLVED`, `L4J-TOOL-DESC`, `L4J-MCP-FILTER`, `L4J-WORKDIR` | **Shipped** |
-| **Deep Agents** | Python | `deepagents` distribution, `import deepagents`, or `create_deep_agent(` | none yet | **Analyzer reports, no rules yet** — `framework_deepagents` opens the Python sources, Python requirement files and `SKILL.md` files of the scan and reports one status row; the rules are designed, not built ([design](docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md), [shape](docs/adr/0008-deepagents-analyzer-resolves-one-module-deep.md)) |
+| **Deep Agents** | Python | `deepagents` distribution, `import deepagents`, or `create_deep_agent(` | 1 rule — `DA-UNRESOLVED` | **Partially shipped** — `framework_deepagents` reads the host-side `create_deep_agent(...)` configuration and reports where resolution stopped; the writability, shadowing and subagent rules are designed, not built ([design](docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md), [shape](docs/adr/0008-deepagents-analyzer-resolves-one-module-deep.md)) |
 
 The base catalog — prompt injection, data exfiltration, privilege escalation, supply chain, taint
 tracking, YARA signatures, MCP least privilege, and the rest — applies to **every** framework. The
@@ -55,17 +55,25 @@ rows above add to it; they never replace it. Full rule tables are in
 
 **Deep Agents, precisely:** a Deep Agents project is detected and reported as such, and its
 `SKILL.md` files are scanned by the base catalog like any other skill. The `framework_deepagents`
-analyzer exists and says so — the scan report now carries a row naming which components it opened,
-so an absence of Deep Agents findings is distinguishable from an absence of inspection. What does
-not exist yet is any Python-specific rule behind it: the analyzer emits no findings at all. Do not
-read that row as "covered by dedicated rules".
+analyzer reads the host-side configuration on top of that, and the scan report carries a row naming
+which components it opened, so an absence of Deep Agents findings is distinguishable from an absence
+of inspection.
+
+What it says today is **where it stopped looking**. `DA-UNRESOLVED` resolves a literal and a constant
+declared in the same module — nothing else — and reports the Skill source list, the backend, the
+permission rules or the store a resolved Skill path is routed to whenever one of them is assembled at
+runtime. What it does **not** yet say is whether a Skill your agent *can* read is one it can also
+rewrite: the writability verdict, cross-source skill-name shadowing and subagent skill inheritance are
+designed and not built. Do not read a clean Deep Agents scan as "this agent cannot modify its own
+instructions".
 
 ## Who this is for
 
 - **Teams building agentic applications in Java or Kotlin with LangChain4j** — the primary audience.
   You have skills in your own repository and no gate on them today.
 - **Teams building agentic applications in Python with Deep Agents** — base-catalog coverage works
-  now; framework-specific rules are on the roadmap.
+  now, and the host-side configuration is read far enough to tell you where the scan stopped; the
+  rules that judge what it did read are on the roadmap.
 - **Platform and AppSec engineers** who need agent-skill findings in an existing security pipeline.
   SARIF output uploads to GitHub code scanning; the exit code gates a build.
 - **Anyone vetting a third-party skill before installing it** — the original upstream use case,
@@ -196,7 +204,7 @@ SkillSpector helps you answer: **"Is this skill safe to install?"**
 ## Features
 
 - **Multi-format input**: Scan Git repos, URLs, zip files, directories, or single files
-- **73 vulnerability patterns** across 18 categories: prompt injection, data exfiltration, privilege escalation, supply chain, excessive agency, output handling, system prompt leakage, memory poisoning, tool misuse, rogue agent, anti-refusal, trigger abuse, dangerous code (AST), taint tracking, YARA signatures, MCP least privilege, MCP tool poisoning, and LangChain4j framework
+- **74 vulnerability patterns** across 19 categories: prompt injection, data exfiltration, privilege escalation, supply chain, excessive agency, output handling, system prompt leakage, memory poisoning, tool misuse, rogue agent, anti-refusal, trigger abuse, dangerous code (AST), taint tracking, YARA signatures, MCP least privilege, MCP tool poisoning, LangChain4j framework, and Deep Agents framework
 - **Two-stage analysis**: Fast static analysis + optional LLM semantic evaluation
 - **Live vulnerability lookups**: SC4 queries [OSV.dev](https://osv.dev) for real-time CVE data with automatic offline fallback
 - **Multiple output formats**: Terminal, JSON, Markdown, and SARIF reports
@@ -598,7 +606,7 @@ claude mcp add skillspector -- skillspector mcp
 
 ## Vulnerability Patterns
 
-SkillSpector detects **73 vulnerability patterns** across 18 categories:
+SkillSpector detects **74 vulnerability patterns** across 19 categories:
 
 ### Prompt Injection (5 patterns)
 
@@ -765,6 +773,19 @@ these rules are inert and the scan is unchanged.
 | L4J-TOOL-DESC | Instruction-Carrying Tool Description | MEDIUM | A `@Tool` description instructs the model instead of describing the tool — tool poisoning written in Java rather than in an MCP manifest |
 | L4J-MCP-FILTER | Unfiltered MCP Tool Provider | MEDIUM | `McpToolProvider` built without `.toolFilter(...)`, so every tool the server exposes reaches the agent |
 | L4J-WORKDIR | Unset Shell Working Directory | MEDIUM | `RunShellCommandToolConfig` built without `workingDirectory`, so commands run wherever the JVM started |
+
+### Deep Agents Framework (1 pattern)
+
+Applies only to a scan whose tree is detected as a Deep Agents project. On every other input this
+rule is inert and the scan is unchanged.
+
+Resolution stops at the module boundary — a literal and a constant declared in the same module are
+read, and nothing else is guessed at. That is the same boundary the Java track draws, and this rule
+is what makes it visible instead of silent.
+
+| ID | Pattern | Severity | Description |
+|----|---------|----------|-------------|
+| DA-UNRESOLVED | Unresolvable Host Configuration | MEDIUM | A `create_deep_agent(...)` argument is assembled at runtime, so the configuration deciding what the agent may do to its skills was never read. Four cases, each named in its own message: the skill source list, the backend, the `FilesystemPermission` rules, and a resolved skill path routed to a store whose contents are computed per request. An argument that is simply absent is a configuration, not a boundary, and raises nothing |
 
 All detected patterns are listed in the tables above.
 

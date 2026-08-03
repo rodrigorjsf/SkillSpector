@@ -1,0 +1,23 @@
+# An application-tree fixture for the Deep Agents Analyzer, in the shape of the
+# LangChain4j application fixtures rather than of `deepagents_detection/`, which
+# is a single requirement file carrying one detection signal and nothing else.
+#
+# What it exercises is the resolution boundary: this application picks its Skill
+# sources per request, so the Scan cannot say which Skill directories the agent
+# was given and reports `DA-UNRESOLVED` instead of reading clean.
+#
+# Its prose is deliberately plain, here and in every file below. Fixture text is
+# scanned like any other Component, and an earlier LangChain4j fixture raised
+# Findings against itself purely for describing its own configuration in the
+# words upstream uses.
+
+[project]
+name = "support-agent"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "deepagents>=0.6.8",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

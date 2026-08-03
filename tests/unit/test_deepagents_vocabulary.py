@@ -42,6 +42,16 @@ prose and containment cannot tell the two apart. Regex-escaped forms *are*
 caught, so recomposing ``re.compile(r"create_deep_agent")`` inline fails the
 same way the plain spelling does.
 
+**Homonyms are exempt from the sweep, on evidence.** Two of the inventory's
+spellings are ordinary English words this repository already writes inline for
+reasons that have nothing to do with Deep Agents -- an Agent Skills manifest
+field, a discovery directory name, a CLI report key. Demanding those call sites
+import a Deep Agents constant would be wrong rather than strict, so the
+inventory still owns them and the sweep skips them. What keeps that from being a
+hole is ``TestHomonyms``: each exempted spelling must really occur inline
+somewhere the sweep covers, so an exemption that stops being a homonym stops
+being allowed.
+
 ``_own_literals`` is imported from the LangChain4j guard rather than copied.
 "A literal of its own" is one definition, and two AST readers of it would drift
 into two guards that disagree about what a leak looks like. What comes with it
@@ -72,9 +82,25 @@ _GUARDED_FILES: tuple[Path, ...] = tuple(
 )
 
 # Every spelling this inventory holds today, as an exact set. Asserted rather
-# than counted loosely: with two entries, a loop over a silently emptied
-# inventory would pass every assertion below while guarding nothing.
-_EXPECTED_SPELLINGS = {"create_deep_agent", "deepagents"}
+# than counted loosely: a loop over a silently emptied inventory would pass
+# every assertion below while guarding nothing.
+_EXPECTED_SPELLINGS = {
+    "create_deep_agent",
+    "deepagents",
+    "FilesystemPermission",
+    "backend",
+    "CompositeBackend",
+    "StoreBackend",
+    "StateBackend",
+    "FilesystemBackend",
+    "routes",
+    "skills",
+    "permissions",
+}
+
+# The two homonyms. Owned by the inventory, skipped by the sweep, and required
+# by ``TestHomonyms`` below to really be homonyms. See the module docstring.
+_HOMONYMS = {"skills", "permissions"}
 
 
 def _read_inventory(module: ModuleType = vocabulary) -> tuple[dict[str, str], list[str]]:
@@ -114,14 +140,24 @@ def _spellings() -> dict[str, str]:
     return _read_inventory()[0]
 
 
+def _swept_spellings() -> dict[str, str]:
+    """The inventory the sweep enforces: everything but the homonyms."""
+    return {
+        spelling: constant
+        for spelling, constant in _spellings().items()
+        if spelling not in _HOMONYMS
+    }
+
+
 def leaks(path: Path, spellings: dict[str, str] | None = None) -> list[str]:
     """Every inventoried spelling *path* writes out instead of importing.
 
     *spellings* is injectable so the mutation proofs below can run the real
     reader against a planted inventory, rather than trusting that a guard which
-    reports nothing is a guard that looked.
+    reports nothing is a guard that looked. It defaults to the swept inventory
+    rather than the whole one: a homonym is not a leak.
     """
-    spellings = _spellings() if spellings is None else spellings
+    spellings = _swept_spellings() if spellings is None else spellings
     escaped = {re.escape(spelling): spelling for spelling in spellings}
     reported = []
     for line, literal in _own_literals(path):
@@ -174,6 +210,37 @@ class TestScope:
     def test_the_sweep_excludes_only_the_home_and_detection(self) -> None:
         every = set(_SRC.rglob("*.py"))
         assert every - set(_GUARDED_FILES) == {_VOCABULARY, _DETECTION}
+
+
+class TestHomonyms:
+    """An exemption is allowed only while the word really is a homonym."""
+
+    def test_every_homonym_is_inventoried(self) -> None:
+        assert _HOMONYMS <= set(_spellings())
+
+    def test_the_sweep_enforces_everything_that_is_not_a_homonym(self) -> None:
+        assert set(_swept_spellings()) == set(_spellings()) - _HOMONYMS
+
+    @pytest.mark.parametrize("spelling", sorted(_HOMONYMS))
+    def test_a_homonym_really_occurs_inline_elsewhere(self, spelling: str) -> None:
+        """The evidence, rather than the claim.
+
+        A spelling is exempt because unrelated modules legitimately write it --
+        an Agent Skills manifest field, a discovery directory name, a CLI report
+        key. If none of them does any more, the exemption is a hole rather than
+        a homonym, and this is where that is noticed.
+        """
+        writers = [
+            path
+            for path in _GUARDED_FILES
+            if not path.is_relative_to(_SRC / "deepagents")
+            and any(literal == spelling for _line, literal in _own_literals(path))
+        ]
+        assert writers, (
+            f"{spelling!r} is exempted from the sweep as a homonym, but no module outside "
+            "skillspector.deepagents writes it inline any more. Drop it from _HOMONYMS so the "
+            "guard enforces it like every other spelling."
+        )
 
 
 class TestTheGuardFails:

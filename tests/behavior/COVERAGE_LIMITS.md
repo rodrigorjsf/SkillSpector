@@ -25,14 +25,15 @@ confirmed clean. Full per-fixture numbers are in the #8 close-out comment.
 
 ## Corpus
 
-- **All 28 leaf scan targets**, one committed snapshot each, laid out to mirror `tests/fixtures/`
+- **All 29 leaf scan targets**, one committed snapshot each, laid out to mirror `tests/fixtures/`
   (`snapshots/sdi/sdi1_mismatch.json`). Measured at 11 079 lines across the original 24, 323–859 per
-  fixture. 23 of the 28 bear a `SKILL.md` **at their root**, which is the only place the Manifest
+  fixture. 23 of the 29 bear a `SKILL.md` **at their root**, which is the only place the Manifest
   parser looks; `mcp_registry` bears none and is in the corpus anyway,
   because it is a scan target in practice, the two `*_detection` fixtures (#21) bear none because
-  they carry one Framework signal and nothing else, and the two LangChain4j applications —
-  `langchain4j_shell_skill` (#28) and `langchain4j_tool_mode` (#53) — bear none at their root
-  because their Skills are nested under `src/main/resources/skills/`.
+  they carry one Framework signal and nothing else, and the three application trees —
+  `langchain4j_shell_skill` (#28), `langchain4j_tool_mode` (#53) and
+  `deepagents_runtime_skills` (#71) — bear none at their root because their Skills are nested
+  under `src/main/resources/skills/` and `skills/` respectively.
 - **The three fixture family parents (`sdi/`, `sqp/`, `ssd/`) are out of the corpus** and will stay
   out: they are fixture-layout containers, not Skills. Scanned as targets they behave as anonymous
   Skills — `sdi` and `sqp` at Risk Score 48 with an empty Manifest (#11).
