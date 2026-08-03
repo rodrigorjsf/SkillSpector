@@ -4,7 +4,7 @@ Status: accepted
 
 A Behavior Snapshot is a committed, canonical projection of one Scan, compared by a blocking test so
 that a change to existing behavior surfaces as a reviewable file diff. What it projects *is* the
-project's working definition of observable behavior, so the choice is worth recording: with 27
+project's working definition of observable behavior, so the choice is worth recording: with 28
 snapshots committed, changing the projection means regenerating all of them and losing the
 ability to say whether a diff was behavior or reformatting.
 
@@ -53,7 +53,9 @@ and elements that are identical in full are interchangeable and cannot produce a
 
 **Normalizing `finding_id` to ordinals** rather than dropping it. This was prototyped and measured to
 work — rewriting `finding-<hex>` to `finding-000`, `finding-001`… after the sort produced projections
-byte-identical across 27 targets, two processes, and two `PYTHONHASHSEED` values. It was rejected
+byte-identical across 27 targets, two processes, and two `PYTHONHASHSEED` values. That measurement is
+the #6 spike's, taken on its own corpus — the 24 leaves plus the three family parents — and is not
+re-run as the corpus grows. It was rejected
 because the projection references the identifier nowhere else: `effective_finding_ids` and
 `inspection_ledger` are outside the projection, and SARIF's copy is stripped. Normalization would be
 machinery preserving links that no longer exist, and it forces a sort→normalize ordering rule

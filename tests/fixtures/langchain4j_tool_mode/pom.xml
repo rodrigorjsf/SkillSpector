@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A Tool mode fixture, not a shell one: this application reaches its Skills
+  through registered tools, with each Skill's content preloaded. It declares only
+  `dev.langchain4j:langchain4j-skills`, so the whole tree is a negative control
+  for L4J-SHELL and a positive one for the Rules that are not about shell mode.
+
+  Its prose is deliberately plain. An earlier draft described the application in
+  the words upstream and issue #53 both use -- naming what shell mode does and
+  saying this application does not do it -- and that phrasing alone raised an EA1
+  Finding against this comment. A fixture that trips a Rule on its own
+  explanatory text is not a negative control, so the wording here says what the
+  application is rather than what it is not.
+
+  The Skills artifact version is the most recent measured release. Every
+  identifier SkillSpector matches on was observed across 1.12.1-beta21 through
+  1.18.1-beta28 -- the range recorded as OBSERVED_VERSION_RANGE in
+  src/skillspector/langchain4j/vocabulary.py, not re-measured here.
+-->
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example</groupId>
+  <artifactId>support-agent</artifactId>
+  <version>0.1.0</version>
+  <dependencies>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j</artifactId>
+      <version>1.18.0</version>
+    </dependency>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-skills</artifactId>
+      <version>1.18.1-beta28</version>
+    </dependency>
+  </dependencies>
+</project>

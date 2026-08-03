@@ -57,7 +57,7 @@ def scan_once() -> Callable[[str], dict[str, Any]]:
     """Return a memoized "Scan this fixture once" callable.
 
     Scanning lazily, one fixture at a time, is what keeps a failure attributable:
-    eagerly building all 27 would surface an error scanning the seventeenth
+    eagerly building all 28 would surface an error scanning the seventeenth
     fixture inside whichever parametrization happened to run first.
     """
     scanned: dict[str, dict[str, Any]] = {}
@@ -163,8 +163,8 @@ def test_the_corpus_matches_the_measured_target_count() -> None:
     The literal lives here and nowhere else in the tests: growing the corpus
     means changing this one number, deliberately, alongside the new snapshot.
     """
-    assert len(proj.CORPUS_NAMES) == 27
-    assert len(set(proj.CORPUS_NAMES)) == 27
+    assert len(proj.CORPUS_NAMES) == 28
+    assert len(set(proj.CORPUS_NAMES)) == 28
 
 
 def test_every_family_parent_is_excluded_and_is_really_a_container() -> None:
@@ -216,6 +216,106 @@ def test_mcp_registry_is_in_the_corpus_without_a_manifest() -> None:
     snapshot = proj.load_snapshot("mcp_registry")
     assert snapshot["manifest"] == {}
     assert snapshot["manifest_status"] == "absent"
+
+
+def test_langchain4j_detection_reports_its_analyzer_and_costs_only_that_row() -> None:
+    """The one snapshot #52 changed, and the three figures it left alone.
+
+    The Analyzer now opens the build file and says so, where the Scan used to
+    carry nothing about it at all. That row is the entire cost: ``completed`` is
+    non-limiting, so the fixture's completeness flag, execution flag and
+    coverage figure read exactly as they did while the Analyzer was silent. The
+    flag is ``False`` because three semantic Analyzers are disabled without
+    credentials -- which is what ``limitations`` names, and it names nothing
+    else.
+    """
+    completeness = proj.load_snapshot("langchain4j_detection")["analysis_completeness"]
+    statuses = {status["analyzer_id"]: status for status in completeness["analyzer_statuses"]}
+
+    assert statuses["framework_langchain4j"]["status"] == "completed"
+    assert statuses["framework_langchain4j"]["planned_work"] == 1
+    assert statuses["framework_langchain4j"]["completed"] == 1
+    assert completeness["is_complete"] is False
+    assert completeness["execution_successful"] is True
+    assert completeness["coverage_percent"] == 100.0
+    assert (
+        completeness["limitations"] == ["Analyzer was disabled by the requested configuration."] * 3
+    )
+
+
+def test_langchain4j_tool_mode_proves_the_non_shell_rules() -> None:
+    """The Rules that are not about shell mode fire without the shell module.
+
+    Issue #53. Every Rule used to be demonstrated only inside
+    ``langchain4j_shell_skill``, whose build file declares
+    ``langchain4j-experimental-skills-shell``. So the ordinary, recommended way
+    to use Skills -- Tool mode, reaching them through registered tools with
+    content preloaded -- was analysed correctly and nothing proved it, and a
+    change that coupled the Analyzer to the shell artifact would have passed the
+    gate.
+
+    Three Rules, not four. ``L4J-WORKDIR``'s receiver is
+    ``RunShellCommandToolConfig``, the shell configuration type this fixture
+    keeps out of its tree, so a Tool mode application cannot reach it. That is a
+    property of the fixture rather than of the Rule: driven on its own, with
+    ``ShellSkills`` referenced nowhere, ``L4J-WORKDIR`` fires by itself.
+    """
+    snapshot = proj.load_snapshot("langchain4j_tool_mode")
+    fired = {finding["rule_id"] for finding in snapshot["findings"]}
+
+    assert {"L4J-UNRESOLVED", "L4J-TOOL-DESC", "L4J-MCP-FILTER"} <= fired
+    assert "L4J-SHELL" not in fired
+    assert "L4J-WORKDIR" not in fired
+    assert snapshot["framework"] == "langchain4j"
+
+
+def test_langchain4j_tool_mode_pins_the_silence_of_its_benign_files() -> None:
+    """A false positive on ordinary Tool mode code fails the gate.
+
+    The fixture is a negative control as well as a positive one. Its wiring
+    class, its repository class and its ``SKILL.md`` carry nothing to report, and
+    naming them here means a future Rule that starts matching ordinary
+    LangChain4j code turns this red rather than quietly widening the corpus's
+    Findings.
+    """
+    snapshot = proj.load_snapshot("langchain4j_tool_mode")
+    reported = {finding["file"] for finding in snapshot["findings"]}
+
+    assert "src/main/java/com/example/SupportAgent.java" not in reported
+    assert "src/main/java/com/example/OrderRepository.java" not in reported
+    assert "src/main/resources/skills/order-triage/SKILL.md" not in reported
+    assert "pom.xml" not in reported
+
+
+def test_langchain4j_tool_mode_costs_only_the_rows_it_opens() -> None:
+    """Its completeness flag, execution flag and coverage figure.
+
+    ``planned_work`` is six rather than seven: the ``SKILL.md`` under the
+    conventional classpath layout is a Component of the Scan but not an
+    applicable file for this Analyzer, which opens Java compilation units and
+    JVM build files.
+
+    The flag is ``False`` because four Analyzers are disabled without
+    credentials -- what ``limitations`` names, and all it names. Four rather than
+    ``langchain4j_detection``'s three: this fixture produces Findings, so
+    ``meta_analyzer`` has something to meta-analyze and reports ``disabled``
+    where the Findings-free fixture reports ``not_applicable``, which is not a
+    limitation. ``langchain4j_shell_skill`` names four for the same reason.
+    """
+    completeness = proj.load_snapshot("langchain4j_tool_mode")["analysis_completeness"]
+    statuses = {status["analyzer_id"]: status for status in completeness["analyzer_statuses"]}
+
+    assert statuses["framework_langchain4j"]["status"] == "completed"
+    assert statuses["framework_langchain4j"]["planned_work"] == 6
+    assert statuses["framework_langchain4j"]["completed"] == 6
+    assert statuses["framework_langchain4j"]["unaccounted"] == 0
+    assert completeness["is_complete"] is False
+    assert completeness["execution_successful"] is True
+    assert completeness["coverage_percent"] == 100.0
+    assert (
+        completeness["limitations"] == ["Analyzer was disabled by the requested configuration."] * 4
+    )
+    assert statuses["meta_analyzer"]["status"] == "disabled"
 
 
 # --------------------------------------------------------------------------- #
@@ -338,7 +438,7 @@ def test_the_sort_orders_a_tied_pair_regardless_of_input_order() -> None:
 
 
 def test_the_unexercised_sort_keys_are_still_unexercised() -> None:
-    """``ledger_exceptions`` and ``scope_exclusions`` are empty in all 27.
+    """``ledger_exceptions`` and ``scope_exclusions`` are empty in all 28.
 
     Their named key has therefore still never ordered anything, which is a
     stated coverage limit rather than a defect. Asserted so that the day a
@@ -391,7 +491,7 @@ def _run_out_of_process(*, hash_seed: str, provider: str) -> dict[str, Any]:
     The environment is built from nothing but ``PATH`` and ``HOME``, so no API
     key of any kind is reachable: the Scan runs with no LLM credentials.
 
-    ``--emit-all`` covers all 27 fixtures per spawn, so widening the corpus
+    ``--emit-all`` covers all 28 fixtures per spawn, so widening the corpus
     left the interpreter-spawn count at three for the module.
     """
     env = dict(CREDENTIAL_FREE_ENV)

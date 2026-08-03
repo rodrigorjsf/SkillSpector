@@ -25,13 +25,14 @@ confirmed clean. Full per-fixture numbers are in the #8 close-out comment.
 
 ## Corpus
 
-- **All 27 leaf scan targets**, one committed snapshot each, laid out to mirror `tests/fixtures/`
+- **All 28 leaf scan targets**, one committed snapshot each, laid out to mirror `tests/fixtures/`
   (`snapshots/sdi/sdi1_mismatch.json`). Measured at 11 079 lines across the original 24, 323–859 per
-  fixture. 23 of the 27 bear a `SKILL.md` **at their root**, which is the only place the Manifest
+  fixture. 23 of the 28 bear a `SKILL.md` **at their root**, which is the only place the Manifest
   parser looks; `mcp_registry` bears none and is in the corpus anyway,
   because it is a scan target in practice, the two `*_detection` fixtures (#21) bear none because
-  they carry one Framework signal and nothing else, and `langchain4j_shell_skill` (#28) bears none
-  at its root because its Skill is nested under `src/main/resources/skills/`.
+  they carry one Framework signal and nothing else, and the two LangChain4j applications —
+  `langchain4j_shell_skill` (#28) and `langchain4j_tool_mode` (#53) — bear none at their root
+  because their Skills are nested under `src/main/resources/skills/`.
 - **The three fixture family parents (`sdi/`, `sqp/`, `ssd/`) are out of the corpus** and will stay
   out: they are fixture-layout containers, not Skills. Scanned as targets they behave as anonymous
   Skills — `sdi` and `sqp` at Risk Score 48 with an empty Manifest (#11).
@@ -46,7 +47,7 @@ confirmed clean. Full per-fixture numbers are in the #8 close-out comment.
 ## Change classes the corpus cannot see
 
 - **Skip-directory changes are unguarded.** No fixture contains a skippable directory, so
-  `analysis_completeness.scope_exclusions` is empty in all 27 and a change to the skip set cannot
+  `analysis_completeness.scope_exclusions` is empty in all 28 and a change to the skip set cannot
   move any snapshot. A test asserts the emptiness, so the day a fixture populates it, this limit is
   revisited rather than quietly becoming false.
 - **Suppression is unguarded.** `suppressed_findings` is empty in every fixture and
@@ -58,17 +59,24 @@ confirmed clean. Full per-fixture numbers are in the #8 close-out comment.
   scored verdict for a directory that is not a Skill — changing that was explicitly out of #11's
   scope, and no fixture guards it.
 - **`manifest_status` is guarded in one direction only.** It is one of the two projected keys carried
-  conditionally: dropped when it holds `present` (ADR 0003), so 23 of the 27 snapshots carry no
+  conditionally: dropped when it holds `present` (ADR 0003), so 23 of the 28 snapshots carry no
   `manifest_status` byte at all. A Skill whose Manifest regressed to any other status still fails the
   byte compare, because the key would appear. The reverse — `mcp_registry` reverting to `present` —
   is caught by its own snapshot, and by nothing else. A test holds the rule non-vacuous by requiring
   that some fixture carry the key and some fixture not.
-- **`framework` is guarded the same way, and by design carries nothing today.** Detection (#21) is
-  the second conditionally carried key, dropped when it holds `agent_skills`, which is what every
-  input scanned before detection existed detects as. Only the two `*_detection` fixtures carry the
-  key, so the rule stays non-vacuous — but no fixture exercises a Framework *Analyzer*, because none
-  exists yet. What is guarded is that a pre-existing input must never start detecting as another
-  Framework: the key would appear in its snapshot and the byte compare would fail.
+- **`framework` is guarded the same way.** Detection (#21) is the second conditionally carried key,
+  dropped when it holds `agent_skills`, which is what every input scanned before detection existed
+  detects as. Four fixtures carry the key — the two `*_detection` ones and the two LangChain4j
+  applications — so the rule stays non-vacuous. What is guarded is that a pre-existing input must
+  never start detecting as another Framework: the key would appear in its snapshot and the byte
+  compare would fail.
+- **A Framework Analyzer is now exercised, in both of its modes.** `langchain4j_shell_skill` (#28)
+  carries the shell wiring and the shell artifact; `langchain4j_tool_mode` (#53) declares only
+  `dev.langchain4j:langchain4j-skills` and proves the Rules that are not about shell mode fire
+  without it. Between them, `L4J-SHELL` firing on Tool mode and a non-shell Rule that silently
+  stopped matching are both behind the gate. `L4J-WORKDIR` is the exception: its receiver is the
+  shell configuration type, which the Tool mode fixture keeps out of its tree by construction, so
+  only `langchain4j_shell_skill` holds it.
 - **SARIF is no longer a coverage limit.** It was previously listed here as unguarded on the grounds
   that it is derived and reintroduces the timestamp; the timestamp claim was measured false, and
   `sarif_report` is in the projection minus `tool.driver.version` (ADR 0003).
@@ -123,7 +131,7 @@ declines is caught, while a change to what it would have found is not.
 - A projected key absent from the returned state is absent from the snapshot rather than recorded as
   `null`. A key that stops being emitted is a behavior change and shows as a diff either way.
 - **Two registered sort keys are still unexercised.** `analysis_completeness.ledger_exceptions` and
-  `scope_exclusions` are empty in **all 27** fixtures, not just in `malicious_skill`, so their named
+  `scope_exclusions` are empty in **all 28** fixtures, not just in `malicious_skill`, so their named
   key has still never ordered anything. Widening the corpus did not close this. Its shape was
   checked against `InspectionLedgerException` (`src/skillspector/inspection_ledger.py`) rather than
   against data — every field it reads is a `str` or an `int | None`.
@@ -131,7 +139,7 @@ declines is caught, while a change to what it would have found is not.
   fixture, for the gate itself and the consecutive-run check, plus one on `malicious_skill` for the
   pre-strip control — for about eight seconds of `make test-unit`. The out-of-process checks did **not**
   scale with the corpus: `regenerate.py --emit-all` projects the whole corpus per spawn, so three
-  child interpreters cover 27 fixtures against two hash seeds and two providers.
+  child interpreters cover 28 fixtures against two hash seeds and two providers.
 - **A fixture's line endings are part of the frozen behavior.** The projection carries each
   component's `size_bytes`, so a checkout that rewrites `\n` to `\r\n` inflates every recorded size
   by one byte per line. `tests/fixtures/.gitattributes` pins the corpus to LF for exactly this

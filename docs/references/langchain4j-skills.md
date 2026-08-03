@@ -11,7 +11,9 @@
 >
 > **Upstream status:** *The Skills API is experimental. APIs and behavior may still change
 > in future releases.* Artifact versions below are `1.18.1-beta28` as published at capture
-> time.
+> time; the identifiers this capture documents were published unchanged across
+> `1.12.1-beta21` — `1.18.1-beta28`, 17 releases with the two artifacts released in lockstep,
+> the sole exception being `ClassPathSkillLoader`, which first appears at `1.13.0-beta23`.
 
 Skills is a mechanism for equipping an LLM with reusable, self-contained behavioral
 instructions. A skill bundles a name, a short description, and a body of instructions (its
@@ -408,6 +410,17 @@ ShellSkills skills = ShellSkills.builder()
 ## Relevance to SkillSpector
 
 *This section is SkillSpector's analysis, not upstream content.*
+
+### How far the spellings above have been checked
+
+The release range in the front-matter block is the one recorded as `OBSERVED_VERSION_RANGE`
+in [`vocabulary.py`](../../src/skillspector/langchain4j/vocabulary.py) and reasoned about in
+[ADR 0005](../adr/0005-langchain4j-upstream-vocabulary.md). It is stated here rather than
+re-measured, so a reader can tell how far this capture's identifiers have been checked and
+not only when they were captured — a capture date says the page was read on a day, and the
+range says the type and method names on it held still for 17 releases. Re-measuring that
+claim is issue #46; what the report should say when the shell artifact drops its
+`experimental` prefix is issue #45.
 
 ### What already works unchanged
 

@@ -43,7 +43,8 @@ _Avoid_: repo scan, recursive scan, project scan, full scan
 
 **Analyzer**:
 A unit that inspects Components and emits Findings. Every Analyzer runs on every Scan; one that
-should only apply to some inputs declines on its own gate.
+should only apply to some inputs gates on its own, and reports an Analyzer Status on every input it
+does not Decline.
 _Avoid_: checker, detector, scanner, plugin
 
 **Rule**:
@@ -103,6 +104,24 @@ _Avoid_: log, audit trail, trace
 One planned unit of inspection in the Inspection Ledger. Every Work Item must reach exactly one
 terminal outcome; unaccounted work is itself a reportable defect.
 _Avoid_: task, job, unit
+
+**Analyzer Status**:
+What one Analyzer reports it did on one Scan. Six values are emitted today — `completed`,
+`not_applicable`, `degraded`, `failed`, `disabled` and `unavailable` — and only the first two leave
+a Scan complete; every other value becomes a stated limitation. The set is measured, not declared:
+naming it here does not close it, which is #47.
+_Avoid_: analyzer result, run status
+
+**Applicability**:
+Which Components an Analyzer opens. One Analyzer has one Applicability, so a Component it opens is
+always a Component it reports.
+_Avoid_: eligibility, purview
+
+**Decline**:
+Return nothing at all — no Finding, no Work Item, no Analyzer Status. The only case is an Analyzer
+whose Framework gate does not open, which plans no inspection and so leaves no gap. An Analyzer that
+opens nothing on a Framework it *does* own reports `not_applicable` instead.
+_Avoid_: abstain, bail out, opt out
 
 ### Changing the scanner safely
 

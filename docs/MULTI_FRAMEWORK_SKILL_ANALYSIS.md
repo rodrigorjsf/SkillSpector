@@ -494,10 +494,13 @@ and **is delivered**: the gate lives in [`tests/behavior/`](../tests/behavior/),
   those two would catch none of them. Measurement confirmed the breadth is affordable: the
   specified projection is 323–859 lines per fixture and 11 079 across the corpus, well inside
   what a reviewer reads.
-- **Corpus: 27 leaf directories.** Every fixture directory bearing a root `SKILL.md` (23), plus
+- **Corpus: 28 leaf directories.** Every fixture directory bearing a root `SKILL.md` (23), plus
   `tests/fixtures/mcp_registry`, which bears none and scans as an anonymous Skill, plus the two
   `*_detection` fixtures phase 1 added, which bear none either and carry one Framework signal each,
-  plus `langchain4j_shell_skill`, the LangChain4j application the `framework_langchain4j` Analyzer reads. The three
+  plus the two LangChain4j applications the `framework_langchain4j` Analyzer reads —
+  `langchain4j_shell_skill` in shell mode, and `langchain4j_tool_mode`, which declares only
+  `dev.langchain4j:langchain4j-skills` and proves the Rules that are not about shell mode fire
+  without the shell artifact anywhere in its tree. The three
   family parents — `sdi/`, `sqp/`, `ssd/` — are fixture-layout containers, not Skills, and are
   not scan targets.
 - **Blocking, inside `make test-unit`**, with a `make update-snapshots` to regenerate. The
@@ -648,6 +651,15 @@ record of what was open.
 reusing the Python AST machinery the repository already has, and it is the last Framework named in
 [§3.2](#32-framework-detection) with no analyzer behind it. Spec conformance (phase 3) follows.
 
+What it reports when it has nothing to do is already decided, in
+[ADR 0006](adr/0006-langchain4j-applicability-is-what-it-opens.md): applicability is one predicate
+over the Components the analyzer opens — for Deep Agents, Python sources and Python requirement
+files — with both the gate and the planned work derived from that single result. A Framework
+mismatch is silent; a matching Framework that opens nothing reports `not_applicable`; a matching
+Framework that opens something reports `completed`, even with no Findings. Copy that shape rather
+than re-deciding it, and copy the vocabulary module of
+[ADR 0005](adr/0005-langchain4j-upstream-vocabulary.md) alongside it.
+
 The **LangChain4j-in-CI increment is done.** Issue #23, sliced into #28–#31, landed phases 4–7 as
 one deliverable: `tree-sitter` accepted as a dependency, a LangChain4j application fixture, the
 gated `framework_langchain4j` analyzer carrying all five L4J rules, and the Repository Scan behind
@@ -665,14 +677,8 @@ Resolvable Skill content — a text block, a literal, a same-unit constant — i
 existing content analyzers and relocated onto the Java file and line it came from. What cannot be
 resolved is reported rather than chased, which is the §3.6 boundary made visible.
 
-Two things are worth carrying forward rather than leaving in the closed issues:
+One thing is worth carrying forward rather than leaving in the closed issues:
 
-- **The analyzer declines twice, and only the first decline is authorised.** The Framework gate is
-  [ADR 0002](adr/0002-gated-analyzers-decline-silently.md). The second — a LangChain4j tree with no
-  Java and no shell declaration — is the case that ADR *deferred* rather than approved, because it
-  does have planned work. It stays silent today because emitting `not_applicable` would change
-  `langchain4j_detection`'s Behavior Snapshot. Reopening it means regenerating that snapshot
-  deliberately.
 - **`--recursive` and `--repo-scan` now overlap.** They answer similar questions with different
   discovery depth, different `--baseline` support and different combined output. Consolidating them
   is worth doing and was out of scope while `--recursive` has committed behavior this increment
@@ -694,7 +700,7 @@ Framework fails the gate on the key's appearance.
 The recommendation before that was to make the behavior gate executable before any analyzer
 work, because until it existed every phase in [§5](#5-phasing) carried an acceptance criterion
 nobody could demonstrate. **That is done.** Issue #4, sliced into #5–#9, landed the committed
-snapshot corpus in [`tests/behavior/`](../tests/behavior/): 27 fixtures, blocking in
+snapshot corpus in [`tests/behavior/`](../tests/behavior/): 28 fixtures, blocking in
 `make test-unit`, verified in CI, demonstrated red on a real behavior change, with its blind
 spots stated in [`COVERAGE_LIMITS.md`](../tests/behavior/COVERAGE_LIMITS.md). Every phase below
 can now be claimed behavior-preserving against evidence rather than against a promise: the
