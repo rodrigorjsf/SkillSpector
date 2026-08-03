@@ -483,7 +483,7 @@ Checked 2026-08-02 against the published sources:
 
 So [agent-skills-specification.md](agent-skills-specification.md) is **not** a partial
 capture — the vocabulary is absent upstream too, which was the open question in
-[issue #49](https://github.com/rodrigorjsf/SkillSpector/issues/49).
+[issue #49](https://github.com/rodrigorjsf/SkillSpector-Polyglot/issues/49).
 
 **Where the axis actually lives upstream.** The distinction itself is real; it is documented
 outside the specification, in the client-implementation guide

@@ -468,7 +468,7 @@ already makes impossible.
 The gate is instead a **committed Behavior Snapshot plus a test that regenerates and compares
 it**. Git supplies the "before" for free, and the snapshot is reviewable in the diff of the
 commit that changes it. It is specified in
-[issue #4](https://github.com/rodrigorjsf/SkillSpector/issues/4), was sliced into issues #5–#9,
+[issue #4](https://github.com/rodrigorjsf/SkillSpector-Polyglot/issues/4), was sliced into issues #5–#9,
 and **is delivered**: the gate lives in [`tests/behavior/`](../tests/behavior/), runs in
 `make test-unit` and in CI, and its stated blind spots are recorded in
 [`tests/behavior/COVERAGE_LIMITS.md`](../tests/behavior/COVERAGE_LIMITS.md).
