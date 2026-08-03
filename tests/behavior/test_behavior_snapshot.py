@@ -218,6 +218,31 @@ def test_mcp_registry_is_in_the_corpus_without_a_manifest() -> None:
     assert snapshot["manifest_status"] == "absent"
 
 
+def test_langchain4j_detection_reports_its_analyzer_and_costs_only_that_row() -> None:
+    """The one snapshot #52 changed, and the three figures it left alone.
+
+    The Analyzer now opens the build file and says so, where the Scan used to
+    carry nothing about it at all. That row is the entire cost: ``completed`` is
+    non-limiting, so the fixture's completeness flag, execution flag and
+    coverage figure read exactly as they did while the Analyzer was silent. The
+    flag is ``False`` because three semantic Analyzers are disabled without
+    credentials -- which is what ``limitations`` names, and it names nothing
+    else.
+    """
+    completeness = proj.load_snapshot("langchain4j_detection")["analysis_completeness"]
+    statuses = {status["analyzer_id"]: status for status in completeness["analyzer_statuses"]}
+
+    assert statuses["framework_langchain4j"]["status"] == "completed"
+    assert statuses["framework_langchain4j"]["planned_work"] == 1
+    assert statuses["framework_langchain4j"]["completed"] == 1
+    assert completeness["is_complete"] is False
+    assert completeness["execution_successful"] is True
+    assert completeness["coverage_percent"] == 100.0
+    assert (
+        completeness["limitations"] == ["Analyzer was disabled by the requested configuration."] * 3
+    )
+
+
 # --------------------------------------------------------------------------- #
 # What the projection carries, and what it drops
 # --------------------------------------------------------------------------- #
