@@ -78,6 +78,14 @@ silent. Applicability there is likewise one predicate over the Components that A
 Python sources and Python requirement files — with the gate and the accounting derived from it. The
 pattern is meant to be copied, not re-decided.
 
+> **The predicate named in that last sentence is revised by
+> [ADR 0008](0008-deepagents-analyzer-resolves-one-module-deep.md).** Scoping duplicate-name
+> shadowing into that Analyzer means it opens each source directory's `SKILL.md` to read the `name`,
+> so its Applicability is Python sources, Python requirement files **and every `SKILL.md` in the
+> Scan**. That widening is forced by *this* record — a Component the Analyzer opens is a Component it
+> reports — so the decision here stands unchanged; only the file set anticipated for Deep Agents
+> was written before the Rule that widens it.
+
 **The behavioral cost was measured, and it is one status row.** Regenerating the corpus changed
 exactly one snapshot: `tests/behavior/snapshots/langchain4j_detection.json` gained a
 `framework_langchain4j` row reading `completed` with `planned_work: 1`. Every other snapshot stayed
