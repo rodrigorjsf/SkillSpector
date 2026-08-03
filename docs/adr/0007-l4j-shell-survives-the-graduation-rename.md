@@ -39,9 +39,11 @@ So this is a forward risk, not a present defect.
 `dev.langchain4j` — `langchain4j-experimental-hibernate`, `langchain4j-experimental-skills-shell`,
 `langchain4j-experimental-sql` — still carries the prefix, and none has a graduated counterpart that
 replaced it. `langchain4j-hibernate` exists, but it is a *different module published alongside* the
-experimental one: both are still releasing, in lockstep, at `1.18.1-beta28`. `langchain4j-sql` does
-not exist at all. `langchain4j-agentic` exists and `langchain4j-experimental-agentic` never did, so
-it is not a rename either.
+experimental one rather than its successor: it starts at `1.12.1-beta21` and the experimental one at
+`1.13.0-beta23`, so the experimental artifact appeared **after** the unprefixed one, and both are
+still publishing at the current `1.18.1-beta28`. A rename would have retired one of them.
+`langchain4j-sql` does not exist at all. `langchain4j-agentic` exists and
+`langchain4j-experimental-agentic` never did, so it is not a rename either.
 
 The group id has therefore never renamed an artifact out of `experimental`. There is no observed
 shape to copy, which means any specific graduated spelling is a guess.
@@ -72,17 +74,44 @@ LangChain4j artifact providing shell execution has `shell` in its name; that is 
 character class is the artifact-id alphabet — so the match cannot span from a group id on one part
 of a line to an unrelated word later on it.
 
-**The over-match is bounded and points the right way.** A future `langchain4j-something-shell` fires
-`L4J-SHELL` at HIGH before anyone has assessed it. For a security scanner that is the conservative
-direction, and the Finding names the artifact it actually read, so a reader can see it is not the
-module the Rule was written for and judge. The alternative — a Rule that stays quiet about a shell
-dependency it does not recognise — is the failure this record exists to prevent.
+**The over-match is real, and it points the right way.** Two kinds of it, measured rather than
+assumed.
+
+*A future artifact.* `langchain4j-something-shell` fires `L4J-SHELL` at HIGH before anyone has
+assessed it. For a security scanner that is the conservative direction, and the Finding names the
+artifact it actually read, so a reader sees it is not the module the Rule was written for and
+judges.
+
+*A project named after shell mode.* This one is new with the widening and was not obvious. The
+pattern matches an artifact id wherever it appears on a live line, so a build file whose **own**
+`<artifactId>`, `<module>`, `<name>` or `<url>` contains `langchain4j-…shell…` — a demo repository,
+an aggregator listing the module, a fork — now fires HIGH without depending on anything. The literal
+did not, because no project is called `langchain4j-experimental-skills-shell`.
+
+Accepted rather than fixed. Separating "this element declares a dependency" from "this element names
+the project" means reading Maven's element names and Gradle's coordinate syntax separately, which is
+the per-format structure `signals` avoids on purpose and which would add new ways to *miss* a real
+declaration. Missing one is the failure this record exists to prevent; over-reporting a repository
+whose own name says shell mode is noise a reader resolves by reading the Finding, which names the id
+it matched. `TestWhatTheWideningAlsoMatches` pins all four cases so the behaviour is a decision, with
+prose naming the capability as the control that bounds the claim — the pattern takes an artifact id,
+not the word "shell".
 
 **The one over-match that would matter is excluded by construction.** `langchain4j-skills`, the safe
 sibling, is in every build file that uses the Skills API at all, and its id is a prefix of the shell
 module's. A pattern loose enough to take it would fire HIGH on every clean LangChain4j Scan and make
 the Rule useless. It cannot satisfy this one: "skills" does not contain "shell". A test asserts it
 directly, with `langchain4j` alone as the control.
+
+**A pre-existing inversion this work surfaced and did not cause.** A pom that *excludes* the shell
+module — `<exclusion>` under a `langchain4j-skills` dependency, or a Maven Enforcer `<exclude>` —
+is flagged HIGH for the one action that removes the risk. `shell_artifact_declarations` already
+blanks comments so a build file naming the artifact only to say it was removed is not read as
+declaring it; an `<exclusion>` says the same thing in XML rather than in a comment, and is not
+blanked. Measured against the literal match this pattern replaced: it reports the exclusion
+identically, so the widening neither caused nor worsened it. Left as a strict `xfail` naming the
+desired behaviour, so the suite carries the defect rather than the repository forgetting it, and
+filed as issue #64.
 
 ## What the report says when a Rule stops matching
 
@@ -147,11 +176,14 @@ still fails.
 asserted three literals were absent from the Tool mode fixture. Since the Rule now matches a
 pattern, absent literals no longer imply a silent Rule, so the guard checks the pattern too.
 
-**Gradle version catalogs are still not read.** `signals.shell_artifact_declarations` explains its
-textual match by noting a catalog declares the coordinate as TOML — but `is_jvm_build_file` matches
-only `pom.xml` and `build.gradle*`, so `gradle/libs.versions.toml` is never opened. A project
-declaring the shell module only there is missed by both halves of the Rule. Pre-existing, untouched
-here, and unrelated to the rename.
+**Gradle version catalogs are still not read, and the gap has two halves.**
+`signals.shell_artifact_declarations` explains its textual match by noting a catalog declares the
+coordinate as TOML — but `is_jvm_build_file` matches only `pom.xml` and `build.gradle*`, so
+`gradle/libs.versions.toml` is never opened. Worse, the *opened* file cannot help either: a
+`build.gradle.kts` using the catalog writes `implementation(libs.langchain4j.skills.shell)`, which
+carries no `langchain4j-` token at all and cannot match any artifact-id pattern. A project on a
+version catalog is missed by the dependency half however wide the pattern gets. Pre-existing,
+untouched here, and unrelated to the rename — but it bounds what this record bought.
 
 **Kotlin sources are still not read either.** `signals.is_java_source` matches `.java` only, while
 Framework detection accepts a `.kt` import as a LangChain4j signal. On a Kotlin project the
