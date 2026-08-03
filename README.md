@@ -1,9 +1,183 @@
-# SkillSpector
+# SkillSpector-Polyglot
 
-**Security scanner for AI agent skills.** Detect vulnerabilities, malicious patterns, and security risks before installing agent skills.
+**Security scanner for AI agent skills, across frameworks.** Detect vulnerabilities, malicious
+patterns, and security risks in the skills an agent loads — whether they ship as a standalone
+`SKILL.md` bundle or live inside a programming-language framework's source tree.
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![Fork of NVIDIA/SkillSpector](https://img.shields.io/badge/fork%20of-NVIDIA%2FSkillSpector-76b900.svg)](https://github.com/NVIDIA/SkillSpector)
+
+---
+
+## Mission
+
+Agent skills execute with implicit trust. Upstream [SkillSpector](https://github.com/NVIDIA/SkillSpector)
+answers **"is this skill safe to install?"** for a skill you obtain as a bundle — a directory, a zip,
+a Git repository — and answers it well.
+
+That framing has a blind spot, and it is the one this fork exists to close. In an *agentic project*,
+a skill is not something you download and inspect before installing. It is **source code you already
+own**: a `SKILL.md` under `src/main/resources/skills/` loaded by LangChain4j's classpath loader, a
+Java `@Tool` method whose description instructs the model, a shell tool wired without a working
+directory. Nobody ever "installs" it, so nobody ever vets it — and the instruction surface reaching
+the model is assembled at build time from files scattered across a multi-module repository.
+
+**SkillSpector-Polyglot's objective:** make the skills embedded in a framework's own codebase a
+first-class subject of security analysis, so a team can gate them in CI on every pull request, with
+the same rule catalog, the same 0–100 risk score, and the same SARIF output already used for
+standalone skills.
+
+Two commitments follow from that, and they constrain every change made here:
+
+- **Upstream behavior is never altered.** Every capability this fork adds is gated on framework
+  detection or on an explicit flag. On an input upstream already scans, the output is byte-for-byte
+  what upstream produces. This is enforced by a test gate, not by good intentions —
+  see [the unchanged-behavior gate](docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md#4-the-unchanged-behavior-gate).
+- **Nothing is claimed before it is built.** The support matrix below states what actually ships
+  today, and names what is still a design proposal.
+
+## Framework support
+
+What SkillSpector-Polyglot does with a scanned tree depends on the framework it detects
+(`src/skillspector/framework.py`). Detection is automatic — there is no flag to set.
+
+| Framework | Language | Detection | Framework-specific rules | Status |
+|---|---|---|---|---|
+| **Agent Skills** (Claude Code, Codex CLI, Gemini CLI, …) | any | default | — (the full 68-pattern base catalog applies) | **Shipped** — upstream behavior, unchanged |
+| **LangChain4j** | Java / Kotlin | `langchain4j` Maven coordinate, `dev.langchain4j` import, or `src/main/resources/skills/` layout | 5 rules — `L4J-SHELL`, `L4J-UNRESOLVED`, `L4J-TOOL-DESC`, `L4J-MCP-FILTER`, `L4J-WORKDIR` | **Shipped** |
+| **Deep Agents** | Python | `deepagents` distribution, `import deepagents`, or `create_deep_agent(` | none yet | **Detected only** — the analyzer is [designed, not built](docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md) |
+
+The base catalog — prompt injection, data exfiltration, privilege escalation, supply chain, taint
+tracking, YARA signatures, MCP least privilege, and the rest — applies to **every** framework. The
+rows above add to it; they never replace it. Full rule tables are in
+[Vulnerability Patterns](#vulnerability-patterns).
+
+**Deep Agents, precisely:** a Deep Agents project is detected and reported as such, and its
+`SKILL.md` files are scanned by the base catalog like any other skill. What does not exist yet is a
+`framework_deepagents` analyzer contributing Python-specific rules. Do not read "Detected" as
+"covered by dedicated rules".
+
+## Who this is for
+
+- **Teams building agentic applications in Java or Kotlin with LangChain4j** — the primary audience.
+  You have skills in your own repository and no gate on them today.
+- **Teams building agentic applications in Python with Deep Agents** — base-catalog coverage works
+  now; framework-specific rules are on the roadmap.
+- **Platform and AppSec engineers** who need agent-skill findings in an existing security pipeline.
+  SARIF output uploads to GitHub code scanning; the exit code gates a build.
+- **Anyone vetting a third-party skill before installing it** — the original upstream use case,
+  which works here exactly as it does upstream.
+
+**This is not for you if** you only ever scan standalone skill bundles and want the canonical,
+vendor-maintained tool. Use [NVIDIA/SkillSpector](https://github.com/NVIDIA/SkillSpector) directly —
+this fork adds surface area you would not use.
+
+## Install
+
+The GitHub repository is named `SkillSpector-Polyglot`, but the Python distribution, the importable
+package, and the command are all still **`skillspector`**. That is deliberate: renaming them would
+break every existing install and every future merge from upstream, and buys nothing. Expect the
+repository name and the command name to differ.
+
+```bash
+# CLI only
+uv tool install git+https://github.com/rodrigorjsf/SkillSpector-Polyglot.git
+
+# With the MCP server extra (needed for `skillspector mcp`)
+uv tool install 'skillspector[mcp] @ git+https://github.com/rodrigorjsf/SkillSpector-Polyglot.git'
+
+# From source
+git clone https://github.com/rodrigorjsf/SkillSpector-Polyglot.git
+cd SkillSpector-Polyglot
+uv venv .venv && source .venv/bin/activate
+make install          # or: make install-dev
+```
+
+The inherited documentation below installs from `github.com/NVIDIA/skillspector`. Those URLs are
+left as-is on purpose — they point at upstream, which is where that documentation came from. Use the
+fork URLs above to get this fork.
+
+## Usage in an agentic project
+
+The single most important flag for this fork's use case is `--repo-scan`. Pointing the scanner at a
+repository root **without** it does not fail — it succeeds wrongly, scanning the whole tree as one
+anonymous skill and computing a risk score over that mixture.
+
+```bash
+# Scan every skill in an agentic repository, static analysis only, SARIF for CI
+skillspector scan . --repo-scan --no-llm --format sarif --output skillspector.sarif
+
+# Re-scan against an accepted baseline: only NEW findings are reported and scored
+skillspector scan . --repo-scan --no-llm --baseline skillspector-baseline.yaml
+
+# A layout the default discovery roots miss
+skillspector scan . --repo-scan --repo-scan-root playbooks --repo-scan-root ops/skills
+```
+
+Discovery roots, the JVM build directories that are skipped, and a complete GitHub Actions job are
+documented under [Scanning a Whole Repository](#scanning-a-whole-repository).
+
+## Configuration
+
+Everything is configured through environment variables and CLI flags — there is no config file.
+Static analysis needs no credentials at all; only the optional LLM stage does.
+
+| What you want | How |
+|---|---|
+| No credentials, no network egress to an LLM | `--no-llm` |
+| Choose an LLM provider | `SKILLSPECTOR_PROVIDER` — `openai`, `anthropic`, `anthropic_proxy`, `bedrock`, `nv_build`, `claude_cli`, `codex_cli`, `gemini_cli` |
+| Use a local agent CLI session instead of an API key | `SKILLSPECTOR_PROVIDER=claude_cli` (or `codex_cli`) |
+| Override the model | `SKILLSPECTOR_MODEL` |
+| Debug a scan | `SKILLSPECTOR_LOG_LEVEL=DEBUG`, or `-V` |
+
+The complete variable table is in [Environment Variables](#environment-variables), every flag in
+[CLI Options](#cli-options), and what leaves your machine in
+[Trust model and data egress](#trust-model-and-data-egress).
+
+## Transparency
+
+- **This is a community fork, not an NVIDIA product.** It is not endorsed by, supported by, or
+  affiliated with NVIDIA. Upstream is [NVIDIA/SkillSpector](https://github.com/NVIDIA/SkillSpector);
+  this fork tracks it and merges from it. Issues with this fork belong
+  [here](https://github.com/rodrigorjsf/SkillSpector-Polyglot/issues), not upstream.
+- **License unchanged.** Apache-2.0, as upstream. See [LICENSE](LICENSE).
+- **The detection rates quoted in the Overview are upstream's research**, reproduced as inherited
+  documentation. This fork has not independently reproduced them.
+- **Known limits are stated, not hidden.** Static analysis matches patterns and cannot prove intent;
+  the LLM stage is probabilistic. See [Limitations](#limitations) — they apply to the
+  framework-specific rules exactly as they apply to the base catalog.
+- **Sending skill content to a third party is opt-out, not opt-in.** The LLM stage is on by default
+  and transmits skill content to the configured provider. `--no-llm` keeps every scan local.
+
+## Contributing, and keeping these docs true
+
+Contributions are welcome — open an issue or a pull request on
+[rodrigorjsf/SkillSpector-Polyglot](https://github.com/rodrigorjsf/SkillSpector-Polyglot).
+
+**This documentation is part of the change, not a follow-up to it.** A pull request that adds or
+alters a rule, a framework, a CLI flag, an environment variable, or an exit code updates this README
+in the *same* pull request. Concretely:
+
+| A change to… | …updates, in the same PR |
+|---|---|
+| Framework detection or a framework analyzer | the [Framework support](#framework-support) matrix — including its **Status** column |
+| Any detection rule | the relevant [Vulnerability Patterns](#vulnerability-patterns) table and the pattern count in [Features](#features) |
+| A CLI flag or subcommand | [CLI Options](#cli-options), and [Usage in an agentic project](#usage-in-an-agentic-project) if it changes the recommended invocation |
+| An environment variable | [Environment Variables](#environment-variables) and the [Configuration](#configuration) summary |
+| An exit code or an output format | [Integrating SkillSpector](#integrating-skillspector) |
+| Anything that ships a designed-but-unbuilt capability | the **Status** column above, and [`docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md`](docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md) |
+
+A capability that ships without its row updated is a documentation bug — report it as one.
+
+---
+
+# Inherited documentation
+
+Everything below this line is upstream SkillSpector's documentation, kept intact so its provenance
+stays legible. It describes the scanner both projects share; where it says "SkillSpector", it means
+the tool this fork is built on. Install URLs in this section point at upstream by design — see
+[Install](#install) above for this fork.
 
 ## Overview
 

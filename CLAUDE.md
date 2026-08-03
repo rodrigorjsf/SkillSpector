@@ -1,6 +1,8 @@
-# SkillSpector
+# SkillSpector-Polyglot
 
-LangGraph pipeline that scans `SKILL.md` skill directories for vulnerabilities and emits SARIF plus a 0–100 risk score.
+LangGraph pipeline that scans `SKILL.md` skill directories for vulnerabilities and emits SARIF plus a 0–100 risk score. This fork extends that to skills embedded in a programming-language framework's own source tree — LangChain4j (shipped) and Deep Agents (detected, analyzer unbuilt).
+
+The GitHub repository is `SkillSpector-Polyglot`; the distribution, the package under `src/skillspector/`, and the console script stay `skillspector`. Renaming them would break upstream merges and existing installs — never propose it as a cleanup.
 
 ## Tooling
 
@@ -20,11 +22,25 @@ This repo is indexed (`.codegraph/`), so CodeGraph applies to every code lookup 
 
 ## Remote
 
-This repo is a fork. **Every git and GitHub operation targets `rodrigorjsf/SkillSpector` — never the
+This repo is a fork. **Every git and GitHub operation targets `rodrigorjsf/SkillSpector-Polyglot` — never the
 upstream `NVIDIA/SkillSpector`.** Pushes, branches, pull requests, issues, issue comments, releases
 and workflow runs all belong to the fork. Upstream is a read-only sync source: fetch from it, never
 push to it and never open a pull request or issue against it. `gh` resolves the upstream remote by
-default on a fork, so pass `--repo rodrigorjsf/SkillSpector` whenever the target is not unambiguous.
+default on a fork, so pass `--repo rodrigorjsf/SkillSpector-Polyglot` whenever the target is not
+unambiguous.
+
+## README is part of the change
+
+`README.md` opens with this fork's own documentation — mission, framework support matrix, audience,
+install, usage, configuration, transparency — and only then the inherited upstream README under the
+`# Inherited documentation` marker. **The fork sections above that marker are not a snapshot; they
+are a contract.** A pull request that adds or alters a rule, a framework, a CLI flag, an environment
+variable, an exit code or an output format updates them in the *same* pull request — never a
+follow-up. The README's own "Contributing, and keeping these docs true" table maps each kind of
+change to the section it must update; keep that table correct too.
+
+Below the marker, keep the diff append-only and leave the `NVIDIA/skillspector` URLs alone — they
+are upstream provenance, not stale links.
 
 ## Commits
 
@@ -113,6 +129,7 @@ whoever the user says. Do not manufacture an Umbrella Branch for a single PR.
 
 When something fails repeatedly, when User has to re-explain, or when a workaround is found for a platform/tool limitation, add a one-line bullet here. Keep each bullet under 15 words. No explanations. Only add things that will save time in future sessions.
 
+- A worktree needs its own venv; the main checkout's editable install imports its dirty `src/`.
 - `gh issue view` fails with a projectCards GraphQL error; use `--json`.
 - `gh pr edit` hits the same error; PATCH the body via `gh api` instead.
 - CI only triggers on `main`-targeting PRs; empty `gh pr checks` is not a pass.

@@ -1,7 +1,7 @@
 # Issue Tracker
 
 Issues for SkillSpector are tracked in GitHub Issues:
-**[github.com/rodrigorjsf/SkillSpector/issues](https://github.com/rodrigorjsf/SkillSpector/issues)**
+**[github.com/rodrigorjsf/SkillSpector-Polyglot/issues](https://github.com/rodrigorjsf/SkillSpector-Polyglot/issues)**
 
 ## Consumer rules
 
