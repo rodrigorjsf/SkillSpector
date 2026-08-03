@@ -134,3 +134,4 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - `agentskills.io/llms.txt` lists every spec page; grep all before claiming absence.
 - Guarding literals: match spellings exactly — containment hits Finding-message prose.
 - Fixture comments are scanned; never name the capability a fixture lacks.
+- Rule `paths`: `**/*.py` skips the base dir; pair it with `*.py`.
