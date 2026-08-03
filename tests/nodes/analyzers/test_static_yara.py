@@ -658,3 +658,20 @@ class TestInspectionLedgerResponse:
         assert event["observed_characters"] == len(content)
         assert event["observed_bytes"] == len(content.encode("utf-8"))
         assert "limit_bytes" not in event
+
+    def test_skipped_work_degrades_the_analyzer_status(self, monkeypatch) -> None:
+        """The middle branch of the derivation, which a conversion could drop silently.
+
+        ``failed`` and ``completed`` are asserted above and by the core pipeline;
+        ``degraded`` is the one the shared cascade in ``analyzer_status_for_events``
+        reaches only when work was skipped and none failed. Issue #60.
+        """
+        monkeypatch.setattr(static_yara, "_load_rules", lambda _extra_dir: object())
+        oversized = "x" * (static_yara.MAX_FILE_CHARS + 1)
+
+        result = static_yara.node(
+            {"components": ["large.md"], "file_cache": {"large.md": oversized}}
+        )
+
+        assert result["inspection_ledger"][0]["outcome"] == "skipped"
+        assert result["analyzer_status_events"][0]["status"] == "degraded"
