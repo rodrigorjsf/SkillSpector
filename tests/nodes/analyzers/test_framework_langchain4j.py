@@ -29,7 +29,12 @@ from typing import Any
 import pytest
 
 from skillspector.framework import Framework
-from skillspector.inspection_ledger import LedgerOutcome, guard_analyzer_node
+from skillspector.inspection_ledger import (
+    LedgerOutcome,
+    LedgerReason,
+    finalize_ledger,
+    guard_analyzer_node,
+)
 from skillspector.nodes.analyzers import framework_langchain4j as analyzer
 
 SHELL_WIRING_JAVA = """package com.example;
@@ -210,10 +215,13 @@ class TestShellDependencyDeclaration:
 class TestTheFrameworkGate:
     """The gate is the first statement, and a declining Analyzer emits nothing."""
 
-    @pytest.mark.parametrize("framework", [Framework.AGENT_SKILLS, Framework.DEEPAGENTS])
+    @pytest.mark.parametrize(
+        "framework", [member for member in Framework if member is not Framework.LANGCHAIN4J]
+    )
     def test_another_framework_produces_no_findings_and_no_ledger(
         self, framework: Framework
     ) -> None:
+        """Every Framework but this one, so a Framework added later is covered too."""
         result = analyzer.node(
             make_state(
                 {"src/main/java/OpsAgent.java": SHELL_WIRING_JAVA, "pom.xml": SHELL_POM},
@@ -231,18 +239,71 @@ class TestTheFrameworkGate:
         assert result["findings"] == []
         assert result.get("analyzer_status_events", []) == []
 
-    def test_a_matching_framework_with_nothing_to_inspect_declines_silently(self) -> None:
+
+class TestApplicability:
+    """A matching Framework always reports exactly one Analyzer Status.
+
+    Applicability is one predicate -- the Components this Analyzer opens -- and
+    both the gate and the accounting derive from it, so a Component that is
+    opened is always a Component that is reported.
+    """
+
+    def test_a_build_file_with_no_shell_declaration_is_opened_and_reported(self) -> None:
         """The shape of ``tests/fixtures/langchain4j_detection``: a pom and no Java.
 
-        ADR 0002 defers the ``not_applicable`` status for this case rather than
-        approving silence, so the decline is an interim owed a revisit -- but it
-        is what keeps that fixture's committed Behavior Snapshot byte-identical.
+        The build file is applicable -- the Analyzer opens it looking for the
+        shell module -- so the Scan says it was opened and found nothing, rather
+        than saying nothing at all.
         """
         result = analyzer.node(make_state({"pom.xml": PLAIN_POM, "README.md": "# hi\n"}))
 
         assert result["findings"] == []
+        assert [event["path"] for event in result["inspection_ledger"]] == ["pom.xml"]
+        assert all(
+            event["outcome"] is LedgerOutcome.COMPLETED for event in result["inspection_ledger"]
+        )
+        statuses = result["analyzer_status_events"]
+        assert len(statuses) == 1
+        assert statuses[0]["status"] == "completed"
+        assert [target["path"] for target in statuses[0]["planned_work"]] == ["pom.xml"]
+
+    def test_nothing_applicable_reports_not_applicable_with_the_shared_reason(self) -> None:
+        """A LangChain4j tree this Analyzer opens nothing in -- Skills, no JVM files.
+
+        The reason code is the one every other Analyzer already emits for the
+        same shape, so a reader does not have to learn a LangChain4j-specific
+        vocabulary to understand the row.
+        """
+        result = analyzer.node(
+            make_state({"src/main/resources/skills/ops-runbook/SKILL.md": "# Ops runbook\n"})
+        )
+
+        assert result["findings"] == []
         assert result.get("inspection_ledger", []) == []
-        assert result.get("analyzer_status_events", []) == []
+        statuses = result["analyzer_status_events"]
+        assert len(statuses) == 1
+        assert statuses[0]["status"] == "not_applicable"
+        assert statuses[0]["reason_code"] is LedgerReason.NO_APPLICABLE_FILES
+        assert statuses[0]["planned_work"] == []
+
+    def test_a_not_applicable_status_does_not_make_a_scan_incomplete(self) -> None:
+        """Asserted through the projection rather than assumed from the reason code."""
+        components = ["src/main/resources/skills/ops-runbook/SKILL.md"]
+        result = analyzer.node(make_state({components[0]: "# Ops runbook\n"}))
+
+        completeness, _effective = finalize_ledger(
+            {
+                "components": components,
+                "findings": [],
+                "effective_finding_ids": [],
+                "inspection_ledger": [],
+                "analyzer_status_events": result["analyzer_status_events"],
+            }
+        )
+
+        assert completeness["limitations"] == []
+        assert completeness["is_complete"] is True
+        assert completeness["execution_successful"] is True
 
 
 class TestTheLedgerContract:

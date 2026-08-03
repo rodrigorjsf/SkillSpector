@@ -98,6 +98,28 @@ def jvm_build_files(file_cache: Mapping[str, str]) -> dict[str, str]:
     return {path: content for path, content in file_cache.items() if is_jvm_build_file(path)}
 
 
+def applicable_files(file_cache: Mapping[str, str]) -> dict[str, str]:
+    """The Components the LangChain4j Analyzer opens, by path.
+
+    Applicability is this one predicate: a Java compilation unit or a JVM build
+    file, whether or not the build file declares the shell module. The Analyzer
+    gates on this result being empty and derives its planned work from the same
+    result, so what it opens and what it reports opening cannot disagree -- the
+    drift ``docs/adr/0006-langchain4j-applicability-is-what-it-opens.md``
+    records, where a build file with no shell declaration was opened by the
+    accounting and closed out by the gate.
+
+    Named for the word the Ledger already uses: an Analyzer with none of these
+    reports ``no_applicable_files``, so the code and the report describe
+    applicability in one vocabulary rather than two.
+    """
+    return {
+        path: content
+        for path, content in file_cache.items()
+        if is_java_source(path) or is_jvm_build_file(path)
+    }
+
+
 def _without_comments(path: str, content: str) -> str:
     """Blank out *content*'s comments, leaving every newline where it was.
 
