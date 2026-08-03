@@ -21,6 +21,7 @@ import re
 from pathlib import Path
 
 from skillspector.inspection_ledger import (
+    AnalyzerStatus,
     LedgerOutcome,
     LedgerReason,
     analyzer_status_event,
@@ -226,7 +227,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
             "analyzer_status_events": [
                 analyzer_status_event(
                     analyzer_id=ANALYZER_ID,
-                    status="not_applicable",
+                    status=AnalyzerStatus.NOT_APPLICABLE,
                     reason=LedgerReason.MANIFEST_ABSENT,
                 )
             ],
@@ -242,7 +243,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
             "analyzer_status_events": [
                 analyzer_status_event(
                     analyzer_id=ANALYZER_ID,
-                    status="not_applicable",
+                    status=AnalyzerStatus.NOT_APPLICABLE,
                     reason=LedgerReason.NO_APPLICABLE_FILES,
                 )
             ],
@@ -439,7 +440,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
         "analyzer_status_events": [
             analyzer_status_event(
                 analyzer_id=ANALYZER_ID,
-                status="completed",
+                status=AnalyzerStatus.COMPLETED,
                 planned_work=[
                     {
                         "work_id": event["work_id"],

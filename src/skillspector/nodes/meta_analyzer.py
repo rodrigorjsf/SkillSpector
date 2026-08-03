@@ -29,6 +29,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from skillspector.constants import _SKILLSPECTOR_DEFAULT_MODEL
 from skillspector.inspection_ledger import (
+    AnalyzerStatus,
     AnalyzerStatusEvent,
     InspectionLedgerEvent,
     LedgerOutcome,
@@ -573,9 +574,9 @@ def _meta_ledger_response(
     status = analyzer_status_event(
         analyzer_id="meta_analyzer",
         status=(
-            "failed"
+            AnalyzerStatus.FAILED
             if any(event["outcome"] is LedgerOutcome.FAILED for event in events)
-            else "completed"
+            else AnalyzerStatus.COMPLETED
         ),
         planned_work=[
             {
@@ -611,7 +612,7 @@ def meta_analyzer(state: SkillspectorState) -> MetaAnalyzerResponse:
             "analyzer_status_events": [
                 analyzer_status_event(
                     analyzer_id="meta_analyzer",
-                    status="not_applicable",
+                    status=AnalyzerStatus.NOT_APPLICABLE,
                     reason=LedgerReason.NO_APPLICABLE_FILES,
                 )
             ],
@@ -626,7 +627,7 @@ def meta_analyzer(state: SkillspectorState) -> MetaAnalyzerResponse:
             "analyzer_status_events": [
                 analyzer_status_event(
                     analyzer_id="meta_analyzer",
-                    status="disabled",
+                    status=AnalyzerStatus.DISABLED,
                     reason=LedgerReason.DISABLED_BY_CONFIGURATION,
                 )
             ],
@@ -745,7 +746,7 @@ def meta_analyzer(state: SkillspectorState) -> MetaAnalyzerResponse:
             "analyzer_status_events": [
                 analyzer_status_event(
                     analyzer_id="meta_analyzer",
-                    status="unavailable",
+                    status=AnalyzerStatus.UNAVAILABLE,
                 )
             ],
             "llm_call_log": [llm_call_record("meta_analyzer", ok=False, error=str(e))],

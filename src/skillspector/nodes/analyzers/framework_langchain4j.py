@@ -71,6 +71,7 @@ from typing import TYPE_CHECKING
 
 from skillspector.framework import Framework
 from skillspector.inspection_ledger import (
+    AnalyzerStatus,
     LedgerOutcome,
     LedgerReason,
     PlannedWorkTarget,
@@ -411,7 +412,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
             "analyzer_status_events": [
                 analyzer_status_event(
                     analyzer_id=ANALYZER_ID,
-                    status="not_applicable",
+                    status=AnalyzerStatus.NOT_APPLICABLE,
                     reason=LedgerReason.NO_APPLICABLE_FILES,
                 )
             ],
@@ -476,7 +477,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
         "analyzer_status_events": [
             analyzer_status_event(
                 analyzer_id=ANALYZER_ID,
-                status="completed",
+                status=AnalyzerStatus.COMPLETED,
                 planned_work=[_planned_target(path) for path, _findings in ordered],
             )
         ],
