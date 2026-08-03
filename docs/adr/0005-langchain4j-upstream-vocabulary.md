@@ -47,6 +47,13 @@ graduates and drops that prefix, the dependency signal behind `L4J-SHELL` dies w
 the report should say when that happens, and how to detect that it has, is issue #45. This decision
 only makes the rename a one-line edit.
 
+> **Superseded in part by [ADR 0007](0007-l4j-shell-survives-the-graduation-rename.md).** Issue #45
+> was decided: `L4J-SHELL`'s dependency half no longer matches `SHELL_ARTIFACT_ID` at all, but a
+> pattern over any `langchain4j-` artifact id containing `shell`. The rename is therefore no longer
+> a one-line edit the Rule depends on — it is an accuracy update. Everything else in this record
+> stands, including the failure shape described above, which still applies to every *other* spelling
+> in the inventory.
+
 ## Considered Options
 
 **Per-version API profiles** — a spelling table per upstream version, selected by the version found

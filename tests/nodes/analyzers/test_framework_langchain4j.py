@@ -101,6 +101,39 @@ COMMENTED_POM = """<project>
 
 SHELL_COORDINATE = "dev.langchain4j:langchain4j-experimental-skills-shell:1.18.1-beta28"
 
+# The spelling a graduation release is expected to publish, and the one nobody
+# can derive: `dev.langchain4j` has never renamed an artifact out of
+# `experimental`, so this is the shape the word "graduation" implies rather than
+# a shape upstream has demonstrated. `L4J-SHELL` therefore matches a pattern
+# over the capability word instead of either spelling --
+# `docs/adr/0007-l4j-shell-survives-the-graduation-rename.md` records why.
+GRADUATED_SHELL_ARTIFACT_ID = "langchain4j-skills-shell"
+GRADUATED_SHELL_POM = f"""<project>
+  <dependencies>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>{GRADUATED_SHELL_ARTIFACT_ID}</artifactId>
+    </dependency>
+  </dependencies>
+</project>
+"""
+# Its own constant rather than reusing SHELL_POM_LINE: the two poms agree on
+# layout today, and a test that reads the right line by coincidence stops
+# proving the location the moment either one is reformatted.
+GRADUATED_SHELL_POM_LINE = 5
+
+# The safe sibling. It is in every LangChain4j build file that uses Skills at
+# all, so a pattern that matched it would fire HIGH on every clean Java Scan.
+SAFE_SKILLS_POM = """<project>
+  <dependencies>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-skills</artifactId>
+    </dependency>
+  </dependencies>
+</project>
+"""
+
 
 def make_state(
     file_cache: dict[str, str],
@@ -180,7 +213,7 @@ class TestShellDependencyDeclaration:
         comment's line, which is both a false positive and a wrong location.
         """
         commented = COMMENTED_POM
-        assert analyzer.signals.SHELL_ARTIFACT_ID in commented
+        assert analyzer.vocabulary.SHELL_ARTIFACT_ID in commented
 
         findings = shell_findings(analyzer.node(make_state({"pom.xml": commented})))
 
@@ -210,6 +243,169 @@ class TestShellDependencyDeclaration:
 
         assert len(findings) == 1
         assert findings[0].file == "build.gradle"
+
+
+class TestTheGraduationRename:
+    """The dependency half of ``L4J-SHELL`` survives the artifact losing ``experimental``.
+
+    Upstream names the artifact ``experimental`` and says the Skills API is
+    experimental, so the prefix is expected to go. Matching the published
+    spelling literally would mean the Rule stops firing on the release that
+    drops it, with no test failing and no Scan saying so -- an absence of
+    Findings indistinguishable from a clean repository, inside an open gate
+    where the Inspection Ledger cannot help either.
+    """
+
+    def test_the_published_spelling_still_fires(self) -> None:
+        # The pattern is wider than the literal it replaced; it must not be
+        # wider in a direction that loses the only spelling published to date.
+        findings = shell_findings(analyzer.node(make_state({"pom.xml": SHELL_POM})))
+
+        assert len(findings) == 1
+        assert analyzer.vocabulary.SHELL_ARTIFACT_ID in findings[0].message
+
+    def test_the_published_spelling_reports_the_message_it_always_did(self) -> None:
+        # The behaviour-preservation proof, written out rather than derived, so
+        # a change to `_declaration_message` that happens to keep the helper
+        # self-consistent still fails here.
+        findings = shell_findings(analyzer.node(make_state({"pom.xml": SHELL_POM})))
+
+        assert findings[0].message == (
+            "The build file declares langchain4j-experimental-skills-shell, putting "
+            "LangChain4j's unsandboxed shell mode on the classpath where any wiring can reach it."
+        )
+
+    def test_a_graduated_spelling_fires_at_its_line(self) -> None:
+        findings = shell_findings(analyzer.node(make_state({"pom.xml": GRADUATED_SHELL_POM})))
+
+        assert len(findings) == 1
+        assert findings[0].start_line == GRADUATED_SHELL_POM_LINE
+        assert findings[0].severity == "HIGH"
+
+    def test_a_graduated_spelling_is_named_in_the_message_it_produced(self) -> None:
+        """The Finding names the build file's spelling, not the inventory's.
+
+        A reader sent to a dependency they cannot find in their own build file
+        has to second-guess the Finding, which is the cost of reporting an
+        artifact id the Scan did not read.
+        """
+        findings = shell_findings(analyzer.node(make_state({"pom.xml": GRADUATED_SHELL_POM})))
+
+        assert GRADUATED_SHELL_ARTIFACT_ID in findings[0].message
+        assert analyzer.vocabulary.SHELL_ARTIFACT_ID not in findings[0].message
+
+    def test_a_graduated_gradle_coordinate_fires(self) -> None:
+        coordinate = f"dev.langchain4j:{GRADUATED_SHELL_ARTIFACT_ID}:2.0.0"
+        gradle = f"dependencies {{\n    implementation '{coordinate}'\n}}\n"
+
+        findings = shell_findings(analyzer.node(make_state({"build.gradle": gradle})))
+
+        assert len(findings) == 1
+        assert findings[0].start_line == 2
+
+    def test_a_commented_out_graduated_spelling_is_not_a_declaration(self) -> None:
+        # Comment blanking runs before the match, so widening the match must not
+        # have widened it past the blanking.
+        commented = (
+            "<project>\n"
+            f"  <!-- dropped {GRADUATED_SHELL_ARTIFACT_ID} -->\n"
+            "  <dependencies/>\n"
+            "</project>\n"
+        )
+
+        assert shell_findings(analyzer.node(make_state({"pom.xml": commented}))) == []
+
+    def test_the_safe_skills_artifact_is_not_a_shell_declaration(self) -> None:
+        """The one over-match that would matter: HIGH on every clean Java Scan.
+
+        ``langchain4j-skills`` is in every build file that uses Skills at all,
+        and its id is a prefix of the shell module's. A pattern loose enough to
+        take it would make the Rule useless.
+        """
+        assert shell_findings(analyzer.node(make_state({"pom.xml": SAFE_SKILLS_POM}))) == []
+
+    def test_the_group_coordinate_alone_is_not_a_shell_declaration(self) -> None:
+        # The control for the assertion above: the same build file, still not a
+        # declaration, for a second reason.
+        assert shell_findings(analyzer.node(make_state({"pom.xml": PLAIN_POM}))) == []
+
+
+class TestWhatTheWideningAlsoMatches:
+    """The over-match the pattern buys, pinned so it is a decision and not a surprise.
+
+    Widening from one artifact id to "any ``langchain4j-`` id containing
+    ``shell``" means a build file that names such an id for a reason other than
+    depending on it now fires ``L4J-SHELL`` at HIGH. The cases below are the
+    realistic ones, and they are accepted rather than fixed: separating "this
+    element declares a dependency" from "this element names the project" needs
+    the build-file structure ``signals`` deliberately does not read, and the
+    only way to be wrong here is to over-report a repository whose own name
+    says shell mode. Under-reporting is the failure the widening exists to
+    prevent, so the asymmetry is taken on purpose.
+
+    The Finding names the id it matched, so a reader sees the artifact and can
+    judge. ``docs/adr/0007-l4j-shell-survives-the-graduation-rename.md`` records
+    the trade-off.
+    """
+
+    @pytest.mark.parametrize(
+        ("label", "line"),
+        [
+            ("its own artifactId", "  <artifactId>langchain4j-shell-demo</artifactId>"),
+            ("an aggregator module", "    <module>langchain4j-shell-examples</module>"),
+            ("its own name", "  <name>langchain4j-shell-playground</name>"),
+            ("its scm url", "  <url>https://github.com/acme/langchain4j-shell-demo</url>"),
+        ],
+    )
+    def test_a_project_named_after_shell_mode_is_reported(self, label: str, line: str) -> None:
+        findings = shell_findings(analyzer.node(make_state({"pom.xml": line + "\n"})))
+
+        assert len(findings) == 1, f"{label} no longer matches -- was the pattern narrowed?"
+
+    def test_prose_naming_the_capability_is_not_reported(self) -> None:
+        """The bound on the over-match: it takes an artifact *id*, not the word.
+
+        Without this the class above would read as "anything mentioning shell",
+        which is a far larger claim than the pattern makes.
+        """
+        prose = "  <description>Uses langchain4j skills, no shell mode</description>\n"
+
+        assert shell_findings(analyzer.node(make_state({"pom.xml": prose}))) == []
+
+    @pytest.mark.xfail(
+        reason="Pre-existing: an <exclusion> naming the shell module is the syntactic "
+        "equivalent of the comment _without_comments already blanks, and is not blanked. "
+        "The literal match this pattern replaced reported it identically, so the widening "
+        "neither caused nor worsened it. Issue #64.",
+        strict=True,
+    )
+    def test_an_excluded_shell_module_is_not_a_declaration(self) -> None:
+        """Excluding the shell module is banning the capability, not taking it.
+
+        Reporting it inverts the Finding: the build file is flagged HIGH for the
+        one action that removes the risk. ``shell_artifact_declarations`` already
+        blanks comments so a build file naming the artifact only to say it was
+        *removed* is not read as declaring it; an ``<exclusion>`` says the same
+        thing in XML rather than in a comment.
+        """
+        excluding = (
+            "<project>\n"
+            "  <dependencies>\n"
+            "    <dependency>\n"
+            "      <groupId>dev.langchain4j</groupId>\n"
+            "      <artifactId>langchain4j-skills</artifactId>\n"
+            "      <exclusions>\n"
+            "        <exclusion>\n"
+            "          <groupId>dev.langchain4j</groupId>\n"
+            f"          <artifactId>{analyzer.vocabulary.SHELL_ARTIFACT_ID}</artifactId>\n"
+            "        </exclusion>\n"
+            "      </exclusions>\n"
+            "    </dependency>\n"
+            "  </dependencies>\n"
+            "</project>\n"
+        )
+
+        assert shell_findings(analyzer.node(make_state({"pom.xml": excluding}))) == []
 
 
 class TestTheFrameworkGate:
@@ -829,6 +1025,22 @@ class TestTheToolModeFixtureCarriesNoShellSpelling:
         for path, content in self._sources("langchain4j_tool_mode").items():
             for spelling in self._forbidden():
                 assert spelling not in content, f"{path} names {spelling}"
+
+    def test_no_file_in_the_tree_declares_the_shell_module(self) -> None:
+        """The dependency half matches a pattern, so the guard has to as well.
+
+        Asserting the three literals is no longer the same as asserting the
+        Rule finds nothing: since ``L4J-SHELL`` matches every ``langchain4j-``
+        artifact id containing ``shell``, a fixture could acquire a *different*
+        shell artifact and stay clean by the check above while the snapshot
+        below it moved.
+        """
+        import re
+
+        pattern = re.compile(analyzer.vocabulary.SHELL_ARTIFACT_PATTERN)
+        for path, content in self._sources("langchain4j_tool_mode").items():
+            match = pattern.search(content)
+            assert match is None, f"{path} declares {match.group(0) if match else ''}"
 
     def test_the_shell_fixture_names_all_three(self) -> None:
         """The control, without which the assertion above is vacuous.

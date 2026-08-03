@@ -307,6 +307,8 @@ Anything the analyzer needs that is not a base dependency is imported **inside**
 
 Every upstream spelling a Framework analyzer matches on — type names, method names, artifact ids, conventional layouts — belongs in that Framework's own vocabulary module, never inline. A framework whose API is beta will rename something, and a Rule matching a stale identifier stops producing Findings while the scan still succeeds and the report still reads as clean. LangChain4j's inventory is [vocabulary.py](../src/skillspector/langchain4j/vocabulary.py), enforced by `tests/unit/test_langchain4j_vocabulary.py` and recorded in [ADR 0005](adr/0005-langchain4j-upstream-vocabulary.md); Deep Agents should copy the shape.
 
+One entry is not a spelling but a pattern, and the reasoning generalises. `SHELL_ARTIFACT_PATTERN` matches any `langchain4j-` artifact id containing `shell`, because the artifact carrying the highest-severity Java Rule is named `experimental` and the graduated spelling cannot be derived — `dev.langchain4j` has never renamed an artifact out of `experimental`, so an enumeration of "the two spellings" would be a guess that fails the same silent way the literal does. Where a capability has a word of its own, match the word; where it does not, an enumeration is still a guess. The Finding names the spelling the scanned build file used, which is what keeps the widening behaviour-preserving. [ADR 0007](adr/0007-l4j-shell-survives-the-graduation-rename.md) records it, including the decision that a Scan reports *nothing new* when a Rule stops matching because an identifier moved.
+
 ---
 
 ## 10. Environment and configuration

@@ -152,3 +152,6 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - Guarding literals: match spellings exactly — containment hits Finding-message prose.
 - Fixture comments are scanned; never name the capability a fixture lacks.
 - Rule `paths`: `**/*.py` skips the base dir; pair it with `*.py`.
+- Run the CLI as `.venv/bin/skillspector`; `python -m skillspector` has no `__main__`.
+- JSON report nests findings under `issues`, keyed `id` — not `findings`/`rule_id`.
+- Undo a mutation test by hand; `git checkout --` drops the whole file's edits.
