@@ -70,9 +70,11 @@ ALLOWED_DOWNLOAD_HOSTS = frozenset(
 )
 
 # Hard ceiling on what any single ingest path can pull into the temp dir.
-# Sized above the per-file analysis cap (``MAX_FILE_BYTES`` = 1 MB) so a
-# legitimate multi-file skill is not blocked at ingest, but tight enough
-# to bound memory / disk DoS from a malicious source.
+# Sized above the per-file analysis cap so a legitimate multi-file skill is
+# not blocked at ingest, but tight enough to bound memory / disk DoS from a
+# malicious source.  That cap is ``MAX_FILE_CHARS`` = 1 000 000 *characters*
+# of decoded text, not bytes: at UTF-8's worst case it admits a file of
+# roughly 4 MB, which this ceiling still clears by a wide margin.
 INGEST_MAX_BYTES = 100 * 1024 * 1024  # 100 MiB
 
 # Hard ceiling on the number of members in a zip we are willing to

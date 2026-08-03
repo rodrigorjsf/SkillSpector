@@ -147,7 +147,11 @@ SkillSpector enforces two independent caps on remote and archive inputs to bound
 - **Per-ingest cap**: `INGEST_MAX_BYTES` (100 MiB) — applied to streamed URL downloads, total uncompressed size of zip archives, and post-clone disk usage of Git repos.
 - **Zip member cap**: `INGEST_MAX_ZIP_MEMBERS` (10,000) — caps the number of entries in a single zip.
 
-Note that the per-file 1 MB analysis cap (`MAX_FILE_BYTES`) is a separate, downstream limit: it bounds what individual analyzers will read out of an already-ingested directory. The ingest caps above bound how much content can land on disk in the first place. A breach of either ingest cap fails closed with an `IngestLimitExceededError`.
+A third cap applies further downstream, and it is denominated differently:
+
+- **Per-file analysis cap**: `MAX_FILE_CHARS` (1,000,000 **characters**) — bounds what individual analyzers will read out of an already-ingested directory.
+
+The two ingest caps count bytes on disk; the analysis cap counts characters of decoded text. They are not interchangeable — a UTF-8 file of 1,000,000 CJK characters occupies roughly 3 MB on disk and is still under the analysis cap. A breach of either ingest cap fails closed with an `IngestLimitExceededError`. A file over the analysis cap is not a failure: it is skipped, and the skip is reported with a `size_limit` reason, so an absence of findings for that file is distinguishable from a clean one.
 
 ### Output Formats
 
