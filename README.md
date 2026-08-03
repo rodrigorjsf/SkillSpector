@@ -151,7 +151,7 @@ A third cap applies further downstream, and it is denominated differently:
 
 - **Per-file analysis cap**: `MAX_FILE_CHARS` (1,000,000 **characters**) — bounds what individual analyzers will read out of an already-ingested directory.
 
-The two ingest caps count bytes on disk; the analysis cap counts characters of decoded text. They are not interchangeable — a UTF-8 file of 1,000,000 CJK characters occupies roughly 3 MB on disk and is still under the analysis cap. A breach of either ingest cap fails closed with an `IngestLimitExceededError`. A file over the analysis cap is not a failure: it is skipped, and the skip is recorded in the inspection ledger with a `size_limit` reason plus the observed character and byte counts, so an absence of findings for that file is distinguishable from a clean one.
+The two ingest caps count bytes on disk; the analysis cap counts characters of decoded text. They are not interchangeable — a UTF-8 file of 1,000,000 CJK characters occupies roughly 3 MB on disk and is still under the analysis cap. A breach of either ingest cap fails closed with an `IngestLimitExceededError`. A file over the analysis cap is not a failure: it is skipped, and the skip is reported with a `size_limit` reason, so an absence of findings for that file is distinguishable from a clean one.
 
 ### Output Formats
 
