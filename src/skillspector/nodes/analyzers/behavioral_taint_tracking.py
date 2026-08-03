@@ -26,12 +26,10 @@ import ast
 from typing import NamedTuple
 
 from skillspector.inspection_ledger import (
-    AnalyzerStatus,
     InspectionLedgerEvent,
     LedgerOutcome,
     LedgerReason,
-    PlannedWorkTarget,
-    analyzer_status_event,
+    analyzer_status_for_events,
     ledger_event,
 )
 from skillspector.logging_config import get_logger
@@ -479,36 +477,8 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
         ledger_events.append(event)
 
     logger.info("%s: %d findings", ANALYZER_ID, len(all_findings))
-    planned_work: list[PlannedWorkTarget] = [
-        {
-            "work_id": event["work_id"],
-            "path": event["path"],
-            "start_line": event["start_line"],
-            "end_line": event["end_line"],
-        }
-        for event in ledger_events
-    ]
-    if not ledger_events:
-        status = analyzer_status_event(
-            analyzer_id=ANALYZER_ID,
-            status=AnalyzerStatus.NOT_APPLICABLE,
-            reason=LedgerReason.NO_APPLICABLE_FILES,
-        )
-    else:
-        outcomes = {event["outcome"] for event in ledger_events}
-        status = analyzer_status_event(
-            analyzer_id=ANALYZER_ID,
-            status=(
-                AnalyzerStatus.FAILED
-                if LedgerOutcome.FAILED in outcomes
-                else AnalyzerStatus.DEGRADED
-                if LedgerOutcome.SKIPPED in outcomes
-                else AnalyzerStatus.COMPLETED
-            ),
-            planned_work=planned_work,
-        )
     return {
         "findings": all_findings,
         "inspection_ledger": ledger_events,
-        "analyzer_status_events": [status],
+        "analyzer_status_events": [analyzer_status_for_events(ANALYZER_ID, ledger_events)],
     }

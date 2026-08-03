@@ -35,6 +35,7 @@ from skillspector.inspection_ledger import (
     LedgerOutcome,
     LedgerReason,
     analyzer_status_event,
+    analyzer_status_for_events,
     ledger_event,
 )
 from skillspector.logging_config import get_logger
@@ -349,34 +350,8 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
         )
 
     logger.info("%s: %d findings", ANALYZER_ID, len(findings))
-    if not events:
-        status = analyzer_status_event(
-            analyzer_id=ANALYZER_ID,
-            status=AnalyzerStatus.NOT_APPLICABLE,
-            reason=LedgerReason.NO_APPLICABLE_FILES,
-        )
-    else:
-        status = analyzer_status_event(
-            analyzer_id=ANALYZER_ID,
-            status=(
-                AnalyzerStatus.FAILED
-                if any(event["outcome"] is LedgerOutcome.FAILED for event in events)
-                else AnalyzerStatus.DEGRADED
-                if any(event["outcome"] is LedgerOutcome.SKIPPED for event in events)
-                else AnalyzerStatus.COMPLETED
-            ),
-            planned_work=[
-                {
-                    "work_id": event["work_id"],
-                    "path": event["path"],
-                    "start_line": event["start_line"],
-                    "end_line": event["end_line"],
-                }
-                for event in events
-            ],
-        )
     return {
         "findings": findings,
         "inspection_ledger": events,
-        "analyzer_status_events": [status],
+        "analyzer_status_events": [analyzer_status_for_events(ANALYZER_ID, events)],
     }
