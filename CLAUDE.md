@@ -129,6 +129,7 @@ whoever the user says. Do not manufacture an Umbrella Branch for a single PR.
 
 When something fails repeatedly, when User has to re-explain, or when a workaround is found for a platform/tool limitation, add a one-line bullet here. Keep each bullet under 15 words. No explanations. Only add things that will save time in future sessions.
 
+- A worktree needs its own venv; the main checkout's editable install imports its dirty `src/`.
 - `gh issue view` fails with a projectCards GraphQL error; use `--json`.
 - `gh pr edit` hits the same error; PATCH the body via `gh api` instead.
 - CI only triggers on `main`-targeting PRs; empty `gh pr checks` is not a pass.
