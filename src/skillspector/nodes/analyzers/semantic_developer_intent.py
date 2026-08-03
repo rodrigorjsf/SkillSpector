@@ -23,7 +23,11 @@ its actual code behavior using LLM-based analysis.
 from __future__ import annotations
 
 from skillspector.constants import _SKILLSPECTOR_DEFAULT_MODEL, MODEL_CONFIG
-from skillspector.inspection_ledger import LedgerReason, analyzer_status_event
+from skillspector.inspection_ledger import (
+    AnalyzerStatus,
+    LedgerReason,
+    analyzer_status_event,
+)
 from skillspector.llm_analyzer_base import (
     BatchExecutionResult,
     LLMAnalyzerBase,
@@ -167,7 +171,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
             "analyzer_status_events": [
                 analyzer_status_event(
                     analyzer_id=ANALYZER_ID,
-                    status="disabled",
+                    status=AnalyzerStatus.DISABLED,
                     reason=LedgerReason.DISABLED_BY_CONFIGURATION,
                 )
             ],
@@ -181,7 +185,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
             "analyzer_status_events": [
                 analyzer_status_event(
                     analyzer_id=ANALYZER_ID,
-                    status="not_applicable",
+                    status=AnalyzerStatus.NOT_APPLICABLE,
                     reason=LedgerReason.NO_APPLICABLE_FILES,
                 )
             ],
@@ -223,7 +227,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
             "analyzer_status_events": [
                 analyzer_status_event(
                     analyzer_id=ANALYZER_ID,
-                    status="unavailable",
+                    status=AnalyzerStatus.UNAVAILABLE,
                 )
             ],
             "llm_call_log": [llm_call_record(ANALYZER_ID, ok=False, error=str(exc))],

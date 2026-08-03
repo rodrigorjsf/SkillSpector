@@ -30,6 +30,7 @@ from pathlib import Path
 import yara  # type: ignore[import-not-found]
 
 from skillspector.inspection_ledger import (
+    AnalyzerStatus,
     InspectionLedgerEvent,
     LedgerOutcome,
     LedgerReason,
@@ -275,7 +276,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
             "analyzer_status_events": [
                 analyzer_status_event(
                     analyzer_id=ANALYZER_ID,
-                    status="unavailable",
+                    status=AnalyzerStatus.UNAVAILABLE,
                     reason=LedgerReason.RULES_UNAVAILABLE,
                 )
             ],
@@ -351,18 +352,18 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
     if not events:
         status = analyzer_status_event(
             analyzer_id=ANALYZER_ID,
-            status="not_applicable",
+            status=AnalyzerStatus.NOT_APPLICABLE,
             reason=LedgerReason.NO_APPLICABLE_FILES,
         )
     else:
         status = analyzer_status_event(
             analyzer_id=ANALYZER_ID,
             status=(
-                "failed"
+                AnalyzerStatus.FAILED
                 if any(event["outcome"] is LedgerOutcome.FAILED for event in events)
-                else "degraded"
+                else AnalyzerStatus.DEGRADED
                 if any(event["outcome"] is LedgerOutcome.SKIPPED for event in events)
-                else "completed"
+                else AnalyzerStatus.COMPLETED
             ),
             planned_work=[
                 {

@@ -106,10 +106,11 @@ terminal outcome; unaccounted work is itself a reportable defect.
 _Avoid_: task, job, unit
 
 **Analyzer Status**:
-What one Analyzer reports it did on one Scan. Six values are emitted today — `completed`,
-`not_applicable`, `degraded`, `failed`, `disabled` and `unavailable` — and only the first two leave
-a Scan complete; every other value becomes a stated limitation. The set is measured, not declared:
-naming it here does not close it, which is #47.
+What one Analyzer reports it did on one Scan. Six values — `completed`, `not_applicable`,
+`degraded`, `failed`, `disabled` and `unavailable` — and only the first two leave a Scan complete;
+every other value becomes a stated limitation. The set is closed by `AnalyzerStatus`, which
+`analyzer_status_event` admits every status through, so an undeclared spelling raises rather than
+reaching a report.
 _Avoid_: analyzer result, run status
 
 **Applicability**:

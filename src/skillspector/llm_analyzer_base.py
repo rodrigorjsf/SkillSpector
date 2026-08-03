@@ -37,6 +37,7 @@ from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field, field_validator
 
 from skillspector.inspection_ledger import (
+    AnalyzerStatus,
     AnalyzerStatusEvent,
     InspectionLedgerEvent,
     LedgerOutcome,
@@ -294,9 +295,9 @@ def ledger_events_for_batches(
     status = analyzer_status_event(
         analyzer_id=analyzer_id,
         status=(
-            "failed"
+            AnalyzerStatus.FAILED
             if any(event["outcome"] is LedgerOutcome.FAILED for event in events)
-            else "completed"
+            else AnalyzerStatus.COMPLETED
         ),
         planned_work=[
             {

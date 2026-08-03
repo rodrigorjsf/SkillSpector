@@ -21,6 +21,7 @@ from pydantic import ValidationError
 
 from skillspector.constants import _SKILLSPECTOR_DEFAULT_MODEL
 from skillspector.inspection_ledger import (
+    AnalyzerStatus,
     LedgerOutcome,
     LedgerReason,
     analyzer_status_event,
@@ -90,7 +91,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
             "analyzer_status_events": [
                 analyzer_status_event(
                     analyzer_id=ANALYZER_ID,
-                    status="disabled",
+                    status=AnalyzerStatus.DISABLED,
                     reason=LedgerReason.DISABLED_BY_CONFIGURATION,
                 )
             ],
@@ -105,7 +106,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
             "analyzer_status_events": [
                 analyzer_status_event(
                     analyzer_id=ANALYZER_ID,
-                    status="not_applicable",
+                    status=AnalyzerStatus.NOT_APPLICABLE,
                     reason=LedgerReason.NO_APPLICABLE_FILES,
                 )
             ],
@@ -130,7 +131,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
             "analyzer_status_events": [
                 analyzer_status_event(
                     analyzer_id=ANALYZER_ID,
-                    status="failed",
+                    status=AnalyzerStatus.FAILED,
                     planned_work=[
                         {
                             "work_id": event["work_id"],
@@ -161,7 +162,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
         if missing_cache_events:
             status = analyzer_status_event(
                 analyzer_id=ANALYZER_ID,
-                status="failed",
+                status=AnalyzerStatus.FAILED,
                 planned_work=[
                     {
                         "work_id": event["work_id"],
@@ -193,7 +194,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
         all_events = [*missing_cache_events, *events]
         status = analyzer_status_event(
             analyzer_id=ANALYZER_ID,
-            status="failed",
+            status=AnalyzerStatus.FAILED,
             planned_work=[
                 {
                     "work_id": event["work_id"],
@@ -222,7 +223,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
             "analyzer_status_events": [
                 analyzer_status_event(
                     analyzer_id=ANALYZER_ID,
-                    status="unavailable",
+                    status=AnalyzerStatus.UNAVAILABLE,
                 )
             ],
             "llm_call_log": [llm_call_record(ANALYZER_ID, ok=False, error=str(exc))],

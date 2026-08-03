@@ -24,6 +24,7 @@ import re
 import unicodedata
 
 from skillspector.inspection_ledger import (
+    AnalyzerStatus,
     LedgerOutcome,
     LedgerReason,
     analyzer_status_event,
@@ -849,7 +850,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
             "analyzer_status_events": [
                 analyzer_status_event(
                     analyzer_id=ANALYZER_ID,
-                    status="not_applicable",
+                    status=AnalyzerStatus.NOT_APPLICABLE,
                     reason=LedgerReason.MANIFEST_ABSENT,
                 )
             ],
@@ -909,7 +910,9 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
         ledger.append(tp4_event)
     status = analyzer_status_event(
         analyzer_id=ANALYZER_ID,
-        status="failed" if tp4_record is not None and not tp4_record["ok"] else "completed",
+        status=AnalyzerStatus.FAILED
+        if tp4_record is not None and not tp4_record["ok"]
+        else AnalyzerStatus.COMPLETED,
         planned_work=[
             {
                 "work_id": event["work_id"],

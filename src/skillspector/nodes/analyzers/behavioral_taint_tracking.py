@@ -26,6 +26,7 @@ import ast
 from typing import NamedTuple
 
 from skillspector.inspection_ledger import (
+    AnalyzerStatus,
     InspectionLedgerEvent,
     LedgerOutcome,
     LedgerReason,
@@ -490,7 +491,7 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
     if not ledger_events:
         status = analyzer_status_event(
             analyzer_id=ANALYZER_ID,
-            status="not_applicable",
+            status=AnalyzerStatus.NOT_APPLICABLE,
             reason=LedgerReason.NO_APPLICABLE_FILES,
         )
     else:
@@ -498,11 +499,11 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
         status = analyzer_status_event(
             analyzer_id=ANALYZER_ID,
             status=(
-                "failed"
+                AnalyzerStatus.FAILED
                 if LedgerOutcome.FAILED in outcomes
-                else "degraded"
+                else AnalyzerStatus.DEGRADED
                 if LedgerOutcome.SKIPPED in outcomes
-                else "completed"
+                else AnalyzerStatus.COMPLETED
             ),
             planned_work=planned_work,
         )

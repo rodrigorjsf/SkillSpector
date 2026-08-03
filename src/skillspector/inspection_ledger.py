@@ -58,6 +58,39 @@ class LedgerReason(StrEnum):
     NO_APPLICABLE_FILES = "no_applicable_files"
 
 
+class AnalyzerStatus(StrEnum):
+    """What one Analyzer reports it did on one Scan.
+
+    Distinct from :class:`LedgerOutcome`, which is the terminal outcome of a
+    single work item. The two vocabularies share the spellings ``completed`` and
+    ``failed`` by coincidence, not by meaning.
+    """
+
+    COMPLETED = "completed"
+    NOT_APPLICABLE = "not_applicable"
+    DEGRADED = "degraded"
+    FAILED = "failed"
+    DISABLED = "disabled"
+    UNAVAILABLE = "unavailable"
+
+
+# The statuses that leave a Scan complete. Every other member states a
+# limitation during finalization and turns ``is_complete`` false.
+NON_LIMITING_STATUSES: Final[frozenset[AnalyzerStatus]] = frozenset(
+    {AnalyzerStatus.COMPLETED, AnalyzerStatus.NOT_APPLICABLE}
+)
+
+# Finalization's marker for an ``AnalyzerStatusEvent`` that reached the ledger
+# without a ``status`` key -- deliberately *not* an ``AnalyzerStatus`` member.
+# No Analyzer reports it and ``analyzer_status_event`` cannot produce it;
+# declaring it would make it emittable, which is the opposite of closing the
+# set. Raising instead was rejected too: finalization exists to survive
+# malformed accounting, not to crash on it. Being outside
+# ``NON_LIMITING_STATUSES``, a malformed event states a limitation rather than
+# passing as complete. The decision is recorded on #47.
+_MALFORMED_ANALYZER_STATUS: Final = "unknown"
+
+
 REASON_MESSAGES: Final[dict[LedgerReason, str]] = {
     LedgerReason.EXCLUDED_DIRECTORY: ("Directory tree is excluded from the configured scan scope."),
     LedgerReason.HIDDEN_FILE: "Hidden file is excluded from the configured scan scope.",
@@ -124,7 +157,7 @@ class AnalyzerStatusEvent(TypedDict):
     """Run-level analyzer status and its internal planned work targets."""
 
     analyzer_id: str
-    status: str
+    status: AnalyzerStatus
     planned_work: list[PlannedWorkTarget]
     reason_code: NotRequired[LedgerReason]
     message: NotRequired[str]
@@ -306,11 +339,17 @@ def ledger_event(
 def analyzer_status_event(
     *,
     analyzer_id: str,
-    status: str,
+    status: AnalyzerStatus,
     planned_work: Iterable[PlannedWorkTarget] = (),
     reason: LedgerReason | None = None,
 ) -> AnalyzerStatusEvent:
-    """Create a run-level analyzer status with normalized expected-work targets."""
+    """Create a run-level analyzer status with normalized expected-work targets.
+
+    The status is admitted through ``AnalyzerStatus``, so an undeclared spelling
+    raises here rather than reaching a report as a silent limitation. That is
+    the enforcement the annotation alone cannot give: ``mypy`` is configured in
+    this repository and invoked by nothing.
+    """
     normalized_work: list[PlannedWorkTarget] = []
     for target in planned_work:
         start_line = target["start_line"]
@@ -327,7 +366,7 @@ def analyzer_status_event(
 
     event: AnalyzerStatusEvent = {
         "analyzer_id": analyzer_id,
-        "status": status,
+        "status": AnalyzerStatus(status),
         "planned_work": normalized_work,
     }
     if reason is not None:
@@ -344,17 +383,17 @@ def analyzer_status_for_events(
     if not terminal_events:
         return analyzer_status_event(
             analyzer_id=analyzer_id,
-            status="not_applicable",
+            status=AnalyzerStatus.NOT_APPLICABLE,
             reason=LedgerReason.NO_APPLICABLE_FILES,
         )
 
     outcomes = {event["outcome"] for event in terminal_events}
     status = (
-        "failed"
+        AnalyzerStatus.FAILED
         if LedgerOutcome.FAILED in outcomes
-        else "degraded"
+        else AnalyzerStatus.DEGRADED
         if LedgerOutcome.SKIPPED in outcomes
-        else "completed"
+        else AnalyzerStatus.COMPLETED
     )
     return analyzer_status_event(
         analyzer_id=analyzer_id,
@@ -677,7 +716,7 @@ def finalize_ledger(state: Mapping[str, object]) -> tuple[AnalysisCompleteness, 
                 primary_targets.append((analyzer_id, target, matches))
         summary: dict[str, object] = {
             "analyzer_id": analyzer_id,
-            "status": status.get("status", "unknown"),
+            "status": str(status.get("status", _MALFORMED_ANALYZER_STATUS)),
             "planned_work": len(planned_work),
             **outcome_counts,
         }
@@ -741,7 +780,7 @@ def finalize_ledger(state: Mapping[str, object]) -> tuple[AnalysisCompleteness, 
     limitations: list[str] = []
     for status_summary in status_summaries:
         status_name = str(status_summary["status"])
-        if status_name not in {"completed", "not_applicable"}:
+        if status_name not in NON_LIMITING_STATUSES:
             message = status_summary.get("message")
             limitations.append(
                 str(message)
@@ -817,7 +856,7 @@ def guard_analyzer_node(
                 "analyzer_status_events": [
                     analyzer_status_event(
                         analyzer_id=analyzer_id,
-                        status="failed",
+                        status=AnalyzerStatus.FAILED,
                         planned_work=planned_work,
                         reason=LedgerReason.ANALYZER_RUNTIME_ERROR,
                     )
