@@ -1,0 +1,37 @@
+
+=== tutorial-default: 2 Deep Agents Finding(s)
+    risk score 11
+    DA-SKILL-WRITABLE  MEDIUM  conf=0.9 src/support_agent/agent.py:11
+        The agent is given the Skill source path /skills/shared/ and nothing denies it write access, so it can rewrite the instructions it runs on and no human is asked.
+    DA-SKILL-WRITABLE  MEDIUM  conf=0.9 src/support_agent/agent.py:11
+        The agent is given the Skill source path /skills/personal/ and nothing denies it write access, so it can rewrite the instructions it runs on and no human is asked.
+
+=== shared-denied-personal-open: 1 Deep Agents Finding(s)
+    risk score 11
+    DA-SKILL-WRITABLE  MEDIUM  conf=0.9 src/support_agent/agent.py:11
+        The agent is given the Skill source path /skills/personal/ and nothing denies it write access, so it can rewrite the instructions it runs on and no human is asked.
+
+=== every-source-denied: 0 Deep Agents Finding(s)
+    risk score 0
+
+=== approval-by-mode: 2 Deep Agents Finding(s)
+    risk score 5
+    DA-SKILL-WRITABLE  LOW     conf=0.9 src/support_agent/agent.py:11
+        The agent is given the Skill source path /skills/shared/ and nothing denies it write access, so it can rewrite the instructions it runs on. A human is asked to approve the write.
+    DA-SKILL-WRITABLE  LOW     conf=0.9 src/support_agent/agent.py:11
+        The agent is given the Skill source path /skills/personal/ and nothing denies it write access, so it can rewrite the instructions it runs on. A human is asked to approve the write.
+
+=== approval-by-gate: 2 Deep Agents Finding(s)
+    risk score 5
+    DA-SKILL-WRITABLE  LOW     conf=0.9 src/support_agent/agent.py:11
+        The agent is given the Skill source path /skills/shared/ and nothing denies it write access, so it can rewrite the instructions it runs on. A human is asked to approve the write.
+    DA-SKILL-WRITABLE  LOW     conf=0.9 src/support_agent/agent.py:11
+        The agent is given the Skill source path /skills/personal/ and nothing denies it write access, so it can rewrite the instructions it runs on. A human is asked to approve the write.
+
+=== specific-before-broad: 1 Deep Agents Finding(s)
+    risk score 5
+    DA-SKILL-WRITABLE  LOW     conf=0.9 src/support_agent/agent.py:11
+        The agent is given the Skill source path /skills/personal/ and nothing denies it write access, so it can rewrite the instructions it runs on. A human is asked to approve the write.
+
+=== on-disk-and-denied: 0 Deep Agents Finding(s)
+    risk score 0
