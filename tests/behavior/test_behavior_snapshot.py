@@ -57,7 +57,7 @@ def scan_once() -> Callable[[str], dict[str, Any]]:
     """Return a memoized "Scan this fixture once" callable.
 
     Scanning lazily, one fixture at a time, is what keeps a failure attributable:
-    eagerly building all 28 would surface an error scanning the seventeenth
+    eagerly building all 29 would surface an error scanning the seventeenth
     fixture inside whichever parametrization happened to run first.
     """
     scanned: dict[str, dict[str, Any]] = {}
@@ -438,7 +438,7 @@ def test_the_sort_orders_a_tied_pair_regardless_of_input_order() -> None:
 
 
 def test_the_unexercised_sort_keys_are_still_unexercised() -> None:
-    """``ledger_exceptions`` and ``scope_exclusions`` are empty in all 28.
+    """``ledger_exceptions`` and ``scope_exclusions`` are empty in all 29.
 
     Their named key has therefore still never ordered anything, which is a
     stated coverage limit rather than a defect. Asserted so that the day a

@@ -51,6 +51,12 @@ Known limits, stated rather than discovered:
   walked further. One level is what the captured reference documents.
 * A name assigned more than once at module level resolves to nothing, because
   which assignment reaches the call is control flow this module does not model.
+* Only keyword arguments are read. A configuration passed positionally --
+  ``create_deep_agent(model, build_skills())`` -- is not seen at all, so it
+  raises no boundary either. Every ``create_deep_agent(`` on the captured page
+  names its arguments, and reading by position would mean pinning an upstream
+  signature order that no rename would announce; ``_permission_rules`` refuses
+  positional arguments for the same reason.
 
 Provenance
 ----------

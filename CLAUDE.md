@@ -159,3 +159,4 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - Undo a mutation test by hand; `git checkout --` drops the whole file's edits.
 - Mutate a module constant in a throwaway script instead; nothing to undo.
 - `Closes #N` no-ops in a Ticket PR; only a default-branch merge closes an issue.
+- Vocabulary guard: exempt a homonym spelling by call site, never globally.
