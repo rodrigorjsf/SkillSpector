@@ -108,7 +108,7 @@ The sweep's output is not the claim; the inventory is. What lands:
 **A sweep that finds a stale spelling does not fix the Rule in the same change.** Recording a
 measurement changes no Scan behavior, and mixing a Rule correction into it destroys the property
 that makes the measurement checkable — that every snapshot stayed byte-identical. File the Rule
-change as its own issue and leave the inventory alone, with the finding written beside the constant
+change as its own issue and leave the inventory alone, with the result written beside the constant
 so the next reader meets it there.
 
 ## The trigger

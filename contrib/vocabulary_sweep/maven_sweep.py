@@ -44,11 +44,10 @@ import io
 import re
 import struct
 import urllib.error
-import urllib.request
 import zipfile
-from dataclasses import dataclass
 from typing import Final
 
+from contrib.vocabulary_sweep.published import Occurrences, fetch
 from contrib.vocabulary_sweep.roles import (
     CORE_ARTIFACT,
     LANGCHAIN4J_ARTIFACTS,
@@ -57,8 +56,8 @@ from contrib.vocabulary_sweep.roles import (
     SHELL_ARTIFACT,
     SKILLS_ARTIFACT,
     Role,
-    assign,
     assign_artifacts,
+    measurable,
 )
 from skillspector.langchain4j import vocabulary
 
@@ -98,39 +97,24 @@ _WIDE_TAGS: Final[dict[int, int]] = {
 _UTF8: Final[int] = 1
 _TAKES_TWO_SLOTS: Final[frozenset[int]] = frozenset({5, 6})
 
+# A class file lists its fields before its methods, in two sections of identical
+# shape. Only the second is read; the first has to be walked to reach it.
+_FIELDS: Final[int] = 0
+_METHODS: Final[int] = 1
+
 # `maven-metadata.xml` also carries `<latest>` and `<release>`; only the list
 # inside `<versions>` is the published history.
 _VERSIONS_BLOCK: Final[re.Pattern[str]] = re.compile(r"<versions>(.*?)</versions>", re.DOTALL)
 _VERSION: Final[re.Pattern[str]] = re.compile(r"<version>([^<]+)</version>")
 
 
-@dataclass(frozen=True)
-class Occurrences:
-    """Every type and declared method one release's artifact ships."""
-
-    types: frozenset[str]
-    methods: frozenset[str]
-
-    def carries(self, spelling: str, role: Role) -> bool:
-        """Whether the release writes *spelling* in *role*."""
-        if role is Role.DEFINED_NAME:
-            return spelling in self.types
-        if role is Role.BOUND_NAME:
-            return spelling in self.methods
-        return False
-
-
-def _fetch(url: str) -> bytes:
-    with urllib.request.urlopen(url, timeout=60) as response:  # noqa: S310 -- https, fixed index
-        return bytes(response.read())
-
-
-def _class_members(data: bytes) -> tuple[list[str], list[str]]:
-    """The Utf8 constants of one class file, and the names of the methods it declares.
+def declared_methods(data: bytes) -> list[str]:
+    """The names of the methods one class file declares.
 
     Parsed rather than searched. A method a class *declares* is a name upstream
     published; a name that merely appears in the constant pool may have arrived
-    through a call to somebody else's API.
+    through a call to somebody else's API -- which for short names such as
+    ``name`` and ``tools`` is most of the pool.
     """
     pool: dict[int, str] = {}
     offset = 10  # magic, minor, major, constant_pool_count
@@ -151,7 +135,7 @@ def _class_members(data: bytes) -> tuple[list[str], list[str]]:
     offset += 6  # access_flags, this_class, super_class
     (interfaces,) = struct.unpack_from(">H", data, offset)
     offset += 2 + 2 * interfaces
-    for section in range(2):  # fields, then methods
+    for section in (_FIELDS, _METHODS):
         (members,) = struct.unpack_from(">H", data, offset)
         offset += 2
         names: list[int] = []
@@ -164,9 +148,9 @@ def _class_members(data: bytes) -> tuple[list[str], list[str]]:
             for _attribute in range(attributes):
                 (length,) = struct.unpack_from(">I", data, offset + 2)
                 offset += 6 + length
-        if section == 1:
-            return list(pool.values()), [pool[name] for name in names if name in pool]
-    return list(pool.values()), []
+        if section == _METHODS:
+            return [pool[name] for name in names if name in pool]
+    return []
 
 
 def versions(artifact_id: str) -> list[str]:
@@ -176,7 +160,7 @@ def versions(artifact_id: str) -> list[str]:
     list served by a fixed index, and every stdlib XML parser is entity-expansion
     material this tool has no reason to accept.
     """
-    metadata = _fetch(
+    metadata = fetch(
         f"{_CENTRAL}/{vocabulary.GROUP_COORDINATE.replace('.', '/')}/"
         f"{artifact_id}/maven-metadata.xml"
     ).decode("utf-8", errors="replace")
@@ -197,7 +181,7 @@ def read_release(artifact_id: str, version: str) -> Occurrences | None:
         f"{artifact_id}/{version}/{artifact_id}-{version}.jar"
     )
     try:
-        payload = _fetch(url)
+        payload = fetch(url)
     except urllib.error.HTTPError:
         return None
     types: set[str] = set()
@@ -207,14 +191,13 @@ def read_release(artifact_id: str, version: str) -> Occurrences | None:
             if not name.endswith(".class"):
                 continue
             types.add(name.removesuffix(".class").rsplit("/", 1)[-1].rsplit("$", 1)[-1])
-            _pool, declared = _class_members(archive.read(name))
-            methods.update(declared)
-    return Occurrences(types=frozenset(types), methods=frozenset(methods))
+            methods.update(declared_methods(archive.read(name)))
+    return Occurrences({Role.DEFINED_NAME: frozenset(types), Role.BOUND_NAME: frozenset(methods)})
 
 
 def sweep() -> dict[str, dict[str, dict[str, bool]]]:
     """Each artifact's own history, spelling by spelling. Artifact -> spelling -> version."""
-    assigned = assign(vocabulary, LANGCHAIN4J_ROLES)
+    assigned = measurable(vocabulary, LANGCHAIN4J_ROLES)
     located = assign_artifacts(vocabulary, LANGCHAIN4J_ROLES, LANGCHAIN4J_ARTIFACTS)
     swept: dict[str, dict[str, dict[str, bool]]] = {}
     for key, artifact_id in _ARTIFACT_IDS.items():

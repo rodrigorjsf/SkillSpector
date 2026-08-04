@@ -237,6 +237,22 @@ def assign(module: ModuleType, roles: dict[str, Role]) -> dict[str, tuple[Role, 
     return assigned
 
 
+def measurable(module: ModuleType, roles: dict[str, Role]) -> dict[str, tuple[Role, str]]:
+    """Only the spellings a release sweep can observe.
+
+    ``NOT_MEASURED`` is dropped here rather than swept and reported absent.
+    ``OBSERVED_VERSION_RANGE`` holds two *version strings*, and sweeping releases
+    for the version numbers of the sweep itself reports the inventory stale on
+    its own bookkeeping -- a blocking verdict pointed at nothing. Shared by both
+    sweeps so neither can forget it in a way the other does not.
+    """
+    return {
+        spelling: (role, constant)
+        for spelling, (role, constant) in assign(module, roles).items()
+        if role is not Role.NOT_MEASURED
+    }
+
+
 def assign_artifacts(
     module: ModuleType, roles: dict[str, Role], artifacts: dict[str, str]
 ) -> dict[str, str]:

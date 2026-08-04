@@ -35,13 +35,12 @@ import ast
 import io
 import json
 import re
-import urllib.request
 import warnings
 import zipfile
-from dataclasses import dataclass
 from typing import Final
 
-from contrib.vocabulary_sweep.roles import DEEPAGENTS_ROLES, Role, assign
+from contrib.vocabulary_sweep.published import Occurrences, fetch
+from contrib.vocabulary_sweep.roles import DEEPAGENTS_ROLES, Role, measurable
 from skillspector.deepagents import vocabulary
 
 _INDEX: Final[str] = "https://pypi.org/pypi/{distribution}/json"
@@ -49,27 +48,6 @@ _INDEX: Final[str] = "https://pypi.org/pypi/{distribution}/json"
 # A final release: three dotted integers and nothing else. `0.7.0b1` and
 # `0.0.11rc1` are the shapes this excludes. See the module docstring.
 _FINAL_RELEASE: Final[re.Pattern[str]] = re.compile(r"\d+\.\d+\.\d+")
-
-
-@dataclass(frozen=True)
-class Occurrences:
-    """Every name and value one release's sources write, grouped by role."""
-
-    defined: frozenset[str]
-    bound: frozenset[str]
-    literal: frozenset[str]
-
-    def carries(self, spelling: str, role: Role) -> bool:
-        """Whether the release writes *spelling* in *role*."""
-        if role is Role.DEFINED_NAME:
-            return spelling in self.defined
-        if role is Role.BOUND_NAME:
-            return spelling in self.bound
-        if role is Role.LITERAL_VALUE:
-            return spelling in self.literal
-        # DISTRIBUTION is observed from the index, NOT_MEASURED from nowhere.
-        # Neither is a question about this archive's contents.
-        return False
 
 
 class _Reader(ast.NodeVisitor):
@@ -144,14 +122,9 @@ class _Reader(ast.NodeVisitor):
         self.bound.update(argument.arg for argument in every)
 
 
-def _fetch(url: str) -> bytes:
-    with urllib.request.urlopen(url, timeout=60) as response:  # noqa: S310 -- https, fixed index
-        return bytes(response.read())
-
-
 def releases_in_scope(distribution: str) -> dict[str, str]:
     """Every final release of *distribution*, oldest first, mapped to its wheel URL."""
-    index = json.loads(_fetch(_INDEX.format(distribution=distribution)))
+    index = json.loads(fetch(_INDEX.format(distribution=distribution)))
     published: dict[str, str] = {}
     for version, files in index["releases"].items():
         if not _FINAL_RELEASE.fullmatch(version):
@@ -168,7 +141,7 @@ def releases_in_scope(distribution: str) -> dict[str, str]:
 def read_release(wheel_url: str) -> Occurrences:
     """Every role shape one release's wheel writes, across all its Python sources."""
     reader = _Reader()
-    with zipfile.ZipFile(io.BytesIO(_fetch(wheel_url))) as archive:
+    with zipfile.ZipFile(io.BytesIO(fetch(wheel_url))) as archive:
         for name in archive.namelist():
             if not name.endswith(".py"):
                 continue
@@ -188,9 +161,11 @@ def read_release(wheel_url: str) -> Occurrences:
                 continue
             reader.visit(tree)
     return Occurrences(
-        defined=frozenset(reader.defined),
-        bound=frozenset(reader.bound),
-        literal=frozenset(reader.literal),
+        {
+            Role.DEFINED_NAME: frozenset(reader.defined),
+            Role.BOUND_NAME: frozenset(reader.bound),
+            Role.LITERAL_VALUE: frozenset(reader.literal),
+        }
     )
 
 
@@ -201,7 +176,7 @@ def sweep() -> dict[str, dict[str, dict[str, bool]]]:
     has a single key. It is the same shape the Maven sweep returns over four
     artifacts, so one report reads both.
     """
-    assigned = assign(vocabulary, DEEPAGENTS_ROLES)
+    assigned = measurable(vocabulary, DEEPAGENTS_ROLES)
     distribution = releases_in_scope(vocabulary.DISTRIBUTION)
     observed: dict[str, dict[str, bool]] = {spelling: {} for spelling in assigned}
     for version, wheel_url in distribution.items():

@@ -73,8 +73,9 @@ Captured from ``docs/references/langchain-deepagents-skills.md`` (upstream
 <https://docs.langchain.com/labs/deep-agents/skills>), and cross-checked against
 the published PyPI distributions by ``contrib/vocabulary_sweep``.
 
-Every final release was swept for the spellings below: 78 versions, ``0.0.1``
-through ``0.7.3``, read out of the wheels rather than off the documentation.
+Measured on 2026-08-03 by ``contrib/vocabulary_sweep``. Every final release was
+swept for the spellings below: 78 versions, ``0.0.1`` through ``0.7.3``, read out
+of the wheels rather than off the documentation.
 **No spelling here has ever been removed.** Most were added during that history,
 which is what a distribution still on ``0.x`` looks like, and the table under
 ``OBSERVED_VERSION_RANGE`` records each one's first release.

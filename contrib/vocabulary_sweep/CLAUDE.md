@@ -32,6 +32,6 @@ re-run. This file is only how to work on the tool.
 - **Parse, do not execute.** Python releases are read with `ast`, Java releases as class files.
   Importing a published release would run arbitrary code and need its dependency tree resolved at
   the version it expected, across the whole history.
-- **Exit code 1 is a blocking finding** — a spelling removed after appearing, or one never published
+- **Exit code 1 is a blocking result** — a spelling removed after appearing, or one never published
   in role. Keep it that way: a trigger that says "run this and read the output" is only as good as
   the reader.

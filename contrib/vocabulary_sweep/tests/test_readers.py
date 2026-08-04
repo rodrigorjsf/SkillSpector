@@ -32,6 +32,7 @@ layers they are built on, which is where the discrimination lives.
 from __future__ import annotations
 
 import ast
+import struct
 import sys
 from pathlib import Path
 
@@ -44,12 +45,15 @@ if str(_ROOT) not in sys.path:
 # Every import below follows the path bootstrap above, which is what makes them
 # resolvable when this file is run as a script.
 from contrib.vocabulary_sweep import report  # noqa: E402
-from contrib.vocabulary_sweep.pypi_sweep import Occurrences, _Reader  # noqa: E402
+from contrib.vocabulary_sweep.maven_sweep import declared_methods  # noqa: E402
+from contrib.vocabulary_sweep.published import Occurrences  # noqa: E402
+from contrib.vocabulary_sweep.pypi_sweep import _Reader  # noqa: E402
 from contrib.vocabulary_sweep.roles import (  # noqa: E402
     DEEPAGENTS_ROLES,
     LANGCHAIN4J_ROLES,
     Role,
     assign,
+    measurable,
 )
 from skillspector.deepagents import vocabulary as deepagents_vocabulary  # noqa: E402
 from skillspector.langchain4j import vocabulary as langchain4j_vocabulary  # noqa: E402
@@ -59,37 +63,97 @@ def _read(source: str) -> Occurrences:
     reader = _Reader()
     reader.visit(ast.parse(source))
     return Occurrences(
-        defined=frozenset(reader.defined),
-        bound=frozenset(reader.bound),
-        literal=frozenset(reader.literal),
+        {
+            Role.DEFINED_NAME: frozenset(reader.defined),
+            Role.BOUND_NAME: frozenset(reader.bound),
+            Role.LITERAL_VALUE: frozenset(reader.literal),
+        }
     )
+
+
+def _class_file(*, fields: list[str], methods: list[str]) -> bytes:
+    """A minimal class file declaring *fields* and *methods*, built by hand.
+
+    Every shape the reader has to walk past is present, because those are what
+    it can silently mis-offset: a `Long` constant, which occupies **two** pool
+    slots; a `Methodref`, which is wider than a `Class`; an implemented
+    interface; and an attribute on a member, whose four-byte length has to be
+    stepped over. Get any of them wrong and the method table is read from the
+    wrong offset -- which surfaces as every spelling reading "never observed",
+    an alarm pointed at the inventory rather than at the reader.
+    """
+    utf8 = [*fields, *methods, "()V", "Code"]
+    pool = bytearray()
+    slot: dict[str, int] = {}
+    index = 1
+    for text in utf8:
+        slot[text] = index
+        payload = text.encode("utf-8")
+        pool += struct.pack(">BH", 1, len(payload)) + payload
+        index += 1
+    pool += struct.pack(">Bq", 5, 1)  # Long: two slots, eight bytes
+    index += 2
+    pool += struct.pack(">BH", 7, 1)  # Class
+    index += 1
+    pool += struct.pack(">BHH", 10, 1, 1)  # Methodref
+    index += 1
+
+    def members(names: list[str]) -> bytes:
+        out = struct.pack(">H", len(names))
+        for name in names:
+            # One attribute each, four bytes of payload, so the reader has to
+            # honour the length rather than assume an empty attribute table.
+            out += struct.pack(">HHHH", 0, slot[name], slot["()V"], 1)
+            out += struct.pack(">HI", slot["Code"], 4) + b"\x00\x00\x00\x00"
+        return out
+
+    return (
+        struct.pack(">IHHH", 0xCAFEBABE, 0, 65, index)
+        + bytes(pool)
+        + struct.pack(">HHH", 0, 1, 1)  # access_flags, this_class, super_class
+        + struct.pack(">HH", 1, 1)  # one interface
+        + members(fields)
+        + members(methods)
+    )
+
+
+def test_the_class_reader_returns_methods_and_not_fields() -> None:
+    """Reading the wrong section would report field names as published methods."""
+    declared = declared_methods(_class_file(fields=["logger"], methods=["filter", "build"]))
+    assert sorted(declared) == ["build", "filter"]
+    assert "logger" not in declared
+
+
+def test_the_class_reader_walks_past_the_wide_pool_entries() -> None:
+    """The control for the offset arithmetic: an empty method table, read correctly."""
+    assert declared_methods(_class_file(fields=["only"], methods=[])) == []
 
 
 def test_a_python_name_is_read_in_its_own_role() -> None:
     """The whole point: a word in prose is not the word in role."""
     documented = _read('"""A module whose docstring mentions a keyword argument."""\n')
-    assert not documented.bound
-    assert not documented.defined
+    assert not documented.carries("backing", Role.BOUND_NAME)
+    assert not documented.carries("make", Role.DEFINED_NAME)
 
     declared = _read("def make(*, backing: int) -> None: ...\n")
-    assert "backing" in declared.bound
-    assert "make" in declared.defined
-    assert "backing" not in declared.defined
+    assert declared.carries("backing", Role.BOUND_NAME)
+    assert declared.carries("make", Role.DEFINED_NAME)
+    assert not declared.carries("backing", Role.DEFINED_NAME)
 
 
 def test_a_string_value_is_not_a_bound_name() -> None:
     """The three role shapes stay apart, or every spelling reads as present."""
     occurrences = _read("CHOICE = 'halt'\ndef run(*, halt: bool) -> None: ...\n")
-    assert "halt" in occurrences.literal
-    assert "halt" in occurrences.bound
-    assert not _read("CHOICE = 'halt'\n").bound
+    assert occurrences.carries("halt", Role.LITERAL_VALUE)
+    assert occurrences.carries("halt", Role.BOUND_NAME)
+    assert not _read("CHOICE = 'halt'\n").carries("halt", Role.BOUND_NAME)
 
 
 def test_an_annotated_field_counts_as_bound() -> None:
     """How a dataclass, a TypedDict and a model all spell their arguments."""
     occurrences = _read("class Rule:\n    governs: list[str]\n")
-    assert "governs" in occurrences.bound
-    assert "Rule" in occurrences.defined
+    assert occurrences.carries("governs", Role.BOUND_NAME)
+    assert occurrences.carries("Rule", Role.DEFINED_NAME)
 
 
 def test_a_role_map_covers_its_inventory_exactly() -> None:
@@ -101,6 +165,24 @@ def test_a_role_map_covers_its_inventory_exactly() -> None:
         assigned = assign(module, roles)
         assert assigned, f"{module.__name__} assigned nothing"
         assert all(isinstance(role, Role) for role, _constant in assigned.values())
+
+
+def test_the_version_range_is_not_swept_as_a_spelling() -> None:
+    """A regression: sweeping releases for the sweep's own version numbers.
+
+    ``OBSERVED_VERSION_RANGE`` holds two version strings, and they are inventory
+    entries like any other. Swept, they read as never observed and raise a
+    blocking verdict against the inventory's own bookkeeping.
+    """
+    for module, roles in (
+        (deepagents_vocabulary, DEEPAGENTS_ROLES),
+        (langchain4j_vocabulary, LANGCHAIN4J_ROLES),
+    ):
+        swept = set(measurable(module, roles))
+        assert swept, f"{module.__name__} would be swept for nothing"
+        assert not swept & set(module.OBSERVED_VERSION_RANGE)
+        # The control: without the filter, both versions are in the swept set.
+        assert set(module.OBSERVED_VERSION_RANGE) <= set(assign(module, roles))
 
 
 def test_a_missing_role_stops_the_sweep() -> None:
