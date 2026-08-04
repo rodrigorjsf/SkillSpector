@@ -1,6 +1,6 @@
 # SkillSpector-Polyglot
 
-LangGraph pipeline that scans `SKILL.md` skill directories for vulnerabilities and emits SARIF plus a 0–100 risk score. This fork extends that to skills embedded in a programming-language framework's own source tree — LangChain4j (shipped) and Deep Agents (detected, analyzer unbuilt).
+LangGraph pipeline that scans `SKILL.md` skill directories for vulnerabilities and emits SARIF plus a 0–100 risk score. This fork extends that to skills embedded in a programming-language framework's own source tree — LangChain4j and Deep Agents, both shipped. The Deep Agents Analyzer carries `DA-UNRESOLVED`, `DA-SKILL-WRITABLE`, `DA-SHADOW` and `DA-SUBAGENT-SKILLS`; both Frameworks' upstream vocabularies carry a measured version range, re-measured by `docs/VOCABULARY_REMEASUREMENT.md`.
 
 The GitHub repository is `SkillSpector-Polyglot`; the distribution, the package under `src/skillspector/`, and the console script stay `skillspector`. Renaming them would break upstream merges and existing installs — never propose it as a cleanup.
 
@@ -123,7 +123,9 @@ whoever the user says. Do not manufacture an Umbrella Branch for a single PR.
 - Architecture, node and provider walkthroughs, env vars — `docs/DEVELOPMENT.md`
 - Extending the scanner to LangChain4j and Deep Agents skills — `docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md`
 - Captured upstream framework docs — `docs/references/README.md`
+- Re-measuring a Framework vocabulary's version range, and its trigger — `docs/VOCABULARY_REMEASUREMENT.md`
 - Batch scanner, own runners, excluded from `make test` — `contrib/batch_scan/CLAUDE.md`
+- Vocabulary sweep, own runner, excluded from `make test` — `contrib/vocabulary_sweep/CLAUDE.md`
 
 ## Applied Learning
 
@@ -157,3 +159,11 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - JSON report nests findings under `issues`, keyed `id` — not `findings`/`rule_id`.
 - Undo a mutation test by hand; `git checkout --` drops the whole file's edits.
 - Mutate a module constant in a throwaway script instead; nothing to undo.
+- `Closes #N` no-ops in a Ticket PR; only a default-branch merge closes an issue.
+- Vocabulary guard: exempt a homonym spelling by call site, never globally.
+- Bare `python` is absent; run throwaway scripts with `.venv/bin/python`.
+- A new `deepagents/` module must join the vocabulary guard's explicit module list.
+- A new vocabulary spelling also needs its guard test's `_EXPECTED_SPELLINGS` set.
+- Editing `pattern_defaults` prose rewrites every snapshot carrying that rule.
+- Upstream docs can name a method no release ships; sweep the artifacts, not the pages.
+- A non-spelling vocabulary constant needs the guard's `_NOT_A_SPELLING` set.

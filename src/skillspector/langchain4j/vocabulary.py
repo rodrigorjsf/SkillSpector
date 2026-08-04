@@ -60,11 +60,29 @@ published Maven metadata of ``dev.langchain4j:langchain4j-skills`` and
 ``dev.langchain4j:langchain4j-experimental-skills-shell``.
 
 Every published release was swept for the identifiers below: 17 versions,
-``1.12.1-beta21`` through ``1.18.1-beta28``, the two artifacts released in
-lockstep. **No identifier here has ever been removed.** The only change across
-that history is ``ClassPathSkillLoader``, which first appears at
-``1.13.0-beta23``; its range is annotated accordingly. Re-measuring that claim
-is issue #46.
+``1.12.1-beta21`` through ``1.18.1-beta28``, the two Skills artifacts released
+in lockstep. **No identifier here has ever been removed.** Two were added at
+``1.13.0-beta23`` -- ``ClassPathSkillLoader`` and the ``tools`` builder argument
+-- and each is annotated below.
+
+Re-measured on 2026-08-03 by ``contrib/vocabulary_sweep``, under the procedure in
+``docs/VOCABULARY_REMEASUREMENT.md``, which is also what obliges the next
+re-measurement. That re-run confirmed the range and corrected the original claim
+twice.
+
+**The ``tools`` addition was invisible to the first measurement.** It compared
+*class listings* between the first and latest release, and a builder argument
+added to a class that already existed changes no listing. So the original record
+said ``ClassPathSkillLoader`` was the only change; reading each release's own
+method tables says otherwise, and this is the corrected claim.
+
+**``toolFilter`` has never been published.** No release of ``langchain4j-mcp``
+declares it -- the builder method is ``filter``, at ``1.12.1-beta21`` as at
+``1.18.1-beta28``. It is in this inventory because upstream's Skills tutorial
+writes ``.toolFilter(...)`` in an example that upstream's own MCP tutorial
+contradicts. The spelling is left as it is here on purpose: what ``L4J-MCP-FILTER``
+should match instead is a Rule change, tracked as issue #82, not a rename this
+record can make quietly. See the constant's own comment.
 
 ``OBSERVED_VERSION_RANGE`` records the sweep so the stability claim is evidence
 rather than assertion, and so a reader can tell at a glance how stale it is.
@@ -99,6 +117,9 @@ DESCRIPTION_SETTER: Final[str] = "description"
 TEXT_SETTERS: Final[tuple[str, ...]] = (CONTENT_SETTER, NAME_SETTER, DESCRIPTION_SETTER)
 
 # The builder argument that attaches a class's ``@Tool`` methods to a Skill.
+# Added at 1.13.0-beta23, on ``AbstractSkill$BaseBuilder``; absent from
+# 1.12.1-beta21 and 1.12.2-beta22. The 2026-08-02 measurement missed it because a
+# builder argument added to an existing class changes no class listing.
 TOOLS_SETTER: Final[str] = "tools"
 
 
@@ -170,6 +191,18 @@ SHELL_ARTIFACT_PATTERN: Final[str] = r"langchain4j-[a-z0-9-]*shell[a-z0-9-]*"
 TOOL_ANNOTATION: Final[str] = "Tool"
 
 MCP_TOOL_PROVIDER: Final[str] = "McpToolProvider"
+
+# **Never published.** ``McpToolProvider.Builder`` declares ``filter`` and
+# ``filterToolNames``, and has since ``1.12.1-beta21``; no release of
+# ``langchain4j-mcp`` has ever declared ``toolFilter``. The spelling comes from
+# upstream's Skills tutorial, whose MCP example writes ``.toolFilter(...)`` --
+# contradicted by upstream's own MCP tutorial and by every jar it publishes.
+#
+# ``L4J-MCP-FILTER`` reports a ``McpToolProvider`` builder chain that never
+# called this setter, so host code written against a *published* release is
+# reported as unfiltered whatever it does. Left uncorrected here because
+# changing it changes what a Scan reports, which the measurement this comment
+# belongs to deliberately does not.
 TOOL_FILTER_SETTER: Final[str] = "toolFilter"
 
 

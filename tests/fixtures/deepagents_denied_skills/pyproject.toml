@@ -1,0 +1,25 @@
+# The negative control of the Deep Agents writability verdict, and the reason it
+# is in the corpus at all: `DA-SKILL-WRITABLE` fires on the configuration the
+# upstream tutorial teaches, so the way it fails is by firing on configuration
+# that is already right. A snapshot pinning this application's silence makes that
+# failure as loud as a lost Finding would be.
+#
+# Chosen rather than authored, like its sibling `deepagents_personal_skills/`:
+# the scenario matrix of issue #72 was driven through a real Scan on a throwaway
+# branch, and this is the arrangement that came back with nothing to report.
+#
+# Its prose is deliberately plain, here and in every file below. Fixture text is
+# scanned like any other Component, and an earlier LangChain4j fixture raised
+# Findings against itself purely for describing its own configuration in the
+# words upstream uses.
+
+[project]
+name = "library-agent"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "deepagents>=0.6.8",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

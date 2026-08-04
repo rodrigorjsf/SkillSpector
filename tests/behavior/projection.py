@@ -287,11 +287,42 @@ FIXTURES_DIR = _BEHAVIOR_DIR.parent / "fixtures"
 # which is the baseline later phases measure against. Adding new inputs is not a
 # behavior change on existing ones, so the gate's promise holds.
 #
-# ``langchain4j_detection`` has since moved off that baseline, deliberately and
-# once: #52 made the Analyzer report the build file it opens, so its snapshot
-# now carries a ``framework_langchain4j`` row. ``deepagents_detection`` still
-# holds the pre-Analyzer baseline, and will until the Deep Agents Analyzer
-# lands.
+# Both have since moved off that baseline, deliberately and once each.
+# ``langchain4j_detection`` moved at #52, which made the Analyzer report the
+# build file it opens, so its snapshot now carries a ``framework_langchain4j``
+# row. ``deepagents_detection`` moved at #70, which wired the Deep Agents
+# Analyzer up carrying no Rules at all -- precisely so the behavioral cost of a
+# gated Framework Analyzer could be read in isolation. It is one added
+# ``framework_deepagents`` row over the requirement file, and nothing else: no
+# Finding, no limitation, and the same coverage as before.
+#
+# ``deepagents_runtime_skills`` (#71) is the Deep Agents counterpart to the
+# LangChain4j application fixtures: a Python application tree whose agent picks
+# its Skill sources per request, so the Analyzer reports the resolution boundary
+# rather than a Skill list. Its root bears no ``SKILL.md`` either -- the Skill is
+# nested under ``skills/``, as an application's is.
+#
+# ``deepagents_personal_skills`` and ``deepagents_denied_skills`` (#72) are the
+# writability verdict's pair. The first is the arrangement upstream recommends
+# for letting an agent refine its own notes -- a shared source under a rule and a
+# per-user source left open -- so its snapshot carries exactly one
+# ``DA-SKILL-WRITABLE``, which is what a per-path verdict means. The second is
+# the negative control: every source the agent is given is covered, so its
+# snapshot pins **silence**. That silence is the point. This Rule fires on the
+# configuration the upstream tutorial teaches, so the way it fails is by firing
+# on configuration that is already right, and without a pinned-silent fixture
+# that failure would land in a report rather than in this gate.
+#
+# ``deepagents_shadowed_skills`` and ``deepagents_layered_skills`` (#73) are the
+# shadowing verdict's pair, and the first fixtures in the corpus whose verdict is
+# decided by two Components read together rather than by one. Both layer a
+# per-user Skill directory over a shared library under a resolvable filesystem
+# backend root, which is what lets the configured source paths be mapped onto
+# manifests at all; they differ only in whether the two sources declare a Skill
+# of one name. The second pins **silence**, for the reason the pair above does:
+# layering is a pattern upstream recommends, so a Rule that read the source list
+# without confirming the names would fire on every application that follows the
+# advice.
 #
 # ``langchain4j_shell_skill`` (#28) is the first fixture a Framework Analyzer
 # actually reads: a LangChain4j application whose Skill sits at
@@ -303,7 +334,13 @@ FIXTURES_DIR = _BEHAVIOR_DIR.parent / "fixtures"
 # ``sdi/``, ``sqp/`` and ``ssd/`` are excluded: they are fixture-layout
 # containers holding a family of Skills, not Skills themselves.
 CORPUS_NAMES: tuple[str, ...] = (
+    "deepagents_denied_skills",
     "deepagents_detection",
+    "deepagents_layered_skills",
+    "deepagents_personal_skills",
+    "deepagents_runtime_skills",
+    "deepagents_shadowed_skills",
+    "deepagents_subagent_skills",
     "langchain4j_detection",
     "langchain4j_shell_skill",
     "langchain4j_tool_mode",

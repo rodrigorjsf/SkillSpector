@@ -1,0 +1,26 @@
+# The confirmed collision `DA-SHADOW` fires on, and the only fixture in the
+# corpus whose verdict is decided by two Components read together. The Skill
+# named `ticket-triage` is declared under both of the sources this application
+# passes, and the list order is what settles which one the agent loads.
+#
+# The collision has to be *confirmed* rather than inferred, so the arrangement
+# here carries everything the confirmation needs: a filesystem backend whose root
+# is written in this file's own tree, and a manifest under each mapped source
+# directory. A Scan of either Skill directory on its own reads two ordinary
+# Skills.
+#
+# Its prose is deliberately plain, here and in every file below. Fixture text is
+# scanned like any other Component, and an earlier LangChain4j fixture raised
+# Findings against itself purely for describing its own configuration in the
+# words upstream uses.
+
+[project]
+name = "support-agent"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "deepagents>=0.6.8",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

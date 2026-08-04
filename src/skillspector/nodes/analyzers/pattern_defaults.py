@@ -42,6 +42,7 @@ class PatternCategory(StrEnum):
     ANTI_REFUSAL = "Anti-Refusal"
     SERVER_SIDE_REQUEST_FORGERY = "Server-Side Request Forgery"
     LANGCHAIN4J_FRAMEWORK = "LangChain4j Framework"
+    DEEPAGENTS_FRAMEWORK = "Deep Agents Framework"
 
 
 # Pattern-specific explanations (why the finding is dangerous)
@@ -145,6 +146,11 @@ DEFAULT_EXPLANATIONS: dict[str, str] = {
     "L4J-TOOL-DESC": "A @Tool annotation's description carries instructions rather than describing the tool. The model reads that text as guidance, so an annotation nobody reviews as prose becomes a prompt-injection surface -- tool poisoning expressed in Java rather than in an MCP manifest.",
     "L4J-MCP-FILTER": "An MCP tool provider is built without a tool filter, so every tool the MCP server exposes reaches the agent instead of a scoped subset. The agent's capability is then whatever the server offers, which can widen without any change to this application.",
     "L4J-WORKDIR": "A shell-command tool configuration omits its working directory, so commands run wherever the JVM happened to start -- usually the application root, where source, configuration and credentials sit.",
+    # Deep Agents Framework
+    "DA-SKILL-WRITABLE": "A Deep Agents agent is given a Skill source path that nothing stops it writing to. Upstream states the default in as many words -- agents can write to skill files if the backend permits it and no permission rule blocks the path -- so an application that adds no denying rule has handed the agent the instructions it runs on. The agent can then rewrite its own Skill, and every later run reads the rewritten one.",
+    "DA-SHADOW": "Two Skill sources one Deep Agents application passes to skills=[...] both declare a Skill of the same name. Later sources override earlier ones -- last one wins -- so the Skill the agent loads is the one in the later source and the earlier one never runs. Where the later source is writable, or is where a per-user directory lives, that is a supply-chain substitution expressed entirely in configuration: nothing in either Skill directory read on its own shows it, and a reviewer who vetted the shared library vetted a Skill the agent does not use.",
+    "DA-SUBAGENT-SKILLS": "A Deep Agents application defines a custom subagent without Skills of its own. Upstream states that only the general-purpose subagent inherits the main agent's Skills and that every custom subagent needs its own skills parameter, so this subagent runs without the Skills the application around it was given. Nothing at runtime reports it: the subagent answers, and it answers without the procedure it was supposed to follow.",
+    "DA-UNRESOLVED": "A Deep Agents host configuration carries something that is not statically resolvable -- the Skill source list, the backend, the permission rules, or the store a resolved Skill path is routed to. Resolution stops at the module boundary by design, so what the agent was given, or what it may do to it, exists in no scanned file. This is reported rather than skipped: silence here would let the report read as clean on the one surface never inspected.",
 }
 
 # Rule ID -> category (for report output)
@@ -229,6 +235,11 @@ RULE_ID_TO_CATEGORY: dict[str, str] = {
     "L4J-TOOL-DESC": PatternCategory.LANGCHAIN4J_FRAMEWORK.value,
     "L4J-MCP-FILTER": PatternCategory.LANGCHAIN4J_FRAMEWORK.value,
     "L4J-WORKDIR": PatternCategory.LANGCHAIN4J_FRAMEWORK.value,
+    # Deep Agents Framework
+    "DA-SKILL-WRITABLE": PatternCategory.DEEPAGENTS_FRAMEWORK.value,
+    "DA-SHADOW": PatternCategory.DEEPAGENTS_FRAMEWORK.value,
+    "DA-SUBAGENT-SKILLS": PatternCategory.DEEPAGENTS_FRAMEWORK.value,
+    "DA-UNRESOLVED": PatternCategory.DEEPAGENTS_FRAMEWORK.value,
 }
 
 # Rule ID -> pattern display name (for report output)
@@ -313,6 +324,11 @@ PATTERN_NAMES: dict[str, str] = {
     "L4J-TOOL-DESC": "Instruction-Carrying Tool Description",
     "L4J-MCP-FILTER": "Unfiltered MCP Tool Provider",
     "L4J-WORKDIR": "Unset Shell Working Directory",
+    # Deep Agents Framework
+    "DA-SKILL-WRITABLE": "Writable Skill Source",
+    "DA-SHADOW": "Shadowed Skill Source",
+    "DA-SUBAGENT-SKILLS": "Subagent Without Skills",
+    "DA-UNRESOLVED": "Unresolvable Host Configuration",
 }
 
 # Pattern-specific remediations (how to fix the issue)
@@ -416,6 +432,11 @@ DEFAULT_REMEDIATIONS: dict[str, str] = {
     "L4J-TOOL-DESC": "Rewrite the @Tool description so it says what the tool does and nothing more. Directives to the model belong in the Skill content, where they are reviewed as instructions.",
     "L4J-MCP-FILTER": "Add .toolFilter(...) to the McpToolProvider builder and name the tools this agent needs, so a tool added on the server does not silently reach the agent.",
     "L4J-WORKDIR": "Set RunShellCommandToolConfig.workingDirectory to a directory scoped to the task, so commands cannot reach the application root by default.",
+    # Deep Agents Framework
+    "DA-SKILL-WRITABLE": 'Add a FilesystemPermission with operations=["write"], mode="deny" and a paths pattern covering this Skill source, placing any more specific rule before it. Where the agent is meant to refine its own Skills, keep the writable source separate from the shared library and require approval for the writes with mode="interrupt" or interrupt_on.',
+    "DA-SHADOW": "Give the two Skills distinct names, or drop the duplicate from the source that is not meant to provide it. Where the override is deliberate, order skills=[...] so the source that is meant to win is written last and say so beside the call -- the list order is the only thing that decides it. Where it is not, keep a per-user or otherwise writable Skill source out of the same name space as the curated library.",
+    "DA-SUBAGENT-SKILLS": "Pass the subagent the Skills it needs by adding a skills entry to its own definition, naming the same sources the main agent is given where the subagent is meant to share them. Where the subagent is deliberately meant to run without Skills, say so beside the definition -- there is nothing at runtime that distinguishes the two.",
+    "DA-UNRESOLVED": "Name the value in the same module the agent is built in -- a literal list of Skill paths, a module-level constant, a backend constructed there rather than returned by a helper -- so the scanner reads the configuration the agent runs with. Where it genuinely has to be assembled per request, review that code path separately; no static scan can follow it.",
 }
 
 

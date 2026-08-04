@@ -9,7 +9,17 @@ and ledger rows exist in committed snapshots: **how far it resolves a value befo
 boundary, how many Findings the absence of a write restriction produces, and which Components its
 Applicability opens.**
 
-No code implements this yet. This record is the input to the Spec that will.
+This record was written as the input to the Spec that would implement it. Issue #70 has since landed
+the Analyzer itself — the gate, the Applicability predicate of §3, the status reporting and the
+vocabulary module — carrying no Rule at all. The Rules of §1 and §2 are issues #71–#74, and the
+stability measurement named under Consequences is #75.
+
+One thing #70 measured that this record did not anticipate: with the Applicability set of §3, the
+Analyzer's `not_applicable` branch is **unreachable through the graph**. Every signal
+`skillspector.framework` detects Deep Agents by is a Python module or a Python requirement file, and
+both are inside the predicate, read from the `file_cache` that `build_context` derived `framework`
+from in the same return. The branch is kept — ADR 0006 makes it the shape of an Applicability gate
+rather than an observed case — and is exercised from synthetic state.
 
 ## What is being judged, and why a token match is wrong
 
@@ -24,6 +34,18 @@ before broader deny rules"* (`:296`).
 A Rule that tests for the presence of the token `permissions=` is therefore wrong in both
 directions. It fires on a read-only backend, and it stays silent on a broad `deny` that a more
 specific earlier rule has already overridden.
+
+**Amendment, from implementing #72: there is no read-only backend.** The sentence above, and the
+Ticket written from it, assumed the `backend=` axis could clear a path on its own. The captured
+reference documents four backends (`:167-171`) and describes none of them as read-only — the only
+read-only-ness on the page is the `deny` rule of its own "Enforce read-only skills" example
+(`:240-266`), which is the `permissions=` axis. Inventing a spelling for a backend that does not
+exist upstream is what [ADR 0005](0005-langchain4j-upstream-vocabulary.md) exists to prevent, so
+`DA-SKILL-WRITABLE` reads the backend as a source of **unknowability** instead: where it routes a
+Skill path somewhere the Scan cannot see into, the path reaches the boundary Rule of §1 and no
+verdict at all. The joint verdict is therefore over two axes that decide and one that can only
+withhold. Note also that §3's "not on disk" boundary must not be borrowed here — files in agent state
+are exactly what a self-modifying agent rewrites.
 
 ## 1. Resolution stops at the module boundary
 
@@ -109,6 +131,25 @@ the Scan root (`:80-81`). Mapping `/skills/` to a directory on disk requires a r
 `FilesystemBackend(root_dir=...)`; under `StoreBackend` or the default `StateBackend` the files are
 not on disk at all and no Scan will ever see them. Those fall to the boundary of §1.
 
+**Amendment, from implementing #73: only one of those three is a boundary.** The sentence above, and
+the Ticket written from it, treated "cannot be mapped" as one case. It is three, and they are not
+alike. A `FilesystemBackend(root_dir=for_tenant(...))` is resolution stopping, which is §1 exactly,
+and it reports `DA-UNRESOLVED`. A `StoreBackend`, and the default `StateBackend` written or omitted,
+are not: nothing failed to resolve there, and what the Scan read is that the Skill files live in
+agent state. Reporting them would contradict the invariant this Analyzer states in three separate
+docstrings — *an argument that is absent is a configuration, not a boundary* — and would put a
+`DA-UNRESOLVED` on `create_deep_agent(model=..., skills=[...])`, which is both the shape the upstream
+tutorial teaches and the shape `DA-SKILL-WRITABLE` exists to judge. That is the false-positive load
+§2 rejected, arriving through a different door. A third case the Ticket did not enumerate resolves
+the same way: a well-formed mapping that lands on no manifest in this Scan confirms no collision, and
+an unconfirmed collision is not one.
+
+There is a mechanical consequence worth recording, because getting it wrong is silent. The
+filesystem root is a **channel of its own** on the resolved configuration rather than a state of the
+`backend` argument's resolution. `writability.assess` returns nothing whenever `backend` is
+unresolved, so folding an unreadable `root_dir` into that one value would silence `DA-SKILL-WRITABLE`
+on a configuration whose backend it identified perfectly well.
+
 **State the cost rather than let a reader discover it in a snapshot.** On a Scan where the mapping
 fails for *every* path — the default `StateBackend` being the likeliest case — the Analyzer has
 opened every `SKILL.md` in the tree, given each one a Work Item, and produced no shadowing verdict
@@ -128,6 +169,31 @@ pattern upstream documents (`:196-204`).
 *"Custom subagents do not inherit the main agent's skills"* (`:228-231`) — is decidable in the
 configuration alone, in the same file. It forces nothing here.
 
+**Amendment, from implementing #74: the general-purpose exclusion is structural, and the definition
+shape is not captured.** The Ticket written from the paragraph above asked for two things of
+`DA-SUBAGENT-SKILLS`: that it fire on a custom subagent defined without its own `skills`, and that
+the general-purpose subagent never produce the Finding. The second needs no code. Upstream describes
+the general-purpose subagent as built in and inheriting automatically (`:228-229`), so nothing in a
+source file declares it and no `subagents=[...]` element can be it. A `name == "general-purpose"`
+check would match an identifier the captured page never spells as one — the silent-rename failure
+[ADR 0005](0005-langchain4j-upstream-vocabulary.md) exists to prevent — and would be pinned by a test
+that passes with or without it.
+
+The same gap decides how much of a definition is read. `:226-231` is prose: it names the `subagents`
+argument and the `skills` parameter a definition needs, and shows **no code example of a definition
+at all**. So the Rule matches one added spelling, `subagents`, and one it already owns, `skills` —
+twenty-two rather than the twenty-one enumerated under Consequences — and reads a definition's *keys*
+without ever reading its values. A Finding therefore names a file and the line the definition opens
+on, never the subagent. Reading values would also be wrong on its own terms: a real definition binds
+tools to objects no static Scan evaluates, so requiring the whole mapping to resolve would send every
+realistic definition to §1's boundary and the Rule would never fire. A definition that is *not* a
+mapping written here, and a `**` spread inside one, do reach that boundary — what they contribute may
+be the `skills` key itself.
+
+**Not dropped.** The Spec allows this Rule to be dropped if implementation shows it noisy, and
+implementation showed the opposite: it fires only inside a `subagents=[...]` list an application
+wrote, and it is silent on every one of the corpus's other 33 fixtures.
+
 ## Consequences
 
 **The vocabulary module is copied from [ADR 0005](0005-langchain4j-upstream-vocabulary.md); the
@@ -145,6 +211,13 @@ the stability claim is evidence rather than assertion". No such measurement exis
 only a version floor quoted in the capture, `deepagents>=0.6.8` for filesystem-permission interrupts
 (`:288`). The measurement is a Ticket of its own inside this work, and that Ticket defines the
 *procedure* and applies it to both Frameworks, which closes issue #46 rather than duplicating it.
+
+> **Delivered.** The second half is now copied: 78 published releases swept, `0.0.1` through
+> `0.7.3`, nothing ever removed, recorded in `OBSERVED_VERSION_RANGE` with each spelling's first
+> release beside it. The procedure and its trigger are
+> [`docs/VOCABULARY_REMEASUREMENT.md`](../VOCABULARY_REMEASUREMENT.md), which covers both Frameworks
+> and closed issue #46. The `deepagents>=0.6.8` floor quoted in the capture is above the measured
+> one: every spelling here exists together from `0.5.2`.
 
 **The code lives in `src/skillspector/deepagents/`, mirroring `langchain4j/`.** Not for size —
 `langchain4j/` is seven modules largely because `java_parser.py` isolates a native dependency that

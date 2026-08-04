@@ -1,0 +1,27 @@
+# An application-tree fixture for the Deep Agents Analyzer, in the shape of
+# `deepagents_runtime_skills/` rather than of `deepagents_detection/`, which is a
+# single requirement file carrying one detection signal and nothing else.
+#
+# What it exercises is `DA-SKILL-WRITABLE`, and it was chosen rather than
+# authored: the scenario matrix of issue #72 was driven through a real Scan on a
+# throwaway branch, and this shape is the one that showed the verdict is per
+# path. Two Skill sources, one rule covering one of them, one Finding. It is also
+# the arrangement the captured upstream page recommends under "Allow agents to
+# edit personal skills", so a reviewer meeting the Finding is meeting it on
+# configuration somebody was told to write.
+#
+# Its prose is deliberately plain, here and in every file below. Fixture text is
+# scanned like any other Component, and an earlier LangChain4j fixture raised
+# Findings against itself purely for describing its own configuration in the
+# words upstream uses.
+
+[project]
+name = "support-agent"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "deepagents>=0.6.8",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
