@@ -150,6 +150,164 @@ skillspector scan . --repo-scan --repo-scan-root playbooks --repo-scan-root ops/
 Discovery roots, the JVM build directories that are skipped, and a complete GitHub Actions job are
 documented under [Scanning a Whole Repository](#scanning-a-whole-repository).
 
+## Scanning the MCP Registry
+
+`skillspector scan --mcp-registry` is a **Registry Scan** — a mode of its own, not a variation on a
+skill scan. It reads records published to the
+[MCP Registry](https://registry.modelcontextprotocol.io) and reports on what a server *owner
+asserted* about their server. It never downloads or inspects the server itself, so it opens no
+component, runs no analyzer, produces no SARIF and issues no `SAFE` / `CAUTION` /
+`DO_NOT_INSTALL` recommendation. Only the 0–100 risk score and the exit-code contract are shared
+with an ordinary scan.
+
+Use it to vet an MCP server's publication hygiene *before* you install it; use `skillspector scan`
+on the server's own repository to vet its code.
+
+### The three input shapes
+
+The positional argument accepts three different things, and which one you gave is decided in this
+order:
+
+```bash
+# 1. A local JSON file holding a registry payload — an object with a "servers" list
+skillspector scan ./registry-dump.json --mcp-registry --format json
+
+# 2. The official registry URL, exactly. Every page is followed via metadata.nextCursor
+skillspector scan https://registry.modelcontextprotocol.io/v0/servers --mcp-registry --format json
+
+# 3. A bare server name. Fetches the whole official registry and keeps that server's latest record
+skillspector scan ai.agenticshelf/graffeo --mcp-registry --format json
+```
+
+Shape 3 is the one the flag's `--help` text does not mention. Anything that is neither an existing
+file nor an `http(s)` URL is treated as a server name; a name that matches no published record is an
+error, not an empty result. Where a name matches several records — the registry keeps every
+published version — the scan assesses the record flagged `isLatest`, falling back to all matches
+when none is.
+
+### The payload shape
+
+A payload is an object with a `servers` list, and **each entry wraps its record under a `server`
+key** — an entry that is a bare record raises rather than scanning. This matters when you hand-write
+or trim a dump: the fields the scan actually reads are these, and nothing else is inspected.
+
+```jsonc
+{
+  "servers": [
+    {
+      "server": {
+        "name": "ai.example/thing",          // required; a nameless server is an error
+        "title": "…", "description": "…", "version": "…", "websiteUrl": "…",
+        "repository": { "url": "…", "source": "…", "id": "…", "subfolder": "…" },
+        "packages": [
+          {
+            "registryType": "npm",
+            "identifier": "…",
+            "version": "1.2.3",
+            "fileSha256": "…",
+            "transport": { "type": "…", "url": "…" }
+          }
+        ],
+        "remotes": [ { "type": "streamable-http", "url": "https://…" } ]
+      },
+      "_meta": {
+        "io.modelcontextprotocol.registry/official": {
+          "status": "active", "publishedAt": "…", "updatedAt": "…", "isLatest": true
+        }
+      }
+    }
+  ],
+  "metadata": { "nextCursor": "…" }          // followed when fetching the live registry
+}
+```
+
+Two claims this documentation deliberately does *not* make: that the scan validates a payload against
+a published MCP Registry schema, and which revision of that schema it targets. Neither is in the
+code. The endpoint it fetches is `/v0/servers`, and the list above is the whole of what it reads —
+a hand-made dump that omits the `_meta` block is accepted, and every check that reads it reports
+`unavailable`.
+
+### The checks it applies
+
+These are posture checks over a published record, not the Rules an Analyzer applies to a Skill —
+nothing here opens a Component, and what it emits is not a Finding. Each is applied per server:
+
+| Check | Fires when | Severity | Risk |
+|---|---|---|---|
+| `MCP-PACKAGE-VERSION` | A package version is a mutable tag (`latest`, `main`, …), a range (`^1.2`, `1.x`), or carries no digit at all (`snapshot`). For `registryType: npm` only, the bar is higher: anything that is not a full `MAJOR.MINOR.PATCH` fires, so `1.2` fires on npm but not on pypi | high | 30 |
+| `MCP-PACKAGE-SHA256` | A declared `fileSha256` is not 64 **lowercase** hex characters — an uppercase digest fires | high | 25 |
+| `MCP-PLAIN-HTTP` | A remote endpoint URL starts with `http://` | high | 25 |
+| `MCP-OFFICIAL-STATUS` | The registry's official status is anything other than `active` (e.g. `deprecated`) | medium | 20 |
+| `MCP-REPOSITORY` | The record carries no repository URL — always reported as `unavailable`, never as a verdict | info | 0 |
+
+Where a field is absent, some — not all — of these report `unavailable`: an `info`, zero-risk entry
+saying the check could not be made rather than passing silently. Which ones, exactly:
+
+- `MCP-REPOSITORY` and `MCP-OFFICIAL-STATUS` are applied **once per server, always**, and report
+  `unavailable` when the record carries no repository URL or no official status.
+- `MCP-PACKAGE-VERSION` and `MCP-PACKAGE-SHA256` are applied **once per package object**, and report
+  `unavailable` when that object omits `version` or `fileSha256`. A record whose `packages` list is
+  empty or absent produces neither — an unpackaged server is not reported as unexamined.
+- `MCP-PLAIN-HTTP` has no `unavailable` result at all: a record with no remotes produces nothing.
+
+The risk score is the sum of the entries' scores across **every** server in the payload, capped at
+100 — so scanning the whole registry says nothing useful about any single server. `max_risk_score`
+carries the worst single entry. Scan one server at a time when you want a per-server verdict.
+
+### Constraints, before you hit them
+
+- **`--format json` is mandatory.** The default is `terminal`, so the bare
+  `skillspector scan <target> --mcp-registry` exits `2` with
+  `Error: --mcp-registry currently supports only --format json`. SARIF is unavailable in this mode
+  today; the error says "currently" because the restriction is a limitation, not a design promise.
+- **Five flags are rejected outright**, exit `2`: `--recursive`, `--repo-scan`, `--baseline`,
+  `--show-suppressed`, `--yara-rules-dir`. There is no way to accept a known posture check and stop
+  scoring it — baselines apply to skill scans only.
+- **Three flags are accepted and silently ignored**: `--no-llm`, `--verbose` / `-V` and
+  `--repo-scan-root`. A Registry Scan never calls an LLM, with or without `--no-llm`.
+- `--output` / `-o` works and writes the JSON report to the given path.
+- Exit codes match a skill scan: `0` when the risk score is ≤ 50, `1` when it is > 50, `2` on any
+  error — including a malformed payload, an unreachable registry, or an unknown server name.
+
+### What leaves your machine
+
+A Registry Scan does not go through the ordinary input handler, so the `ALLOWED_DOWNLOAD_HOSTS`
+allowlist that governs `skillspector scan <url>` does not apply to it. It has a narrower rule
+instead: the **only** URL it will fetch is the official registry endpoint,
+`https://registry.modelcontextprotocol.io/v0/servers`. Any other `http(s)` argument is rejected
+before a request is made. Requests carry a 30-second timeout and do not follow redirects. Nothing
+else is contacted — no LLM provider, no package registry, no repository host.
+
+### Output
+
+```console
+$ skillspector scan ./registry-dump.json --mcp-registry --format json
+{
+  "mcp_registry": true,
+  "source": "./registry-dump.json",
+  "server_count": 3,
+  "risk_score": 45,
+  "max_risk_score": 25,
+  "findings": [
+    {
+      "id": "MCP-PLAIN-HTTP",
+      "target": "http://example.invalid/mcp",
+      "message": "Remote endpoint uses plain HTTP",
+      "severity": "high",
+      "evidence": "registry_assertion",
+      "risk_score": 25
+    }
+  ],
+  "snapshots": [ ... ],
+  "servers": [ { "snapshot": { ... }, "findings": [ ... ] } ]
+}
+```
+
+`findings` is flat across all servers; `servers` pairs each snapshot with its own findings; and
+`snapshots` is the normalized record — including a `record_hash` over the published record and the
+official metadata, which is stable under JSON key reordering and so is usable for detecting that an
+owner changed a published record between two scans.
+
 ## Configuration
 
 Everything is configured through environment variables and CLI flags — there is no config file.
@@ -202,6 +360,8 @@ in the *same* pull request. Concretely:
 | Framework detection or a framework analyzer | the [Framework support](#framework-support) matrix — including its **Status** column |
 | Any detection rule | the relevant [Vulnerability Patterns](#vulnerability-patterns) table and the pattern count in [Features](#features) |
 | A CLI flag or subcommand | [CLI Options](#cli-options), and [Usage in an agentic project](#usage-in-an-agentic-project) if it changes the recommended invocation |
+| `--mcp-registry` behavior: an input shape, a check, a rejected flag, or the network rule | [Scanning the MCP Registry](#scanning-the-mcp-registry) and the walkthrough in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) |
+| A domain term, or the meaning of one | [`CONTEXT.md`](CONTEXT.md) — the glossary is the vocabulary the prose, the docstrings and the test names are held to |
 | An environment variable | [Environment Variables](#environment-variables) and the [Configuration](#configuration) summary |
 | An exit code or an output format | [Integrating SkillSpector](#integrating-skillspector) |
 | Anything that ships a designed-but-unbuilt capability | the **Status** column above, and [`docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md`](docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md) |
@@ -926,6 +1086,9 @@ Options:
   --show-suppressed                            List baseline-suppressed findings
   --repo-scan                                  Find every skill in a repository, scan each
   --repo-scan-root TEXT                        Replace the discovery roots (repeatable)
+  --mcp-registry                               Registry Scan: assess MCP Registry records
+                                               instead of a skill (see Scanning the MCP
+                                               Registry; requires --format json)
   -V, --verbose                                Show detailed progress
   --help                                       Show this message and exit
 
