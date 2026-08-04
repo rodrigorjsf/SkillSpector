@@ -34,6 +34,7 @@ Importing this module imports the tree-sitter parser -- see
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final
 
@@ -42,8 +43,8 @@ from tree_sitter import Node
 from skillspector.langchain4j import builder_chains, java_parser
 
 # The upstream spelling this module matches on. The types and setters the
-# Analyzer passes to :func:`find_unset_setter` are spelled there too -- this
-# module takes a receiver and a setter as arguments and does not name them.
+# Analyzer passes to :func:`find_chains_missing_setters` are spelled there too -- this
+# module takes a receiver and its setters as arguments and does not name them.
 from skillspector.langchain4j.vocabulary import TOOL_ANNOTATION
 
 _ANNOTATION_TYPES: Final[frozenset[str]] = frozenset({"annotation", "marker_annotation"})
@@ -58,11 +59,10 @@ class ToolAnnotation:
 
 
 @dataclass(frozen=True)
-class UnsetSetter:
-    """A builder chain that never called a setter it should have."""
+class UnconfiguredChain:
+    """A builder chain that called none of the setters it should have."""
 
     receiver: str
-    setter: str
     line: int
 
 
@@ -110,15 +110,31 @@ def find_tool_annotations(source: str) -> list[ToolAnnotation]:
     return annotations
 
 
-def find_unset_setter(source: str, receiver: str, setter: str) -> list[UnsetSetter]:
-    """Every ``<receiver>.builder()`` chain in *source* that never called *setter*.
+def find_chains_missing_setters(
+    source: str, receiver: str, setters: Sequence[str]
+) -> list[UnconfiguredChain]:
+    """Every ``<receiver>.builder()`` chain in *source* that called none of *setters*.
+
+    Several spellings rather than one, because a builder can offer more than one
+    way to configure the same thing -- ``McpToolProvider`` narrows its tool set
+    through either ``filter`` or ``filterToolNames``, and a chain that called
+    either is configured. A single-spelling caller passes a one-element
+    sequence.
 
     The absence is the finding, so the whole chain has to be in view before it
     can be judged -- a chain is reported once, at its first line, however many
     other setters it called.
     """
+    if isinstance(setters, str):
+        # A ``str`` is a ``Sequence[str]`` of its own characters, so passing one
+        # spelling instead of a sequence of them would look for six setters
+        # named ``f``, ``i``, ``l`` ... and report every chain. Nothing type-checks
+        # this repo, so the mistake is caught here or not at all.
+        raise TypeError(
+            f"setters is a sequence of spellings, not one spelling: pass ({setters!r},)"
+        )
     return [
-        UnsetSetter(receiver=receiver, setter=setter, line=chain.line)
+        UnconfiguredChain(receiver=receiver, line=chain.line)
         for chain in builder_chains.find_builder_chains(source, receiver)
-        if not chain.called(setter)
+        if not any(chain.called(setter) for setter in setters)
     ]

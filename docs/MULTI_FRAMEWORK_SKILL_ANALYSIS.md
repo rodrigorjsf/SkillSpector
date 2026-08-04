@@ -94,7 +94,7 @@ with an explicit trigger rather than scheduled as work — see
 | `ShellSkills` / `langchain4j-experimental-skills-shell` present | Unsandboxed arbitrary command execution — upstream itself documents this as unsafe | `static_patterns_excessive_agency`, `static_patterns_privilege_escalation` |
 | `RunShellCommandToolConfig.workingDirectory` unset | Commands default to the JVM's `user.dir` | `static_patterns_excessive_agency` |
 | `@Tool("...")` description text | Instruction-carrying string the model reads — the tool-poisoning surface, in Java rather than an MCP manifest | `mcp_tool_poisoning` (TP1–TP4) |
-| `McpToolProvider` without `.toolFilter(...)` | Every MCP tool exposed post-activation instead of a scoped subset | `mcp_least_privilege` (LP1–LP4) |
+| `McpToolProvider` without `.filter(...)` or `.filterToolNames(...)` | Every MCP tool exposed post-activation instead of a scoped subset | `mcp_least_privilege` (LP1–LP4) |
 | Skill `content(...)` built by concatenation or fetched remotely | Instruction text that exists in no scanned file | `static_patterns_prompt_injection` |
 | `pom.xml` / `build.gradle` dependencies | Maven ecosystem unsupported in `osv_client.py:56` (PyPI and npm only) | `static_patterns_supply_chain` (SC4) |
 
@@ -375,7 +375,7 @@ interpreter.
 | `Skill.builder().content(someVar)` — DB, remote API, runtime-generated | **No** | See below |
 | `SkillResource.builder().relativePath(…).content(…)` | Same rules as `Skill.builder()` | |
 | `skill.toBuilder().tools(new OrderTools())` | Yes | Resolve the class, read its `@Tool` annotations |
-| `.toolProviders(McpToolProvider.builder()…)` | Yes | Presence and `.toolFilter(…)` absence are both visible |
+| `.toolProviders(McpToolProvider.builder()…)` | Yes | Presence and the absence of both `.filter(…)` and `.filterToolNames(…)` are visible |
 | `.tools(Map.of(spec, executor))` | Partially | The `ToolSpecification` literal is readable; the `ToolExecutor` lambda body is not analyzed |
 | `Skills.from(…)` vs `ShellSkills.from(…)` | Yes | Mode selection is a type reference |
 
@@ -688,7 +688,8 @@ there is nothing to exclude. The vocabulary stability measurement (#75) closed t
 published `deepagents` releases swept, nothing ever removed, recorded in `OBSERVED_VERSION_RANGE`,
 with the re-measurement procedure and trigger of [`docs/VOCABULARY_REMEASUREMENT.md`](VOCABULARY_REMEASUREMENT.md)
 covering both Frameworks — which closed #46 and found, on its first run, that `L4J-MCP-FILTER`
-matches a method no published release declares (#82). **Spec conformance (phase 3) is next.**
+matched a method no published release declares, corrected in #82. **Spec conformance (phase 3) is
+next.**
 
 The boundary went first on purpose: the writability verdict of #72 needed somewhere to fall when it
 cannot decide, and building that landing place afterwards would have meant building it twice. It
@@ -726,7 +727,7 @@ gated `framework_langchain4j` analyzer carrying all five L4J rules, and the Repo
 | `L4J-SHELL` | `ShellSkills` wiring, or any declared `langchain4j-…shell…` dependency — `langchain4j-experimental-skills-shell` is the only one published, and [ADR 0007](adr/0007-l4j-shell-survives-the-graduation-rename.md) records why the match is wider than it | HIGH |
 | `L4J-UNRESOLVED` | A Skill's content, name, description or loader path built at runtime | MEDIUM |
 | `L4J-TOOL-DESC` | A `@Tool` description that instructs rather than describes | MEDIUM |
-| `L4J-MCP-FILTER` | `McpToolProvider` built without `.toolFilter(...)` | MEDIUM |
+| `L4J-MCP-FILTER` | `McpToolProvider` built without `.filter(...)` or `.filterToolNames(...)` | MEDIUM |
 | `L4J-WORKDIR` | `RunShellCommandToolConfig` built without `workingDirectory` | MEDIUM |
 
 Resolvable Skill content — a text block, a literal, a same-unit constant — is handed to the

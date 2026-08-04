@@ -443,10 +443,11 @@ The MCP example under [Modes](#modes) writes `.toolFilter(...)`. **No release of
 is reproduced as upstream wrote it, because this file is a capture; it is not code that compiles
 against any published release.
 
-The consequence for SkillSpector is a Rule, not a document. `L4J-MCP-FILTER` reports a
+The consequence for SkillSpector was a Rule, not a document. `L4J-MCP-FILTER` used to report a
 `McpToolProvider` builder chain that never called `toolFilter`, so host code written against a
-published release is reported as unfiltered whatever it does. What the Rule should match instead is
-issue #82 — the measurement that found this deliberately changed no Scan behavior.
+published release was reported as unfiltered whatever it did. Issue #82 corrected the Rule: it now
+reports a chain only when it called neither `filter` nor `filterToolNames`. The capture above is
+left as upstream wrote it — it is provenance, and this note is the correction.
 
 ### What already works unchanged
 
@@ -478,7 +479,7 @@ Detection opportunities, ordered by severity of what they catch:
 | `ShellSkills` / `langchain4j-experimental-skills-shell` on the classpath | Unsandboxed arbitrary command execution, flagged unsafe by upstream itself | `static_patterns_excessive_agency`, `static_patterns_privilege_escalation` |
 | `RunShellCommandToolConfig.workingDirectory` unset | Commands default to the JVM's `user.dir` — usually the app root | `static_patterns_excessive_agency` |
 | `@Tool("...")` description text | Instruction-carrying string the model reads; the tool-poisoning surface, in Java rather than an MCP manifest | `mcp_tool_poisoning` (TP1–TP4) |
-| `McpToolProvider` without `.toolFilter(...)` | Every MCP tool exposed post-activation rather than a scoped subset | `mcp_least_privilege` (LP1–LP4) |
+| `McpToolProvider` without `.filter(...)` or `.filterToolNames(...)` | Every MCP tool exposed post-activation rather than a scoped subset | `mcp_least_privilege` (LP1–LP4) |
 | Skill `content(...)` built by string concatenation or from a remote source | Instruction text outside any scanned file | `static_patterns_prompt_injection` |
 | `pom.xml` / `build.gradle` dependencies | No Maven ecosystem support in `osv_client.py:56` (PyPI and npm only) | `static_patterns_supply_chain` (SC4) |
 

@@ -430,7 +430,7 @@ DEFAULT_REMEDIATIONS: dict[str, str] = {
     "L4J-SHELL": "Prefer tool mode (Skills.from(...)) so the model reaches only the tools the Skill declares. Where shell mode is genuinely required, confine the process to a container or a restricted user and set RunShellCommandToolConfig.workingDirectory rather than inheriting the JVM's.",
     "L4J-UNRESOLVED": "Move the text into a literal, a text block, or a same-file constant so the scanner can read what the model reads. Where it genuinely has to come from a database or a remote call, review that source separately -- no static scan can see it.",
     "L4J-TOOL-DESC": "Rewrite the @Tool description so it says what the tool does and nothing more. Directives to the model belong in the Skill content, where they are reviewed as instructions.",
-    "L4J-MCP-FILTER": "Add .toolFilter(...) to the McpToolProvider builder and name the tools this agent needs, so a tool added on the server does not silently reach the agent.",
+    "L4J-MCP-FILTER": "Add .filter(...) or .filterToolNames(...) to the McpToolProvider builder and name the tools this agent needs, so a tool added on the server does not silently reach the agent.",
     "L4J-WORKDIR": "Set RunShellCommandToolConfig.workingDirectory to a directory scoped to the task, so commands cannot reach the application root by default.",
     # Deep Agents Framework
     "DA-SKILL-WRITABLE": 'Add a FilesystemPermission with operations=["write"], mode="deny" and a paths pattern covering this Skill source, placing any more specific rule before it. Where the agent is meant to refine its own Skills, keep the writable source separate from the shared library and require approval for the writes with mode="interrupt" or interrupt_on.',

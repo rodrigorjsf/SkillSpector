@@ -11,7 +11,7 @@ public class McpWiring {
     public static ToolProvider inventoryTools(McpClient mcpClient) {
         return McpToolProvider.builder()
                 .mcpClients(mcpClient)
-                .toolFilter((tool, client) -> tool.name().startsWith("inventory_"))
+                .filter((client, tool) -> tool.name().startsWith("inventory_"))
                 .build();
     }
 

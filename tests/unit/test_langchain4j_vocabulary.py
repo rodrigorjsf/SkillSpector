@@ -28,7 +28,7 @@ about the running system looks different.
 of its own -- the shape a matcher takes, and the shape every leak this Spec
 relocated had. A spelling embedded in a longer literal is not caught, because
 the Finding messages in ``framework_langchain4j`` legitimately quote type names
-in prose (*"McpToolProvider is built without a toolFilter"*) and containment
+in prose (*"McpToolProvider is built without a filter or filterToolNames"*) and containment
 cannot tell the two apart. Regex-escaped forms *are* caught, so recomposing
 ``re.compile(r"dev\\.langchain4j")`` inline fails the same way the plain
 spelling does.

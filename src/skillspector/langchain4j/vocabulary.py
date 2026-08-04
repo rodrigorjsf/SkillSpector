@@ -77,12 +77,12 @@ said ``ClassPathSkillLoader`` was the only change; reading each release's own
 method tables says otherwise, and this is the corrected claim.
 
 **``toolFilter`` has never been published.** No release of ``langchain4j-mcp``
-declares it -- the builder method is ``filter``, at ``1.12.1-beta21`` as at
-``1.18.1-beta28``. It is in this inventory because upstream's Skills tutorial
-writes ``.toolFilter(...)`` in an example that upstream's own MCP tutorial
-contradicts. The spelling is left as it is here on purpose: what ``L4J-MCP-FILTER``
-should match instead is a Rule change, tracked as issue #82, not a rename this
-record can make quietly. See the constant's own comment.
+declares it -- the builder methods are ``filter`` and ``filterToolNames``, at
+``1.12.1-beta21`` as at ``1.18.1-beta28``. It was in this inventory because
+upstream's Skills tutorial writes ``.toolFilter(...)`` in an example that
+upstream's own MCP tutorial contradicts, and it made ``L4J-MCP-FILTER`` report
+every chain that compiles. Issue #82 replaced it with the two published
+spellings; ``TOOL_FILTER_SETTERS`` is what the Rule matches now.
 
 ``OBSERVED_VERSION_RANGE`` records the sweep so the stability claim is evidence
 rather than assertion, and so a reader can tell at a glance how stale it is.
@@ -192,18 +192,23 @@ TOOL_ANNOTATION: Final[str] = "Tool"
 
 MCP_TOOL_PROVIDER: Final[str] = "McpToolProvider"
 
-# **Never published.** ``McpToolProvider.Builder`` declares ``filter`` and
-# ``filterToolNames``, and has since ``1.12.1-beta21``; no release of
-# ``langchain4j-mcp`` has ever declared ``toolFilter``. The spelling comes from
-# upstream's Skills tutorial, whose MCP example writes ``.toolFilter(...)`` --
-# contradicted by upstream's own MCP tutorial and by every jar it publishes.
+# The published setters that narrow the tool set an ``McpToolProvider`` hands
+# the agent. ``McpToolProvider.Builder`` has declared both since
+# ``1.12.1-beta21``: ``filter`` takes a predicate, ``filterToolNames`` takes the
+# names to keep. Either scopes the set, so ``L4J-MCP-FILTER`` reports a chain
+# only when it called *neither*.
 #
-# ``L4J-MCP-FILTER`` reports a ``McpToolProvider`` builder chain that never
-# called this setter, so host code written against a *published* release is
-# reported as unfiltered whatever it does. Left uncorrected here because
-# changing it changes what a Scan reports, which the measurement this comment
-# belongs to deliberately does not.
-TOOL_FILTER_SETTER: Final[str] = "toolFilter"
+# ``alwaysVisibleToolNames`` is deliberately not one of them. It names the tools
+# that stay visible past a filter rather than narrowing the exposed set, so
+# accepting it would turn this Rule's over-report into an under-report.
+#
+# This inventory read ``toolFilter`` until issue #82. That spelling has never
+# been published by any release of ``langchain4j-mcp``; it comes from upstream's
+# Skills tutorial, whose MCP example is contradicted by upstream's own MCP
+# tutorial and by every jar it ships. Recorded here as history, not as a setter
+# to call: ``docs/adr/0005-langchain4j-upstream-vocabulary.md`` carries the
+# reversal.
+TOOL_FILTER_SETTERS: Final[tuple[str, ...]] = ("filter", "filterToolNames")
 
 
 # -- Framework detection signals --------------------------------------------- #
