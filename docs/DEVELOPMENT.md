@@ -174,7 +174,7 @@ There are no conditional edges: after `resolve_input` → `build_context`, all a
 | `mcp_rug_pull.py` | MCP rug-pull analyzer (RP1–RP3): detects manifest/tool-definition changes between scans |
 | `semantic_security_discovery.py`, `semantic_developer_intent.py`, `semantic_quality_policy.py` | Semantic (LLM) analyzers; emit findings only when `use_llm` is enabled |
 | `framework_langchain4j.py` | Gated LangChain4j analyzer (L4J-SHELL, L4J-UNRESOLVED, L4J-TOOL-DESC, L4J-MCP-FILTER, L4J-WORKDIR). Declines silently on every other Framework; on its own it always reports a status |
-| `framework_deepagents.py` | Gated Deep Agents analyzer (DA-SKILL-WRITABLE, DA-SHADOW, DA-UNRESOLVED). It opens the scan's Python sources, Python requirement files and `SKILL.md` files, gives each a work item, and reports one status; #74 adds the subagent rule. Declines silently on every other Framework |
+| `framework_deepagents.py` | Gated Deep Agents analyzer (DA-SKILL-WRITABLE, DA-SHADOW, DA-SUBAGENT-SKILLS, DA-UNRESOLVED). It opens the scan's Python sources, Python requirement files and `SKILL.md` files, gives each a work item, and reports one status. Declines silently on every other Framework |
 | **langchain4j/** | |
 | `signals.py` | Parser-free: `applicable_files`, the predicate the analyzer gates on, plus the comment-aware build-file scan behind `L4J-SHELL` |
 | `java_parser.py` | The tree-sitter binding for Java. Importing this imports tree-sitter, so analyzers import it lazily |

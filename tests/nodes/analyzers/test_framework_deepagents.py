@@ -256,6 +256,67 @@ agent = create_deep_agent(
 """
 
 
+# The subagent Rule's inputs. Upstream states a custom subagent does not inherit
+# the main agent's Skills, so the whole question is whether the definition
+# carries a ``skills`` key of its own. Every one of these denies write to the
+# main agent's own Skill source, so what a test reads is this verdict rather
+# than ``DA-SKILL-WRITABLE`` arriving alongside it.
+
+WITHOUT_OWN_SKILLS = """        {
+            "name": "researcher",
+            "description": "Gathers background on an incoming ticket.",
+            "prompt": "Collect the account history the ticket refers to.",
+        },"""
+
+WITH_OWN_SKILLS = """        {
+            "name": "researcher",
+            "description": "Gathers background on an incoming ticket.",
+            "prompt": "Collect the account history the ticket refers to.",
+            "skills": ["/skills/research/"],
+        },"""
+
+
+def _with_subagents(definitions: str) -> str:
+    """An agent whose own Skill source is denied, defining *definitions*."""
+    return f"""from deepagents import FilesystemPermission, create_deep_agent
+
+agent = create_deep_agent(
+    model="claude-sonnet-5",
+    skills=["/skills/shared/"],
+    permissions=[
+        FilesystemPermission(operations=["write"], paths=["/skills/**"], mode="deny"),
+    ],
+    subagents=[
+{definitions}
+    ],
+)
+"""
+
+
+# The subagent list assembled at runtime, and one definition this Scan cannot
+# read. Neither names a Skill source, so neither carries a writability verdict
+# that would have to be read around.
+RUNTIME_SUBAGENTS_PY = """from deepagents import create_deep_agent
+
+from .team import subagents_for_tenant
+
+agent = create_deep_agent(
+    model="claude-sonnet-5",
+    subagents=subagents_for_tenant("acme"),
+)
+"""
+
+OPAQUE_SUBAGENT_PY = """from deepagents import create_deep_agent
+
+from .team import researcher
+
+agent = create_deep_agent(
+    model="claude-sonnet-5",
+    subagents=[researcher],
+)
+"""
+
+
 def _manifest(name: str) -> str:
     """An Agent Skills manifest declaring *name*."""
     return f"---\nname: {name}\ndescription: Route an incoming ticket.\n---\n\n# {name}\n"
@@ -419,6 +480,8 @@ class TestTheResolutionBoundary:
             pytest.param(HELPER_BACKEND_PY, "backend is built", id="backend"),
             pytest.param(HELPER_PERMISSIONS_PY, "permission rules", id="permissions"),
             pytest.param(ROUTED_STORE_PY, "/skills/", id="routed-store"),
+            pytest.param(RUNTIME_SUBAGENTS_PY, "subagent", id="subagent-list"),
+            pytest.param(OPAQUE_SUBAGENT_PY, "subagent", id="opaque-subagent"),
         ],
     )
     def test_each_case_raises_one_finding_that_names_what_was_unresolvable(
@@ -431,12 +494,15 @@ class TestTheResolutionBoundary:
         assert result["findings"][0].severity == "MEDIUM"
         assert result["findings"][0].file == "agent.py"
 
-    def test_the_four_messages_do_not_all_read_the_same(self) -> None:
+    def test_the_messages_of_these_cases_do_not_all_read_the_same(self) -> None:
         """The criterion the report is judged on: which surface went unexamined.
 
-        Asserted across the four rather than per case, because the failure this
+        Asserted across the set rather than per case, because the failure this
         guards against -- one message reused -- is invisible from inside any
-        single one of them.
+        single one of them. The two subagent shapes are one message deliberately:
+        a list assembled at runtime and a definition written as something this
+        Scan cannot read leave the same thing unexamined, which subagents were
+        defined without Skills of their own.
         """
         messages = {
             _messages(analyzer.node(make_state({"agent.py": source})))[0]
@@ -445,10 +511,12 @@ class TestTheResolutionBoundary:
                 HELPER_BACKEND_PY,
                 HELPER_PERMISSIONS_PY,
                 ROUTED_STORE_PY,
+                RUNTIME_SUBAGENTS_PY,
+                OPAQUE_SUBAGENT_PY,
             )
         }
 
-        assert len(messages) == 4
+        assert len(messages) == 5
 
     def test_the_finding_points_at_the_argument_rather_than_the_call(self) -> None:
         """A multi-line call is the ordinary shape, so the top of it is not enough."""
@@ -1058,6 +1126,132 @@ class TestWhatCannotBeMapped:
 
         assert _rule_ids(result) == ["DA-UNRESOLVED"]
         assert "Skill source list" in _messages(result)[0]
+
+
+class TestTheSubagentVerdict:
+    """``DA-SUBAGENT-SKILLS``: a custom subagent defined without Skills of its own.
+
+    The one Rule of this Analyzer whose claim is correctness rather than
+    security, and the only one that reads no path and opens no second file: a
+    subagent definition decides the question inside the same call.
+    """
+
+    def test_a_custom_subagent_without_its_own_skills_is_reported(self) -> None:
+        result = analyzer.node(make_state({"agent.py": _with_subagents(WITHOUT_OWN_SKILLS)}))
+
+        assert _rule_ids(result) == ["DA-SUBAGENT-SKILLS"]
+        assert result["findings"][0].severity == "LOW"
+        assert result["findings"][0].file == "agent.py"
+
+    def test_a_custom_subagent_that_declares_its_own_skills_produces_nothing(self) -> None:
+        """The negative control: the same definition, one key longer."""
+        result = analyzer.node(make_state({"agent.py": _with_subagents(WITH_OWN_SKILLS)}))
+
+        assert result["findings"] == []
+        assert result["analyzer_status_events"][0]["status"] == "completed"
+
+    def test_the_finding_points_at_the_definition_rather_than_the_call(self) -> None:
+        """Two subagents in one list are told apart by their line and nothing else.
+
+        The message names no subagent, because the identifier a definition is
+        named by is not a spelling the captured reference documents -- see the
+        Analyzer's own record of it. So the line has to carry the whole of which
+        one this is.
+        """
+        source = _with_subagents(f"{WITH_OWN_SKILLS}\n{WITHOUT_OWN_SKILLS}")
+        result = analyzer.node(make_state({"agent.py": source}))
+
+        assert _rule_ids(result) == ["DA-SUBAGENT-SKILLS"]
+        lines = source.splitlines()
+        reported = result["findings"][0].start_line
+        assert lines[reported - 1].strip() == "{"
+        # The second definition, so the one that declares its own Skills is the
+        # one the Finding passed over rather than the one it landed on.
+        assert reported > next(
+            index for index, line in enumerate(lines, start=1) if '"/skills/research/"' in line
+        )
+
+    def test_each_subagent_defined_without_skills_is_reported_on_its_own(self) -> None:
+        """One Finding per definition, so accepting one does not accept the other."""
+        source = _with_subagents(f"{WITHOUT_OWN_SKILLS}\n{WITHOUT_OWN_SKILLS}")
+        result = analyzer.node(make_state({"agent.py": source}))
+
+        assert _rule_ids(result) == ["DA-SUBAGENT-SKILLS", "DA-SUBAGENT-SKILLS"]
+        assert len({finding.start_line for finding in result["findings"]}) == 2
+
+    def test_the_general_purpose_subagent_has_no_definition_and_so_no_finding(self) -> None:
+        """Upstream's exclusion needs no code, and this is what says so.
+
+        The general-purpose subagent is built in and inherits the main agent's
+        Skills automatically; nothing in the source declares it. So an agent
+        given Skills and no ``subagents`` at all -- which is exactly the
+        application that has a general-purpose subagent and nothing else --
+        raises nothing here, and no name is matched on to arrange that.
+        """
+        result = analyzer.node(make_state({"agent.py": DENIED_PY}))
+
+        assert result["findings"] == []
+        assert "subagents" not in DENIED_PY
+
+    def test_an_absent_subagents_argument_is_a_configuration_rather_than_a_silence(self) -> None:
+        """No ``subagents`` is no custom subagents, which is the invariant of every Rule here."""
+        assert analyzer.node(make_state({"agent.py": NO_ARGUMENTS_PY}))["findings"] == []
+
+    @pytest.mark.parametrize(
+        "source",
+        [
+            pytest.param(RUNTIME_SUBAGENTS_PY, id="list-built-elsewhere"),
+            pytest.param(OPAQUE_SUBAGENT_PY, id="definition-built-elsewhere"),
+        ],
+    )
+    def test_a_subagent_list_this_scan_cannot_read_reaches_the_boundary_rule(
+        self, source: str
+    ) -> None:
+        """Criterion 4 of the Ticket: not a silent pass, and not a guessed verdict."""
+        result = analyzer.node(make_state({"agent.py": source}))
+
+        assert _rule_ids(result) == ["DA-UNRESOLVED"]
+        assert result["findings"][0].severity == "MEDIUM"
+
+    def test_a_definition_holding_a_spread_is_read_as_unresolvable(self) -> None:
+        """What a ``**`` contributes is exactly what this Scan will not guess at.
+
+        The control is the same definition without it: a dict whose keys are all
+        written is read, and one key of it may well be the ``skills`` this Rule
+        looks for.
+        """
+        source = _with_subagents(WITHOUT_OWN_SKILLS).replace(
+            '            "name": "researcher",', "            **defaults(),"
+        )
+        result = analyzer.node(make_state({"agent.py": source}))
+
+        assert _rule_ids(result) == ["DA-UNRESOLVED"]
+
+    def test_a_subagent_key_that_does_not_resolve_does_not_hide_the_skills_key(self) -> None:
+        """Only the keys are read, never the values.
+
+        A definition binds a subagent's tools to objects no Scan can evaluate,
+        so requiring the whole dict to resolve would send every realistic
+        definition to the boundary and this Rule would never fire.
+        """
+        source = _with_subagents(
+            WITH_OWN_SKILLS.replace(
+                '            "skills": ["/skills/research/"],',
+                '            "tools": [search_tickets],\n            "skills": ["/skills/research/"],',
+            )
+        )
+
+        assert analyzer.node(make_state({"agent.py": source}))["findings"] == []
+
+    def test_the_pattern_catalog_supplies_the_reported_prose(self) -> None:
+        finding = analyzer.node(make_state({"agent.py": _with_subagents(WITHOUT_OWN_SKILLS)}))[
+            "findings"
+        ][0]
+
+        assert finding.category == "Deep Agents Framework"
+        assert finding.pattern == "Subagent Without Skills"
+        assert finding.explanation
+        assert finding.remediation
 
 
 class TestTheDetectionFixtureThroughTheRealGraph:

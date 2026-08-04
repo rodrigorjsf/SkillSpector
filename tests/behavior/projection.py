@@ -340,6 +340,7 @@ CORPUS_NAMES: tuple[str, ...] = (
     "deepagents_personal_skills",
     "deepagents_runtime_skills",
     "deepagents_shadowed_skills",
+    "deepagents_subagent_skills",
     "langchain4j_detection",
     "langchain4j_shell_skill",
     "langchain4j_tool_mode",

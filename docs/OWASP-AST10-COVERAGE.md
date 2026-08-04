@@ -53,6 +53,12 @@ Coverage labels are intentionally conservative:
 - AST07 remains partial because current rules reason about dependency hygiene and known package risk, not the live patch level or update history of an installed deployment.
 - AST08 remains partial because the scanner itself has bounded visibility. It does not provide runtime execution tracing, binary unpacking for every format, or exhaustive coverage of every attacker-controlled external surface.
 - AST09 is not currently addressed as a direct rule surface. Governance needs inventories, approval controls, action logging, and revocation workflows that sit outside the current scanner.
+- `DA-SUBAGENT-SKILLS` maps to no category above, and that is a decision rather than an omission. It
+  is the one rule in the catalog whose claim is correctness rather than security: a Deep Agents
+  custom subagent defined without its own `skills` runs without the capability its author believes it
+  has, which upstream documents as a bug and not as a risk. This matrix maps rules onto risk
+  categories, so a rule that asserts no risk earns no row; recording the absence here is what keeps
+  it visible.
 - AST10 remains partial because cross-platform translation can drop or reinterpret security metadata in ways that require source-to-target manifest comparison, not only single-manifest analysis.
 
 ## What stays out of scope here

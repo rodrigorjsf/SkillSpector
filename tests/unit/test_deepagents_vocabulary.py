@@ -102,6 +102,7 @@ _EXPECTED_SPELLINGS = {
     "FilesystemBackend",
     "routes",
     "root_dir",
+    "subagents",
     "operations",
     "paths",
     "deny",
