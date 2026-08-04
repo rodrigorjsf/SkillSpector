@@ -165,6 +165,99 @@ agent = create_deep_agent(
 """
 
 
+# The shadowing Rule's inputs. Every one of them denies write to both sources,
+# so what a test reads is the shadowing verdict rather than the writability one
+# arriving alongside it.
+
+SHADOWED_PY = """from deepagents import FilesystemPermission, create_deep_agent
+from deepagents.backends.filesystem import FilesystemBackend
+
+agent = create_deep_agent(
+    model="claude-sonnet-5",
+    backend=FilesystemBackend(root_dir="./library"),
+    skills=["/skills/shared/", "/skills/personal/"],
+    permissions=[
+        FilesystemPermission(operations=["write"], paths=["/skills/**"], mode="deny"),
+    ],
+)
+"""
+
+THREE_SOURCES_PY = """from deepagents import FilesystemPermission, create_deep_agent
+from deepagents.backends.filesystem import FilesystemBackend
+
+agent = create_deep_agent(
+    model="claude-sonnet-5",
+    backend=FilesystemBackend(root_dir="./library"),
+    skills=["/skills/shared/", "/skills/team/", "/skills/personal/"],
+    permissions=[
+        FilesystemPermission(operations=["write"], paths=["/skills/**"], mode="deny"),
+    ],
+)
+"""
+
+# The default backend, written by omission. Its Skill files are not on disk, so
+# no configured path maps -- and that is a configuration this Scan read rather
+# than a place it stopped reading.
+DEFAULT_BACKEND_PY = """from deepagents import FilesystemPermission, create_deep_agent
+
+agent = create_deep_agent(
+    model="claude-sonnet-5",
+    skills=["/skills/shared/", "/skills/personal/"],
+    permissions=[
+        FilesystemPermission(operations=["write"], paths=["/skills/**"], mode="deny"),
+    ],
+)
+"""
+
+STORE_BACKEND_PY = """from deepagents import FilesystemPermission, create_deep_agent
+from deepagents.backends import StoreBackend
+
+agent = create_deep_agent(
+    model="claude-sonnet-5",
+    backend=StoreBackend(),
+    skills=["/skills/shared/", "/skills/personal/"],
+    permissions=[
+        FilesystemPermission(operations=["write"], paths=["/skills/**"], mode="deny"),
+    ],
+)
+"""
+
+# The one unmappable case that *is* a boundary: the root is written and this
+# Scan cannot read it.
+UNRESOLVED_ROOT_PY = """from deepagents import FilesystemPermission, create_deep_agent
+from deepagents.backends.filesystem import FilesystemBackend
+
+from .infra import root_for_tenant
+
+agent = create_deep_agent(
+    model="claude-sonnet-5",
+    backend=FilesystemBackend(root_dir=root_for_tenant("acme")),
+    skills=["/skills/shared/", "/skills/personal/"],
+    permissions=[
+        FilesystemPermission(operations=["write"], paths=["/skills/**"], mode="deny"),
+    ],
+)
+"""
+
+
+def _manifest(name: str) -> str:
+    """An Agent Skills manifest declaring *name*."""
+    return f"---\nname: {name}\ndescription: Route an incoming ticket.\n---\n\n# {name}\n"
+
+
+# The two mapped source directories of ``SHADOWED_PY``, declaring one name.
+COLLIDING_MANIFESTS: dict[str, str] = {
+    "library/skills/shared/ticket-triage/SKILL.md": _manifest("ticket-triage"),
+    "library/skills/personal/ticket-triage/SKILL.md": _manifest("ticket-triage"),
+}
+
+# The same two directories, each providing what the other does not.
+LAYERED_MANIFESTS: dict[str, str] = {
+    "library/skills/shared/ticket-triage/SKILL.md": _manifest("ticket-triage"),
+    "library/skills/personal/meeting-notes/SKILL.md": _manifest("meeting-notes"),
+}
+
+
 def _messages(result: dict[str, Any]) -> list[str]:
     """The Finding messages a node call produced, in the order it produced them."""
     return [finding.message for finding in result["findings"]]
@@ -792,6 +885,146 @@ class TestTheLedgerContract:
         assert len(emitted["agent.py"]) == 1
 
 
+class TestTheShadowingVerdict:
+    """``DA-SHADOW`` fires on a confirmed collision and on nothing weaker.
+
+    Every input below carries a ``deny`` covering both sources, so what these
+    tests read is this Rule rather than ``DA-SKILL-WRITABLE`` arriving with it.
+    That the two are independent is asserted once, at the end, rather than being
+    assumed by every case.
+    """
+
+    def test_one_name_in_two_mapped_sources_is_reported_once(self) -> None:
+        result = analyzer.node(
+            make_state({"agent.py": SHADOWED_PY, **COLLIDING_MANIFESTS}),
+        )
+
+        assert _rule_ids(result) == ["DA-SHADOW"]
+        assert result["findings"][0].severity == "HIGH"
+
+    def test_the_finding_names_both_sources_and_the_manifest_the_agent_loads(self) -> None:
+        """A Finding that named one source would leave the reviewer to find the other."""
+        message = _messages(
+            analyzer.node(make_state({"agent.py": SHADOWED_PY, **COLLIDING_MANIFESTS}))
+        )[0]
+
+        assert "/skills/shared/" in message
+        assert "/skills/personal/" in message
+        assert "library/skills/personal/ticket-triage/SKILL.md" in message
+
+    def test_two_sources_that_provide_different_skills_raise_nothing(self) -> None:
+        """Layering is what upstream recommends; the Rule fires on the names, not the list."""
+        result = analyzer.node(make_state({"agent.py": SHADOWED_PY, **LAYERED_MANIFESTS}))
+
+        assert result["findings"] == []
+
+    def test_the_last_source_wins_over_every_earlier_one(self) -> None:
+        """Three sources, one name: two Findings, and both name the final source.
+
+        One Finding per *shadowed* source rather than per name, so a reviewer can
+        accept one substitution without also accepting the other -- the
+        granularity ``DA-SKILL-WRITABLE`` chose for the same reason.
+        """
+        manifests = {
+            "library/skills/shared/triage/SKILL.md": _manifest("ticket-triage"),
+            "library/skills/team/triage/SKILL.md": _manifest("ticket-triage"),
+            "library/skills/personal/triage/SKILL.md": _manifest("ticket-triage"),
+        }
+        messages = _messages(analyzer.node(make_state({"agent.py": THREE_SOURCES_PY, **manifests})))
+
+        assert len(messages) == 2
+        assert all("later source /skills/personal/" in message for message in messages)
+        assert any("Skill source /skills/shared/" in message for message in messages)
+        assert any("Skill source /skills/team/" in message for message in messages)
+
+    def test_a_manifest_outside_every_mapped_source_is_not_compared(self) -> None:
+        """The mapping is computed through the backend root, never assumed.
+
+        These two manifests hold one name and would collide under any reading
+        that matched on the Skill directories alone. Neither is under the root
+        this call configures, so neither is read for this verdict -- and both are
+        still opened and still reported.
+        """
+        outside = {
+            "elsewhere/skills/shared/triage/SKILL.md": _manifest("ticket-triage"),
+            "elsewhere/skills/personal/triage/SKILL.md": _manifest("ticket-triage"),
+        }
+        result = analyzer.node(make_state({"agent.py": SHADOWED_PY, **outside}))
+
+        assert result["findings"] == []
+        assert [event["path"] for event in result["inspection_ledger"]] == [
+            "agent.py",
+            *sorted(outside),
+        ]
+
+
+class TestWhatCannotBeMapped:
+    """Only one of the Ticket's three unmappable cases is a boundary.
+
+    ADR 0008 §3's amendment, asserted rather than only written down. A
+    ``StoreBackend`` and the default ``StateBackend`` are configurations this
+    Scan read successfully -- what it read is that the Skill files are not on
+    disk -- so they raise nothing, and reporting them would put a Finding on the
+    shape the upstream tutorial teaches. A ``root_dir`` the Scan cannot read is
+    resolution stopping, which is §1's boundary exactly.
+    """
+
+    @pytest.mark.parametrize("source", [DEFAULT_BACKEND_PY, STORE_BACKEND_PY])
+    def test_skill_files_that_are_not_on_disk_raise_nothing(self, source: str) -> None:
+        result = analyzer.node(make_state({"agent.py": source, **COLLIDING_MANIFESTS}))
+
+        assert result["findings"] == []
+
+    @pytest.mark.parametrize("source", [DEFAULT_BACKEND_PY, STORE_BACKEND_PY])
+    def test_every_manifest_is_still_opened_and_still_given_a_work_item(self, source: str) -> None:
+        """ADR 0008 §3's stated price, and the thing that makes the silence readable.
+
+        Without these rows, "no shadowing found" and "the names were never read"
+        are the same report.
+        """
+        result = analyzer.node(
+            make_state({"agent.py": source, "pyproject.toml": PYPROJECT, **COLLIDING_MANIFESTS})
+        )
+
+        status = result["analyzer_status_events"][0]
+        assert status["status"] == "completed"
+        assert [target["path"] for target in status["planned_work"]] == [
+            "agent.py",
+            *sorted(COLLIDING_MANIFESTS),
+            "pyproject.toml",
+        ]
+
+    def test_a_root_the_scan_cannot_read_reaches_the_boundary_rule(self) -> None:
+        result = analyzer.node(make_state({"agent.py": UNRESOLVED_ROOT_PY, **COLLIDING_MANIFESTS}))
+
+        assert _rule_ids(result) == ["DA-UNRESOLVED"]
+        assert "root directory" in _messages(result)[0]
+
+    def test_an_unreadable_root_does_not_silence_the_writability_verdict(self) -> None:
+        """The root is a channel of its own, never a state of the backend's resolution.
+
+        Folding the two together would make ``DA-SKILL-WRITABLE`` -- which asks
+        only *which* backend this is -- go quiet on a configuration it can decide.
+        """
+        source = UNRESOLVED_ROOT_PY.replace(
+            '        FilesystemPermission(operations=["write"], paths=["/skills/**"], mode="deny"),\n',
+            "",
+        )
+        result = analyzer.node(make_state({"agent.py": source}))
+
+        assert sorted(set(_rule_ids(result))) == ["DA-SKILL-WRITABLE", "DA-UNRESOLVED"]
+
+    def test_an_unresolvable_skill_list_reports_one_silence_rather_than_two(self) -> None:
+        """No path resolved, so there is nothing the root could have mapped."""
+        source = UNRESOLVED_ROOT_PY.replace(
+            'skills=["/skills/shared/", "/skills/personal/"]', "skills=skills_for_tenant()"
+        )
+        result = analyzer.node(make_state({"agent.py": source}))
+
+        assert _rule_ids(result) == ["DA-UNRESOLVED"]
+        assert "Skill source list" in _messages(result)[0]
+
+
 class TestTheDetectionFixtureThroughTheRealGraph:
     """The one committed Deep Agents input, driven end to end.
 
@@ -844,6 +1077,27 @@ class TestTheDetectionFixtureThroughTheRealGraph:
         assert "/skills/shared/" not in writable[0].message
 
         assert scan_state(FIXTURES_DIR / "deepagents_denied_skills")["findings"] == []
+
+    def test_the_shadowing_fixtures_are_the_verdict_and_its_negative_control(self) -> None:
+        """The two committed applications of issue #73, driven end to end.
+
+        They differ in one thing only -- whether the two layered sources declare
+        a Skill of one name -- so what separates them is the confirmation rather
+        than the source list, which is what this Rule was scoped to require.
+
+        The silence of the second is asserted here as well as pinned by its
+        snapshot because layering is a pattern upstream recommends: the way this
+        Rule fails is by firing on an application that took the advice.
+        """
+        from tests.behavior.projection import FIXTURES_DIR, scan_state
+
+        shadowed = scan_state(FIXTURES_DIR / "deepagents_shadowed_skills")["findings"]
+        assert [finding.rule_id for finding in shadowed] == [analyzer._SHADOW_RULE_ID]
+        assert shadowed[0].severity == "HIGH"
+        assert "ticket-triage" in shadowed[0].message
+        assert "library/skills/personal/ticket-triage/SKILL.md" in shadowed[0].message
+
+        assert scan_state(FIXTURES_DIR / "deepagents_layered_skills")["findings"] == []
 
     def test_it_contributes_no_limitation_and_moves_no_coverage(self) -> None:
         """The behavioral cost of this Ticket is one status row and nothing else."""

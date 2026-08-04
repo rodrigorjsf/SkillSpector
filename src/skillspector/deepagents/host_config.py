@@ -143,6 +143,42 @@ class OpaqueRoute:
 
 
 @dataclass(frozen=True)
+class FilesystemRoot:
+    """Where a ``FilesystemBackend`` roots the agent-visible paths it is given.
+
+    A configured Skill source path is relative to the backend root rather than to
+    the Scan root, so this is the one value that turns ``/skills/shared/`` into a
+    place this Scan can open. ADR 0008 §3 named that as the second boundary of
+    the shadowing Rule, and it is a **channel of its own** rather than a state of
+    :class:`Resolution` on ``backend``: an unreadable ``root_dir`` leaves the
+    backend perfectly well identified, and folding the two together would silence
+    the writability verdict -- which asks only *which* backend this is -- on a
+    configuration it can decide.
+
+    *root* is ``None`` only when ``root_dir=`` is written and does not resolve.
+    An **absent** ``root_dir`` is not that: it resolves to the Scan root, on the
+    stated limit below, because absent is a configuration rather than a boundary.
+
+    Known limit, stated rather than discovered: a ``root_dir`` is read as
+    relative to the Scan root. Upstream's is relative to the process working
+    directory, which is not a fact in any scanned file, and reading it as the
+    Scan root is what makes the common layout -- an application whose backend
+    roots at a directory inside its own tree -- map at all. Where the two differ,
+    the mapping finds no manifest under the path and the Rule stays silent, which
+    is the direction that under-reports rather than the one that invents a
+    collision.
+    """
+
+    root: str | None
+    line: int
+
+    @property
+    def unresolved(self) -> bool:
+        """Whether a written ``root_dir`` fell on the boundary side."""
+        return self.root is None
+
+
+@dataclass(frozen=True)
 class AgentConfiguration:
     """One ``create_deep_agent(...)`` call, read as far as this module resolves.
 
@@ -165,6 +201,14 @@ class AgentConfiguration:
     # one. Reporting it as a fifth `DA-UNRESOLVED` would describe a
     # configuration that is already being reported, in the quieter direction.
     interrupt_on: Resolution | None = None
+
+    # Where the backend roots the paths above, when it is a ``FilesystemBackend``
+    # and therefore the only one whose files a Scan can ever open. ``None`` says
+    # the Skill files are not on disk under this configuration -- a
+    # ``StoreBackend``, the default ``StateBackend``, or a backend that did not
+    # resolve at all. That is a resolved fact rather than a boundary, and ADR
+    # 0008 §3's amendment is why it raises nothing.
+    filesystem_root: FilesystemRoot | None = None
 
 
 def find_agent_configurations(tree: ast.Module) -> list[AgentConfiguration]:
@@ -205,8 +249,8 @@ def _configuration(call: ast.Call, constants: Mapping[str, ast.expr]) -> AgentCo
     )
 
     backend_argument = arguments.get(vocabulary.BACKEND)
-    backend, routes = (
-        (None, ()) if backend_argument is None else _backend(backend_argument, constants)
+    backend, routes, filesystem_root = (
+        (None, (), None) if backend_argument is None else _backend(backend_argument, constants)
     )
 
     # A route is only a boundary for a Skill path that resolved. Where the Skill
@@ -233,6 +277,7 @@ def _configuration(call: ast.Call, constants: Mapping[str, ast.expr]) -> AgentCo
         backend=backend,
         opaque_routes=covered,
         interrupt_on=interrupt_on,
+        filesystem_root=filesystem_root,
     )
 
 
@@ -380,49 +425,76 @@ def _permission_rules(
 
 def _backend(
     node: ast.expr, constants: Mapping[str, ast.expr]
-) -> tuple[Resolution, tuple[OpaqueRoute, ...]]:
-    """Which backend a ``backend=`` argument names, and which routes stay opaque.
+) -> tuple[Resolution, tuple[OpaqueRoute, ...], FilesystemRoot | None]:
+    """Which backend a ``backend=`` argument names, which routes stay opaque, and where it roots.
 
     Recognizing the backend is naming it: the four upstream backends resolve to
     their own spelling, and anything else -- a helper call, a name bound
     elsewhere -- resolves to nothing. Only a ``CompositeBackend`` is walked into,
     because it is the only one that maps paths onto other backends; a backend
     nested inside one of its routes is recognized by name and not walked again.
+
+    The third value is the root only a ``FilesystemBackend`` has. The other three
+    backends return ``None`` for it, which says their files are not on disk
+    rather than that anything failed to resolve -- see :class:`FilesystemRoot`.
+    A ``FilesystemBackend`` reached through a ``CompositeBackend`` route returns
+    ``None`` too: that is the one-level limit this module already states, and
+    reading a root out of a route without also reading which prefix it applies to
+    would map the wrong paths.
     """
     resolution = Resolution(node.lineno, None)
     call = _effective(node, constants)
     if not isinstance(call, ast.Call):
-        return resolution, ()
+        return resolution, (), None
     name = _called_name(call)
     if name not in _BACKENDS:
-        return resolution, ()
+        return resolution, (), None
+    if name == vocabulary.FILESYSTEM_BACKEND:
+        return Resolution(node.lineno, name), (), _filesystem_root(call, constants)
     if name != vocabulary.COMPOSITE_BACKEND:
-        return Resolution(node.lineno, name), ()
+        return Resolution(node.lineno, name), (), None
 
     routes = next(
         (keyword.value for keyword in call.keywords if keyword.arg == vocabulary.ROUTES), None
     )
     if routes is None:
-        return Resolution(node.lineno, name), ()
+        return Resolution(node.lineno, name), (), None
     mapping = _effective(routes, constants)
     if not isinstance(mapping, ast.Dict):
-        return resolution, ()
+        return resolution, (), None
 
     opaque: list[OpaqueRoute] = []
     for key, target in zip(mapping.keys, mapping.values, strict=True):
         # A `**other` spread inside the mapping leaves a `None` key, and what it
         # contributes is exactly what this module will not guess at.
         if key is None:
-            return resolution, ()
+            return resolution, (), None
         path = _literal(key, constants)
         if not isinstance(path, str):
-            return resolution, ()
+            return resolution, (), None
         routed = _effective(target, constants)
         if not isinstance(routed, ast.Call) or _called_name(routed) not in _BACKENDS:
-            return resolution, ()
+            return resolution, (), None
         if _called_name(routed) == vocabulary.STORE_BACKEND and _is_computed(routed, constants):
             opaque.append(OpaqueRoute(path=path, line=key.lineno))
-    return Resolution(node.lineno, name), tuple(opaque)
+    return Resolution(node.lineno, name), tuple(opaque), None
+
+
+# What an absent ``root_dir`` is read as. See :class:`FilesystemRoot` for why the
+# absence is a configuration rather than a boundary, and for the limit that makes
+# a written relative root read the same way.
+_SCAN_ROOT: Final[str] = "."
+
+
+def _filesystem_root(call: ast.Call, constants: Mapping[str, ast.expr]) -> FilesystemRoot:
+    """Where a ``FilesystemBackend(...)`` roots the paths it is given."""
+    argument = next(
+        (keyword.value for keyword in call.keywords if keyword.arg == vocabulary.ROOT_DIR), None
+    )
+    if argument is None:
+        return FilesystemRoot(root=_SCAN_ROOT, line=call.lineno)
+    value = _literal(argument, constants)
+    return FilesystemRoot(root=value if isinstance(value, str) else None, line=argument.lineno)
 
 
 def _is_computed(call: ast.Call, constants: Mapping[str, ast.expr]) -> bool:

@@ -31,9 +31,10 @@ Component it does not report.
 ``docs/adr/0008-deepagents-analyzer-resolves-one-module-deep.md`` §3 records why
 the set reaches past Python into every ``SKILL.md``.
 
-Two Rules today, and they partition every ``create_deep_agent(...)`` call
-between them: what resolved is judged, and what did not is reported as not
-having been.
+Three Rules today. Two of them partition every ``create_deep_agent(...)`` call
+between them -- what resolved is judged, and what did not is reported as not
+having been -- and the third asks a question neither of those does: not what the
+call permits, but what its Skill sources *contain*.
 
 ``DA-SKILL-WRITABLE`` (MEDIUM, LOW where a human approves the write). The verdict
 the Deep Agents work exists for: *can this agent rewrite its own instructions?*
@@ -77,8 +78,35 @@ see. It was deliberately built first, because the verdict above needs somewhere
 to fall when it cannot decide, and a fifth case joined it with that verdict: a
 permission rule written in a shape this Scan cannot read leaves the ordered walk
 undecided for every path, so the whole configuration reaches the boundary rather
-than a guess. Issues #73 and #74 add Skill-name shadowing across sources and a
-subagent defined without its own Skills.
+than a guess. A sixth arrived with the Rule below -- a ``FilesystemBackend``
+whose ``root_dir`` this Scan cannot read, so no configured Skill source path can
+be mapped onto a file. Issue #74 adds a subagent defined without its own Skills.
+
+``DA-SHADOW`` (HIGH). The supply-chain substitution that is expressible entirely
+in configuration and invisible to any single-directory Scan: *"Later sources
+override earlier ones for skills with the same name (last one wins)"*, so
+``skills=[shared, personal]`` lets a Skill in the writable personal directory
+replace a vetted one in the shared library, and no Scan of either directory alone
+can see it. It fires on a **confirmed** collision and never on the mere presence
+of two sources -- layering is a pattern upstream documents as intentional -- so
+confirming means mapping each configured path onto files this Scan can open and
+reading the ``name`` out of each source's ``SKILL.md`` frontmatter.
+:mod:`skillspector.deepagents.skill_sources` is that mapping and that reader, and
+ADR 0008 §3 is why Applicability reaches past Python to make it possible.
+
+**The Ticket's three unmappable cases are not one, and this is the record of
+it.** Issue #73 asked for a Skill path that cannot be mapped -- a store backend,
+the default state backend, or an unresolvable backend root -- to reach the
+boundary Rule above rather than silently pass. Only the third is a boundary. The
+other two are configurations this Scan read successfully and what it read is that
+the Skill files are not on disk, so reporting them would contradict the invariant
+the rest of this Analyzer states three times over -- an absent argument is a
+configuration, not a silence -- and would put a Finding on
+``create_deep_agent(model=..., skills=[...])``, the shape the tutorial teaches
+and the shape ``DA-SKILL-WRITABLE`` exists to judge. ADR 0008 §3 carries the
+amendment. What those two cases produce instead is exactly the cost §3 already
+stated: every ``SKILL.md`` opened, every one given a Work Item, and no shadowing
+verdict from any of them.
 
 **The ``not_applicable`` branch cannot be reached through the graph.** Every
 signal ``skillspector.framework`` detects Deep Agents by is a Python module or a
@@ -98,7 +126,7 @@ from __future__ import annotations
 import ast
 from collections.abc import Mapping
 
-from skillspector.deepagents import host_config, signals, writability
+from skillspector.deepagents import host_config, signals, skill_sources, writability
 from skillspector.framework import Framework
 from skillspector.inspection_ledger import (
     AnalyzerStatus,
@@ -127,6 +155,7 @@ _PHASE = "static"
 _UNRESOLVED_RULE_ID = "DA-UNRESOLVED"
 _UNRESOLVED_SEVERITY = "MEDIUM"
 _WRITABLE_RULE_ID = "DA-SKILL-WRITABLE"
+_SHADOW_RULE_ID = "DA-SHADOW"
 _TAGS = ["ASI02"]
 
 # The boundary is a fact about the shape of the source -- an argument that is
@@ -147,6 +176,16 @@ _WRITABLE_CONFIDENCE = 0.9
 # instructions to rewrite.
 _WRITABLE_SEVERITY = "MEDIUM"
 _WRITABLE_MITIGATED_SEVERITY = "LOW"
+
+# HIGH, and higher than either Rule beside it, because this one is a *measured*
+# collision rather than an absence: two manifests were opened and found to
+# declare one name, so a Skill that was reviewed is not the Skill that runs. The
+# confidence is the writability verdict's rather than the boundary's -- what the
+# Scan measured is the collision, what it infers is that the backend root names
+# the directories this Scan holds, and `host_config.FilesystemRoot` states the
+# limit that inference carries.
+_SHADOW_SEVERITY = "HIGH"
+_SHADOW_CONFIDENCE = 0.9
 
 # Four cases, four messages. A report that said the same sentence about an
 # unknown Skill list and an unknown backend would leave a reviewer to work out
@@ -169,6 +208,27 @@ _UNREADABLE_PERMISSION_RULE = (
     "A filesystem permission rule is written in a shape this Scan does not recognize, so which "
     "rule decides a Skill path -- and therefore what the agent may do to it -- was not determined."
 )
+
+_UNRESOLVED_BACKEND_ROOT = (
+    "The filesystem backend's root directory is not statically resolvable, so the agent's Skill "
+    "source paths could not be mapped onto files this Scan can open and no Skill name was read "
+    "from them."
+)
+
+
+def _shadow_message(shadowing: skill_sources.Shadowing) -> str:
+    """The ``DA-SHADOW`` message for one confirmed collision.
+
+    Names both sources and the manifest the agent ends up reading, because the
+    Finding is otherwise indistinguishable from an observation that two
+    directories exist -- and because the source the reviewer needs to look at is
+    the one that wins, not the one that was replaced.
+    """
+    return (
+        f"The Skill {shadowing.name} is declared in both the Skill source {shadowing.shadowed} and "
+        f"the later source {shadowing.shadowing}. Later sources override earlier ones for Skills "
+        f"of the same name, so the agent loads {shadowing.loaded} and the earlier one never runs."
+    )
 
 
 def _writable_message(path: str, mitigated: bool) -> str:
@@ -247,6 +307,13 @@ def _boundary_findings(path: str, configuration: host_config.AgentConfiguration)
     ``permissions`` is no rules, no ``backend`` is the default one. Each of those
     is a configuration the writability verdict judges, not a silence this one
     reports.
+
+    A ``root_dir`` this Scan cannot read is the sixth case, and it is a boundary
+    for the same reason as the other five: resolution stopped. Its two siblings
+    from the Ticket -- a store backend and the default state backend -- are not,
+    and the module docstring above records the amendment. It is raised only where
+    the Skill list itself resolved; where it did not, that is already reported and
+    saying it twice in two vocabularies would describe one silence as two.
     """
     findings = [
         _unresolved(path, resolution.line, message)
@@ -261,13 +328,17 @@ def _boundary_findings(path: str, configuration: host_config.AgentConfiguration)
         _unresolved(path, route.line, _unresolved_route_message(route.path))
         for route in configuration.opaque_routes
     )
+    skills = configuration.skill_paths
+    root = configuration.filesystem_root
+    if skills is not None and not skills.unresolved and root is not None and root.unresolved:
+        findings.append(_unresolved(path, root.line, _UNRESOLVED_BACKEND_ROOT))
     return findings
 
 
 def _configuration_findings(
-    path: str, configuration: host_config.AgentConfiguration
+    path: str, configuration: host_config.AgentConfiguration, manifests: Mapping[str, str]
 ) -> list[Finding]:
-    """Both Rules over one ``create_deep_agent(...)`` call.
+    """All three Rules over one ``create_deep_agent(...)`` call.
 
     The boundary is reported first because it is what the verdict falls back to:
     :func:`skillspector.deepagents.writability.assess` returns nothing for a
@@ -275,6 +346,12 @@ def _configuration_findings(
     so the two Rules partition the call rather than overlapping on it. A rule
     written in a shape the verdict cannot read is the same partition seen from
     the other side -- it lands on the boundary, and this is where it is spelled.
+
+    ``DA-SHADOW`` is orthogonal to both: it asks what the sources *contain*
+    rather than what the call permits, so a source can carry a shadowing verdict
+    and a writability one at once. *manifests* is the ``SKILL.md`` half of the
+    same Applicability result the ledger rows are built from, so the collision is
+    confirmed out of files this Analyzer has already said it opened.
     """
     findings = _boundary_findings(path, configuration)
     assessment = writability.assess(configuration)
@@ -293,10 +370,23 @@ def _configuration_findings(
         )
         for writable in assessment.writable
     )
+    findings.extend(
+        _finding(
+            _SHADOW_RULE_ID,
+            _SHADOW_SEVERITY,
+            _SHADOW_CONFIDENCE,
+            path,
+            shadowing.line,
+            _shadow_message(shadowing),
+        )
+        for shadowing in skill_sources.find_shadowing(configuration, manifests)
+    )
     return findings
 
 
-def _open(path: str, source: str) -> tuple[InspectionLedgerEvent, list[Finding]]:
+def _open(
+    path: str, source: str, manifests: Mapping[str, str]
+) -> tuple[InspectionLedgerEvent, list[Finding]]:
     """Open one applicable Component and record what came of it.
 
     A Python module is parsed, because that is what every Rule this Analyzer
@@ -307,8 +397,12 @@ def _open(path: str, source: str) -> tuple[InspectionLedgerEvent, list[Finding]]
     unparseable Python file rather than one per Analyzer.
 
     Anything else applicable is a requirement file or a Skill manifest. Neither
-    has a Rule reading it yet, so opening it is listing it; ADR 0008 §3 states
-    that cost rather than leaving it to be discovered in a snapshot.
+    carries a Finding of its own. A manifest is nonetheless *read* -- by
+    ``DA-SHADOW``, through *manifests*, whose Findings land on the module that
+    configured the sources rather than on the manifest -- so the row a manifest
+    gets is a row for a file that was genuinely used. Where no configured path
+    maps onto it, opening it is listing it, and ADR 0008 §3 states that cost
+    rather than leaving it to be discovered in a snapshot.
 
     *source* is never ``None``: everything applicable came out of ``file_cache``
     and therefore was readable. Which kind of Component it is is asked of the
@@ -332,7 +426,7 @@ def _open(path: str, source: str) -> tuple[InspectionLedgerEvent, list[Finding]]
         findings = [
             finding
             for configuration in host_config.find_agent_configurations(tree)
-            for finding in _configuration_findings(path, configuration)
+            for finding in _configuration_findings(path, configuration, manifests)
         ]
     else:
         findings = []
@@ -376,7 +470,13 @@ def node(state: SkillspectorState) -> AnalyzerNodeResponse:
     # Iterated over the same result the gate tested, never recomputed from
     # `file_cache`: two definitions of "applicable" a few lines apart are what
     # ADR 0006 exists to prevent recurring.
-    opened = [_open(path, source) for path, source in sorted(applicable.items())]
+    # Narrowed from the same result, never recomputed from `file_cache`, for the
+    # reason below: `DA-SHADOW` must confirm a collision out of exactly the
+    # manifests the ledger says this Analyzer opened.
+    manifests = {
+        path: source for path, source in applicable.items() if signals.is_skill_manifest(path)
+    }
+    opened = [_open(path, source, manifests) for path, source in sorted(applicable.items())]
     events = [event for event, _findings in opened]
     findings = [finding for _event, file_findings in opened for finding in file_findings]
 

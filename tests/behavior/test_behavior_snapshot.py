@@ -163,8 +163,8 @@ def test_the_corpus_matches_the_measured_target_count() -> None:
     The literal lives here and nowhere else in the tests: growing the corpus
     means changing this one number, deliberately, alongside the new snapshot.
     """
-    assert len(proj.CORPUS_NAMES) == 31
-    assert len(set(proj.CORPUS_NAMES)) == 31
+    assert len(proj.CORPUS_NAMES) == 33
+    assert len(set(proj.CORPUS_NAMES)) == 33
 
 
 def test_every_family_parent_is_excluded_and_is_really_a_container() -> None:

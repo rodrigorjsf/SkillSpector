@@ -1,0 +1,28 @@
+# The negative case of `DA-SHADOW`, and the reason it is in the corpus at all.
+# Layering a per-user Skill directory over a shared library is a pattern the
+# upstream documentation recommends, so a Rule that read the source *list* alone
+# would report every application that follows the advice. This one follows it,
+# with each source providing the Skills the other does not, and its snapshot pins
+# the silence.
+#
+# Everything the confirmation needs is present -- a filesystem backend rooted in
+# this tree, a manifest under each mapped source directory -- so what is being
+# pinned is a verdict that was reached, rather than one that was never asked for.
+# Its sibling `deepagents_shadowed_skills/` is the same arrangement with the
+# Skill names brought together, and the pair is what separates the two.
+#
+# Its prose is deliberately plain, here and in every file below. Fixture text is
+# scanned like any other Component, and an earlier LangChain4j fixture raised
+# Findings against itself purely for describing its own configuration in the
+# words upstream uses.
+
+[project]
+name = "desk-agent"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "deepagents>=0.6.8",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
