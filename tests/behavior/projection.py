@@ -313,6 +313,17 @@ FIXTURES_DIR = _BEHAVIOR_DIR.parent / "fixtures"
 # on configuration that is already right, and without a pinned-silent fixture
 # that failure would land in a report rather than in this gate.
 #
+# ``deepagents_shadowed_skills`` and ``deepagents_layered_skills`` (#73) are the
+# shadowing verdict's pair, and the first fixtures in the corpus whose verdict is
+# decided by two Components read together rather than by one. Both layer a
+# per-user Skill directory over a shared library under a resolvable filesystem
+# backend root, which is what lets the configured source paths be mapped onto
+# manifests at all; they differ only in whether the two sources declare a Skill
+# of one name. The second pins **silence**, for the reason the pair above does:
+# layering is a pattern upstream recommends, so a Rule that read the source list
+# without confirming the names would fire on every application that follows the
+# advice.
+#
 # ``langchain4j_shell_skill`` (#28) is the first fixture a Framework Analyzer
 # actually reads: a LangChain4j application whose Skill sits at
 # ``src/main/resources/skills/`` and whose host code wires shell mode. Its root
@@ -325,8 +336,10 @@ FIXTURES_DIR = _BEHAVIOR_DIR.parent / "fixtures"
 CORPUS_NAMES: tuple[str, ...] = (
     "deepagents_denied_skills",
     "deepagents_detection",
+    "deepagents_layered_skills",
     "deepagents_personal_skills",
     "deepagents_runtime_skills",
+    "deepagents_shadowed_skills",
     "langchain4j_detection",
     "langchain4j_shell_skill",
     "langchain4j_tool_mode",

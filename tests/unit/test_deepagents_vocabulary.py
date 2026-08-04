@@ -101,6 +101,7 @@ _EXPECTED_SPELLINGS = {
     "StateBackend",
     "FilesystemBackend",
     "routes",
+    "root_dir",
     "operations",
     "paths",
     "deny",
@@ -255,6 +256,7 @@ class TestHomonyms:
         assert {
             _SRC / "deepagents" / "host_config.py",
             _SRC / "deepagents" / "signals.py",
+            _SRC / "deepagents" / "skill_sources.py",
             _SRC / "deepagents" / "writability.py",
             _SRC / "deepagents" / "__init__.py",
             _ANALYZER,

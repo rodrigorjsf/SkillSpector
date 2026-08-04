@@ -131,6 +131,25 @@ the Scan root (`:80-81`). Mapping `/skills/` to a directory on disk requires a r
 `FilesystemBackend(root_dir=...)`; under `StoreBackend` or the default `StateBackend` the files are
 not on disk at all and no Scan will ever see them. Those fall to the boundary of §1.
 
+**Amendment, from implementing #73: only one of those three is a boundary.** The sentence above, and
+the Ticket written from it, treated "cannot be mapped" as one case. It is three, and they are not
+alike. A `FilesystemBackend(root_dir=for_tenant(...))` is resolution stopping, which is §1 exactly,
+and it reports `DA-UNRESOLVED`. A `StoreBackend`, and the default `StateBackend` written or omitted,
+are not: nothing failed to resolve there, and what the Scan read is that the Skill files live in
+agent state. Reporting them would contradict the invariant this Analyzer states in three separate
+docstrings — *an argument that is absent is a configuration, not a boundary* — and would put a
+`DA-UNRESOLVED` on `create_deep_agent(model=..., skills=[...])`, which is both the shape the upstream
+tutorial teaches and the shape `DA-SKILL-WRITABLE` exists to judge. That is the false-positive load
+§2 rejected, arriving through a different door. A third case the Ticket did not enumerate resolves
+the same way: a well-formed mapping that lands on no manifest in this Scan confirms no collision, and
+an unconfirmed collision is not one.
+
+There is a mechanical consequence worth recording, because getting it wrong is silent. The
+filesystem root is a **channel of its own** on the resolved configuration rather than a state of the
+`backend` argument's resolution. `writability.assess` returns nothing whenever `backend` is
+unresolved, so folding an unreadable `root_dir` into that one value would silence `DA-SKILL-WRITABLE`
+on a configuration whose backend it identified perfectly well.
+
 **State the cost rather than let a reader discover it in a snapshot.** On a Scan where the mapping
 fails for *every* path — the default `StateBackend` being the likeliest case — the Analyzer has
 opened every `SKILL.md` in the tree, given each one a Work Item, and produced no shadowing verdict

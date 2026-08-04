@@ -148,6 +148,7 @@ DEFAULT_EXPLANATIONS: dict[str, str] = {
     "L4J-WORKDIR": "A shell-command tool configuration omits its working directory, so commands run wherever the JVM happened to start -- usually the application root, where source, configuration and credentials sit.",
     # Deep Agents Framework
     "DA-SKILL-WRITABLE": "A Deep Agents agent is given a Skill source path that nothing stops it writing to. Upstream states the default in as many words -- agents can write to skill files if the backend permits it and no permission rule blocks the path -- so an application that adds no denying rule has handed the agent the instructions it runs on. The agent can then rewrite its own Skill, and every later run reads the rewritten one.",
+    "DA-SHADOW": "Two Skill sources one Deep Agents application passes to skills=[...] both declare a Skill of the same name. Later sources override earlier ones -- last one wins -- so the Skill the agent loads is the one in the later source and the earlier one never runs. Where the later source is writable, or is where a per-user directory lives, that is a supply-chain substitution expressed entirely in configuration: nothing in either Skill directory read on its own shows it, and a reviewer who vetted the shared library vetted a Skill the agent does not use.",
     "DA-UNRESOLVED": "A Deep Agents host configuration carries something that is not statically resolvable -- the Skill source list, the backend, the permission rules, or the store a resolved Skill path is routed to. Resolution stops at the module boundary by design, so what the agent was given, or what it may do to it, exists in no scanned file. This is reported rather than skipped: silence here would let the report read as clean on the one surface never inspected.",
 }
 
@@ -235,6 +236,7 @@ RULE_ID_TO_CATEGORY: dict[str, str] = {
     "L4J-WORKDIR": PatternCategory.LANGCHAIN4J_FRAMEWORK.value,
     # Deep Agents Framework
     "DA-SKILL-WRITABLE": PatternCategory.DEEPAGENTS_FRAMEWORK.value,
+    "DA-SHADOW": PatternCategory.DEEPAGENTS_FRAMEWORK.value,
     "DA-UNRESOLVED": PatternCategory.DEEPAGENTS_FRAMEWORK.value,
 }
 
@@ -322,6 +324,7 @@ PATTERN_NAMES: dict[str, str] = {
     "L4J-WORKDIR": "Unset Shell Working Directory",
     # Deep Agents Framework
     "DA-SKILL-WRITABLE": "Writable Skill Source",
+    "DA-SHADOW": "Shadowed Skill Source",
     "DA-UNRESOLVED": "Unresolvable Host Configuration",
 }
 
@@ -428,6 +431,7 @@ DEFAULT_REMEDIATIONS: dict[str, str] = {
     "L4J-WORKDIR": "Set RunShellCommandToolConfig.workingDirectory to a directory scoped to the task, so commands cannot reach the application root by default.",
     # Deep Agents Framework
     "DA-SKILL-WRITABLE": 'Add a FilesystemPermission with operations=["write"], mode="deny" and a paths pattern covering this Skill source, placing any more specific rule before it. Where the agent is meant to refine its own Skills, keep the writable source separate from the shared library and require approval for the writes with mode="interrupt" or interrupt_on.',
+    "DA-SHADOW": "Give the two Skills distinct names, or drop the duplicate from the source that is not meant to provide it. Where the override is deliberate, order skills=[...] so the source that is meant to win is written last and say so beside the call -- the list order is the only thing that decides it. Where it is not, keep a per-user or otherwise writable Skill source out of the same name space as the curated library.",
     "DA-UNRESOLVED": "Name the value in the same module the agent is built in -- a literal list of Skill paths, a module-level constant, a backend constructed there rather than returned by a helper -- so the scanner reads the configuration the agent runs with. Where it genuinely has to be assembled per request, review that code path separately; no static scan can follow it.",
 }
 

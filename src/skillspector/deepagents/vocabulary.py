@@ -127,6 +127,17 @@ FILESYSTEM_BACKEND: Final[str] = "FilesystemBackend"
 # Skill path without resolving what the path is routed to.
 ROUTES: Final[str] = "routes"
 
+# The directory a `FilesystemBackend` roots its agent-visible paths at. It is the
+# only argument that turns a configured Skill source path into a place a Scan can
+# open, so `DA-SHADOW` cannot confirm a name collision without it.
+#
+# The manifest field that Rule compares across sources is deliberately *not*
+# inventoried beside it. Upstream overrides *"skills with the same name"*, but
+# ``name`` is an Agent Skills manifest field rather than a Deep Agents spelling:
+# it moves on the specification's clock, exactly as ``SKILL.md`` itself does in
+# :mod:`skillspector.deepagents.signals`.
+ROOT_DIR: Final[str] = "root_dir"
+
 # -- Homonyms: owned here, exempt from the sweep ------------------------------ #
 #
 # All four are ordinary English words this repository already writes inline for

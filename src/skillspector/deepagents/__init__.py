@@ -29,9 +29,10 @@ folding the spellings into :mod:`skillspector.framework` would make detection an
 the Rules share one inventory, so a single upstream rename would move both at
 once.
 
-Four modules today, and the last two are deliberately a pair: one resolves, the
-other judges. Keeping the judgement out of the resolver is what lets the resolver
-refuse to guess without also having to decide what a refusal means.
+Five modules today, and the resolver is deliberately alone on its side of the
+line: the two judging modules read what it produced and it decides nothing about
+what a refusal means. Keeping the judgement out of the resolver is what lets it
+refuse to guess in one place.
 
 * :mod:`skillspector.deepagents.vocabulary` is every upstream spelling this
   package matches on, and nothing else. Parser-free.
@@ -47,6 +48,12 @@ refuse to guess without also having to decide what a refusal means.
   semantics upstream. It judges nothing wherever the resolver reported a
   boundary, so
   the two Rules partition a call rather than overlapping on it.
+* :mod:`skillspector.deepagents.skill_sources` maps each configured Skill source
+  path onto the Components of this Scan -- through the backend root, because that
+  is what the paths are relative to -- and confirms a name collision across two
+  of them by reading the manifests it mapped to. It is the only module here that
+  reasons across sources, and the only one that reads something other than
+  Python.
 
 The Analyzer reaches for ``ast`` from the standard library, so unlike the
 LangChain4j package there is no import ordering to preserve here: nothing this
