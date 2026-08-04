@@ -146,6 +146,11 @@ def assess(configuration: AgentConfiguration) -> Assessment:
     # A path routed into a store whose contents are computed per request is
     # already reported as `DA-UNRESOLVED`, and this is where that boundary is
     # honoured rather than talked about: it reaches no verdict.
+    #
+    # Matched by prefix rather than by `_covers`, and the asymmetry is upstream's
+    # rather than an oversight to unify away: a `routes` key is a path *prefix*
+    # (`host_config._covers_any` reads it the same way), while a permission
+    # rule's `paths` is a glob. One relation each.
     opaque = {route.path for route in configuration.opaque_routes}
     gated = _interrupts_every_write(configuration)
 
