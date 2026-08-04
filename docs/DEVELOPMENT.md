@@ -154,6 +154,7 @@ There are no conditional edges: after `resolve_input` → `build_context`, all a
 | `suppression.py` | Baseline / false-positive suppression: `Baseline`, `SuppressionRule`, `load_baseline`, `partition_findings`, `finding_fingerprint`, `build_baseline_dict`; exact v2 fingerprints require the scanner version and source `file_cache` (see [SUPPRESSION.md](SUPPRESSION.md)) |
 | `__init__.py` | Package version (from pyproject.toml via `importlib.metadata`) |
 | `sarif_models.py` | SARIF 2.1.0 Pydantic models and `validate_sarif_report()` |
+| `mcp_registry.py` | Registry Scan: acquires an MCP Registry payload (local file, the official registry URL, or a server name looked up in it), normalizes each record into a `RegistryServerSnapshot`, and applies the five `MCP-*` posture checks. Reached only via `--mcp-registry`, and entirely outside the graph — no node, no analyzer, no `Finding` |
 | `repository_scan.py` | Repository Scan discovery: finds every skill in a repository under conventional roots, matched as a path suffix at any depth. Reached only via `--repo-scan`; skips JVM build directories, which the ordinary walk must keep reading |
 | **nodes/** | |
 | `build_context.py` | Build-context node |
@@ -212,6 +213,50 @@ skillspector --version
 ```
 
 The CLI passes `input_path` to the graph. The **resolve_input** node (using [input_handler.py](../src/skillspector/input_handler.py)) resolves Git URL, file URL, .zip, single .md file, or directory to a local directory and sets `skill_path` (and `temp_dir_for_cleanup` when a temp dir was created). The CLI cleans up `temp_dir_for_cleanup` after invoke. Exit code 1 if risk_score > 50; exit code 2 on error. See [Integrating SkillSpector](../README.md#integrating-skillspector) for the full exit-code and JSON contract.
+
+### Registry Scan (`--mcp-registry`)
+
+`--mcp-registry` is handled in `cli.py` **before** anything else in `scan` runs, and returns without
+ever reaching the graph. No node executes, no analyzer is registered for it, and nothing it produces
+is a `Finding`, a `Recommendation` or an Inspection Ledger entry — the mode has its own dict-shaped
+report and its own `RegistryFinding` TypedDict. Treat it as a sibling command that happens to share a
+flag namespace, not as a scan variant. The user-facing contract — input shapes, the five checks, the
+rejected and the silently ignored flags, and the output keys — is in
+[Scanning the MCP Registry](../README.md#scanning-the-mcp-registry).
+
+The pipeline is three steps in [mcp_registry.py](../src/skillspector/mcp_registry.py):
+
+| Step | Function | What it owns |
+|------|----------|--------------|
+| Acquire | `_load_payload` | Decides which of the three input shapes was given, and fetches when needed |
+| Normalize | `normalize_payload` → `normalize_server` | Turns each raw record into a frozen `RegistryServerSnapshot`, plus a `record_hash` |
+| Assess | `posture_findings` | Applies the `MCP-*` posture checks to one snapshot |
+
+`scan_registry` composes them and aggregates the risk score.
+
+**Acquisition is deliberately not `InputHandler`'s.** `input_handler.py` resolves arbitrary user
+input and therefore needs the `ALLOWED_DOWNLOAD_HOSTS` allowlist; `_load_payload` never calls it, so
+that allowlist has no bearing on this mode. Its own rule is stricter than an allowlist — the exact
+`REGISTRY_URL` or nothing — and the README section above states it in full for users. What matters
+here is that the rule lives *inside* this module: there is no shared gate upstream of it to inherit
+one from, so a new remote source added here needs its own host check, its own timeout, and its own
+`follow_redirects` decision. Pagination follows `metadata.nextCursor` and raises on a repeated
+cursor, so a registry that loops cannot hang the scan.
+
+**Normalization never fails on a field's *value*.** `_optional_string` records a non-string where a
+string was expected as `None`, so a posture check reports `unavailable` instead of the scan dying.
+What does raise `ValueError` — which `cli.py` turns into exit code 2 — is a structurally invalid
+payload: a non-object, a missing `servers` list, an entry whose `server` is not an object, a
+nameless server, a non-object `repository`, or a `packages`/`remotes` entry that is not a list of
+objects. Keep that split when adding a field: shape errors raise, value surprises degrade.
+
+Its unit tests are [tests/unit/test_mcp_registry.py](../tests/unit/test_mcp_registry.py), over the
+payloads in `tests/fixtures/mcp_registry/`. The fixture directory is unrelated to the corpus fixtures
+referenced in [MULTI_FRAMEWORK_SKILL_ANALYSIS.md](MULTI_FRAMEWORK_SKILL_ANALYSIS.md).
+
+```bash
+skillspector scan tests/fixtures/mcp_registry/mcp_registry.json --mcp-registry --format json
+```
 
 ### Programmatic
 

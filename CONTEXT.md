@@ -39,6 +39,21 @@ A single pass over an entire repository that finds every Skill within it and Sca
 to a Scan of one already-identified Skill directory.
 _Avoid_: repo scan, recursive scan, project scan, full scan
 
+**Registry Scan**:
+A pass over MCP Registry records — the metadata a server owner published about an MCP server — as
+opposed to a Scan, which reads a Skill's own Components. It assesses what the owner asserted, so it
+opens no Component and emits no Recommendation; it shares only the 0–100 shape of the Risk Score.
+What it applies is a Posture Check, not a Rule, and what a Posture Check emits is not a Finding —
+neither is bound to a Component, so neither carries a Finding's identity.
+_Avoid_: registry check, server scan, registry audit
+
+**Posture Check**:
+One named check a Registry Scan applies to what a published record asserts. Deliberately not a
+Rule: it reads an assertion rather than a Component. Where it is applied and the field it needs is
+absent, it says so rather than passing silently — but that is a property of the individual Posture
+Check, not of all of them, and each states its own scope.
+_Avoid_: registry rule, posture rule
+
 ### Detection
 
 **Analyzer**:

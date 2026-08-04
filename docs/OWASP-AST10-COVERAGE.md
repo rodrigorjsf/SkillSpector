@@ -61,6 +61,16 @@ Coverage labels are intentionally conservative:
   keeps it visible. Its findings do still carry the `ASI02` tag, because that tag is set once for
   every rule the Deep Agents analyzer emits and is not derived from this matrix; the two are
   independent taxonomies and this page maps only its own.
+- The five `MCP-*` posture checks of a Registry Scan — `MCP-PACKAGE-VERSION`, `MCP-PACKAGE-SHA256`,
+  `MCP-PLAIN-HTTP`, `MCP-OFFICIAL-STATUS` and `MCP-REPOSITORY`, reached only through
+  `skillspector scan --mcp-registry` — map to no category above, and that is a scope decision rather
+  than an omission. This matrix crosswalks the rule catalog that assesses a **Skill**; those checks
+  assess a record an MCP server owner published to the MCP Registry, and never read a skill, a
+  component or a line of the server's code. Several of them would look at home under AST02 or AST07
+  on subject matter alone, and claiming them there would overstate what the tool proves about any
+  scanned skill. They are documented in
+  [README § Scanning the MCP Registry](../README.md#scanning-the-mcp-registry);
+  recording the absence here is what keeps the boundary visible.
 - AST10 remains partial because cross-platform translation can drop or reinterpret security metadata in ways that require source-to-target manifest comparison, not only single-manifest analysis.
 
 ## What stays out of scope here
