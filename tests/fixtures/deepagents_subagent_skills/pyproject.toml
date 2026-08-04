@@ -1,0 +1,25 @@
+# The two custom subagents `DA-SUBAGENT-SKILLS` separates: one that is given
+# Skill sources of its own and one that is not. Upstream states that a custom
+# subagent is not handed the main agent's Skill sources, so the difference
+# between these two definitions is the difference between a subagent that can
+# follow the triage procedure and one that cannot.
+#
+# The main agent's own Skill source is covered by a denying rule here, so this
+# application carries exactly one verdict and it is the subagent one. Nothing in
+# it is shadowed either: one source, one Skill.
+#
+# Its prose is deliberately plain, here and in every file below. Fixture text is
+# scanned like any other Component, and an earlier LangChain4j fixture raised
+# Findings against itself purely for describing its own configuration in the
+# words upstream uses.
+
+[project]
+name = "support-agent"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "deepagents>=0.6.8",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

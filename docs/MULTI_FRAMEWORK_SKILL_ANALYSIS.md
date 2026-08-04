@@ -5,8 +5,11 @@ and phases 1 and 4–7 of [§5](#5-phasing) have shipped: `detect_framework` and
 key (issue #21), then the LangChain4j-in-CI increment (issue #23) — the gated
 `framework_langchain4j` Analyzer carrying all five L4J rules of
 [§3.6](#36-java-parsing-and-definition-path-coverage), and the Repository Scan of
-[§3.7](#37-repository-level-discovery-cicd) behind `--repo-scan`. **Phases 2, 3 and 8 remain design
-proposal** — Deep Agents, spec conformance, and the deferred behavior-affecting changes.
+[§3.7](#37-repository-level-discovery-cicd) behind `--repo-scan`, and phase 2 — the gated
+`framework_deepagents` Analyzer carrying all four of the Deep Agents rules of
+[§2.3](#23-deep-agents-python-host) (issues #70–#74), with only the vocabulary
+stability measurement (#75) outstanding. **Phases 3 and 8 remain design proposal** — spec
+conformance and the deferred behavior-affecting changes.
 [§9](#9-recommended-next-step) carries the live status; each phase row in §5 names the Ticket that
 landed it.
 **Goal:** extend SkillSpector to evaluate skills hosted by **LangChain4j** (Java) and
@@ -187,10 +190,11 @@ Four new nodes, appended to `ANALYZER_NODE_IDS` after `semantic_quality_policy` 
 ordering is preserved.
 
 Two of them now exist. `framework_langchain4j` ships all five of its Rules (#28, #30, #31).
-`framework_deepagents` is wired and reports its status (#70) and carries two of its Rules:
-`DA-UNRESOLVED` (#71), the resolution boundary, which the row below does not propose at all, and
+`framework_deepagents` is wired and reports its status (#70) and carries all four of its Rules:
+`DA-UNRESOLVED` (#71), the resolution boundary, which the row below does not propose at all,
 `DA-SKILL-WRITABLE` (#72), the writability verdict, which is the row's first three collapsed into
-one. The rest are issues #73–#74, and the shape they take is
+one, `DA-SHADOW` (#73), the cross-source collision, and `DA-SUBAGENT-SKILLS` (#74), the subagent
+defined without Skills of its own. The shape they take is
 [ADR 0008](adr/0008-deepagents-analyzer-resolves-one-module-deep.md)'s rather than this row's — it
 collapsed the first three into one composed verdict per Skill source path, and added the boundary
 that #71 shipped. Read the row as the original proposal, not as what is running.
@@ -503,20 +507,21 @@ and **is delivered**: the gate lives in [`tests/behavior/`](../tests/behavior/),
   those two would catch none of them. Measurement confirmed the breadth is affordable: the
   specified projection is 323–859 lines per fixture and 11 079 across the original 24, well inside
   what a reviewer reads.
-- **Corpus: 33 leaf directories.** Every fixture directory bearing a root `SKILL.md` (23), plus
+- **Corpus: 34 leaf directories.** Every fixture directory bearing a root `SKILL.md` (23), plus
   `tests/fixtures/mcp_registry`, which bears none and scans as an anonymous Skill, plus the two
   `*_detection` fixtures phase 1 added, which bear none either and carry one Framework signal each,
   plus the two LangChain4j applications the `framework_langchain4j` Analyzer reads —
   `langchain4j_shell_skill` in shell mode, and `langchain4j_tool_mode`, which declares only
   `dev.langchain4j:langchain4j-skills` and proves the Rules that are not about shell mode fire
-  without the shell artifact anywhere in its tree — plus the five Deep Agents applications
+  without the shell artifact anywhere in its tree — plus the six Deep Agents applications
   `framework_deepagents` reads: `deepagents_runtime_skills`, whose agent picks its Skill sources
   per request and therefore exercises the resolution boundary, `deepagents_personal_skills`, which
   leaves one of two Skill sources open and carries the per-path writability verdict,
   `deepagents_denied_skills`, the negative control whose silence is pinned, and the shadowing pair
   `deepagents_shadowed_skills` and `deepagents_layered_skills`, which layer a per-user Skill
   directory over a shared library under a resolvable filesystem backend root and differ only in
-  whether the two sources declare a Skill of one name. The three
+  whether the two sources declare a Skill of one name, and `deepagents_subagent_skills`, whose two
+  custom subagent definitions differ only in whether one names Skill sources of its own. The three
   family parents — `sdi/`, `sqp/`, `ssd/` — are fixture-layout containers, not Skills, and are
   not scan targets.
 - **Blocking, inside `make test-unit`**, with a `make update-snapshots` to regenerate. The
@@ -556,7 +561,7 @@ Ordered by value-to-risk. Each phase is independently shippable and independentl
 |-------|---------|----------------------|
 | **0** | This document + [`docs/references/`](references/README.md) | Yes — docs only |
 | **1** | ~~`detect_framework` + `framework` state key~~ **Done** (#21) — no analyzer read it at the time; `framework_langchain4j` does now. Unit tests assert correct detection on new fixtures and `"agent_skills"` on every existing fixture | Yes |
-| **2** | `framework_deepagents` analyzer, gated. Cheapest — reuses Python AST. **Started** (#58): the analyzer is wired and reports its status (#70), `DA-UNRESOLVED` ships its resolution boundary (#71), `DA-SKILL-WRITABLE` the writability verdict (#72) and `DA-SHADOW` the cross-source collision (#73); the remaining rule is #74, and the vocabulary stability measurement is #75 | Yes, via gate |
+| **2** | `framework_deepagents` analyzer, gated. Cheapest — reuses Python AST. **Started** (#58): the analyzer is wired and reports its status (#70), `DA-UNRESOLVED` ships its resolution boundary (#71), `DA-SKILL-WRITABLE` the writability verdict (#72) `DA-SHADOW` the cross-source collision (#73) and `DA-SUBAGENT-SKILLS` the subagent defined without Skills of its own (#74); what remains is the vocabulary stability measurement, #75 | Yes, via gate |
 | **3** | `structure_agent_skills_spec` behind `--spec-checks` (default `off`), plus the advisory-section rendering in [§3.5](#35-spec-conformance-rules-and-scoring) | Yes, via opt-in |
 | **4** | ~~**Dependency decision:** accept `tree-sitter` + `tree-sitter-java`~~ **Done** (#23) — accepted in [ADR 0001](adr/0001-tree-sitter-for-java-parsing.md), both ship `cp39-abi3` wheels | N/A |
 | **5** | ~~LangChain4j fixture~~ **Done** (#28, extended by #30 and #31) — `tests/fixtures/langchain4j_shell_skill/` | Yes — test data only |
@@ -663,8 +668,8 @@ record of what was open.
 
 ## 9. Recommended next step
 
-**Continue phase 2 — the last Rule of the `framework_deepagents` analyzer.** The analyzer is
-wired and gated (#70) and carries three Rules. `DA-UNRESOLVED` (#71) resolves a literal and a
+**Finish phase 2 — the vocabulary stability measurement.** The analyzer is
+wired and gated (#70) and carries all four of its Rules. `DA-UNRESOLVED` (#71) resolves a literal and a
 same-module constant and reports every place a host configuration stopped resolving —
 `src/skillspector/deepagents/host_config.py`, the boundary [ADR 0008 §1](adr/0008-deepagents-analyzer-resolves-one-module-deep.md)
 copied from the Java track. `DA-SKILL-WRITABLE` (#72) is the verdict the work exists for — one
@@ -674,7 +679,12 @@ were written**, because upstream's own advice to place specific rules before bro
 something under first-match-wins. `DA-SHADOW` (#73) is the only Rule here that reasons across
 Components: it maps each configured Skill source path onto the files of the Scan through the backend
 root and confirms a duplicate Skill `name` across two of them, in
-`src/skillspector/deepagents/skill_sources.py`. What remains is #74, subagent Skill inheritance, and
+`src/skillspector/deepagents/skill_sources.py`. `DA-SUBAGENT-SKILLS` (#74) is the one whose claim is
+correctness rather than security: upstream states that a custom subagent does not inherit the main
+agent's Skills, so a definition inside `subagents=[...]` written without its own `skills` runs
+without them and nothing at runtime says so. It reads a definition's keys and never its values, and
+the general-purpose subagent is excluded structurally rather than by name — nothing declares it, so
+there is nothing to exclude. What remains is
 #75, the vocabulary stability measurement. Spec conformance (phase 3) follows.
 
 The boundary went first on purpose: the writability verdict of #72 needed somewhere to fall when it
@@ -743,7 +753,7 @@ Framework fails the gate on the key's appearance.
 The recommendation before that was to make the behavior gate executable before any analyzer
 work, because until it existed every phase in [§5](#5-phasing) carried an acceptance criterion
 nobody could demonstrate. **That is done.** Issue #4, sliced into #5–#9, landed the committed
-snapshot corpus in [`tests/behavior/`](../tests/behavior/): 33 fixtures, blocking in
+snapshot corpus in [`tests/behavior/`](../tests/behavior/): 34 fixtures, blocking in
 `make test-unit`, verified in CI, demonstrated red on a real behavior change, with its blind
 spots stated in [`COVERAGE_LIMITS.md`](../tests/behavior/COVERAGE_LIMITS.md). Every phase below
 can now be claimed behavior-preserving against evidence rather than against a promise: the

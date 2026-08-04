@@ -31,10 +31,11 @@ Component it does not report.
 ``docs/adr/0008-deepagents-analyzer-resolves-one-module-deep.md`` §3 records why
 the set reaches past Python into every ``SKILL.md``.
 
-Three Rules today. Two of them partition every ``create_deep_agent(...)`` call
-between them -- what resolved is judged, and what did not is reported as not
-having been -- and the third asks a question neither of those does: not what the
-call permits, but what its Skill sources *contain*.
+Four Rules. Two of them partition every ``create_deep_agent(...)`` call between
+them -- what resolved is judged, and what did not is reported as not having been
+-- and the other two ask questions neither of those does: not what the call
+permits, but what its Skill sources *contain*, and which of the subagents it
+defines were given Skills at all.
 
 ``DA-SKILL-WRITABLE`` (MEDIUM, LOW where a human approves the write). The verdict
 the Deep Agents work exists for: *can this agent rewrite its own instructions?*
@@ -80,7 +81,8 @@ permission rule written in a shape this Scan cannot read leaves the ordered walk
 undecided for every path, so the whole configuration reaches the boundary rather
 than a guess. A sixth arrived with the Rule below -- a ``FilesystemBackend``
 whose ``root_dir`` this Scan cannot read, so no configured Skill source path can
-be mapped onto a file. Issue #74 adds a subagent defined without its own Skills.
+be mapped onto a file. A seventh arrived with the last Rule below: a subagent
+list, or one definition inside it, written in a shape this Scan cannot read.
 
 ``DA-SHADOW`` (HIGH). The supply-chain substitution that is expressible entirely
 in configuration and invisible to any single-directory Scan: *"Later sources
@@ -108,6 +110,34 @@ amendment. What those two cases produce instead is exactly the cost §3 already
 stated: every ``SKILL.md`` opened, every one given a Work Item, and no shadowing
 verdict from any of them.
 
+``DA-SUBAGENT-SKILLS`` (LOW). The one Rule here whose claim is correctness rather
+than security, and upstream says so itself: *"Custom subagents do not inherit the
+main agent's skills. Each subagent definition needs its own skills parameter."*
+An application that defines one without is not exposed to anything; it is running
+a subagent that cannot do what its author believes it can, and nothing at runtime
+says so. It reads no path, opens no second file and needs no mapping -- the
+definitions are in the same call as everything above -- which is why ADR 0008
+recorded it as the one "cross-source" Rule that crosses nothing, and
+:mod:`skillspector.deepagents.subagents` is the verdict.
+
+**The Ticket's general-purpose exclusion needs no code, and this is the record of
+it.** Issue #74 asked for the general-purpose subagent to be excluded from this
+Finding. It is excluded structurally: upstream describes it as built in and
+inheriting automatically, so no ``subagents=[...]`` element declares it and there
+is nothing for this Rule to reach. Writing a name check instead would mean
+matching an identifier the captured reference never spells -- the failure
+``docs/adr/0005-langchain4j-upstream-vocabulary.md`` exists to prevent -- and
+pinning it with a test that would pass whether or not the check were there.
+
+**What the Rule therefore does not say is *which* subagent.** The captured page
+documents ``subagents`` in prose and shows no example of a definition, so the key
+a subagent is named by is a spelling this project would be asserting rather than
+capturing. A Finding names its file and the line the definition opens on.
+:class:`skillspector.deepagents.host_config.SubagentDefinition` reads keys and
+never values for a second reason of the same kind: a realistic definition binds
+tools to objects no Scan can evaluate, and requiring the whole mapping to resolve
+would send every one of them to the boundary and leave this Rule unable to fire.
+
 **The ``not_applicable`` branch cannot be reached through the graph.** Every
 signal ``skillspector.framework`` detects Deep Agents by is a Python module or a
 Python requirement file, and both are exactly what this Analyzer opens.
@@ -126,7 +156,7 @@ from __future__ import annotations
 import ast
 from collections.abc import Mapping
 
-from skillspector.deepagents import host_config, signals, skill_sources, writability
+from skillspector.deepagents import host_config, signals, skill_sources, subagents, writability
 from skillspector.framework import Framework
 from skillspector.inspection_ledger import (
     AnalyzerStatus,
@@ -156,6 +186,7 @@ _UNRESOLVED_RULE_ID = "DA-UNRESOLVED"
 _UNRESOLVED_SEVERITY = "MEDIUM"
 _WRITABLE_RULE_ID = "DA-SKILL-WRITABLE"
 _SHADOW_RULE_ID = "DA-SHADOW"
+_SUBAGENT_RULE_ID = "DA-SUBAGENT-SKILLS"
 _TAGS = ["ASI02"]
 
 # The boundary is a fact about the shape of the source -- an argument that is
@@ -187,9 +218,20 @@ _WRITABLE_MITIGATED_SEVERITY = "LOW"
 _SHADOW_SEVERITY = "HIGH"
 _SHADOW_CONFIDENCE = 0.9
 
-# Four cases, four messages. A report that said the same sentence about an
-# unknown Skill list and an unknown backend would leave a reviewer to work out
-# which surface went unexamined, which is the work this Rule exists to save.
+# LOW, and the only Rule here whose claim is correctness rather than security:
+# upstream frames a custom subagent without its own Skills as a bug its own
+# documentation calls out, not as a risk. The confidence is the inference tier
+# again -- what the Scan measured is an absent key, what it infers from upstream's
+# statement is that the capability is unavailable at runtime.
+_SUBAGENT_SEVERITY = "LOW"
+_SUBAGENT_CONFIDENCE = 0.9
+
+# One message per surface the Scan can stop at. A report that said the same
+# sentence about an unknown Skill list and an unknown backend would leave a
+# reviewer to work out which surface went unexamined, which is the work this Rule
+# exists to save. The two shapes a subagent list stops at share one message
+# deliberately: an unreadable list and an unreadable definition inside it leave
+# the same thing undetermined.
 _UNRESOLVED_SKILL_LIST = (
     "The Skill source list is assembled at runtime, so the Scan cannot say which Skill "
     "directories this agent was given and examined none of them."
@@ -209,10 +251,21 @@ _UNREADABLE_PERMISSION_RULE = (
     "rule decides a Skill path -- and therefore what the agent may do to it -- was not determined."
 )
 
+_UNRESOLVED_SUBAGENTS = (
+    "The subagent definitions are not statically resolvable, so which of this agent's custom "
+    "subagents were given Skills of their own was not determined."
+)
+
 _UNRESOLVED_BACKEND_ROOT = (
     "The filesystem backend's root directory is not statically resolvable, so the agent's Skill "
     "source paths could not be mapped onto files this Scan can open and no Skill name was read "
     "from them."
+)
+
+
+_SUBAGENT_MESSAGE = (
+    "This custom subagent is defined without Skills of its own. A custom subagent does not inherit "
+    "the main agent's Skills, so it runs without the Skills the application around it was given."
 )
 
 
@@ -271,7 +324,7 @@ def _decline() -> AnalyzerNodeResponse:
 def _finding(
     rule_id: str, severity: str, confidence: float, path: str, start_line: int, message: str
 ) -> Finding:
-    """Build one Finding of either Rule.
+    """Build one Finding of any of the four Rules.
 
     Category, name, explanation and remediation are read from
     ``pattern_defaults`` rather than restated here. They are the same strings a
@@ -304,9 +357,9 @@ def _boundary_findings(path: str, configuration: host_config.AgentConfiguration)
     """Every place one host configuration stopped resolving.
 
     An argument that is absent is not a boundary: no ``skills`` is no Skills, no
-    ``permissions`` is no rules, no ``backend`` is the default one. Each of those
-    is a configuration the writability verdict judges, not a silence this one
-    reports.
+    ``permissions`` is no rules, no ``backend`` is the default one, and no
+    ``subagents`` is no custom subagents. Each of those is a configuration a
+    verdict judges, not a silence this one reports.
 
     A ``root_dir`` this Scan cannot read is the sixth case, and it is a boundary
     for the same reason as the other five: resolution stopped. Its two siblings
@@ -321,6 +374,7 @@ def _boundary_findings(path: str, configuration: host_config.AgentConfiguration)
             (configuration.skill_paths, _UNRESOLVED_SKILL_LIST),
             (configuration.backend, _UNRESOLVED_BACKEND),
             (configuration.permission_rules, _UNRESOLVED_PERMISSIONS),
+            (configuration.subagents, _UNRESOLVED_SUBAGENTS),
         )
         if resolution is not None and resolution.unresolved
     ]
@@ -338,7 +392,7 @@ def _boundary_findings(path: str, configuration: host_config.AgentConfiguration)
 def _configuration_findings(
     path: str, configuration: host_config.AgentConfiguration, manifests: Mapping[str, str]
 ) -> list[Finding]:
-    """All three Rules over one ``create_deep_agent(...)`` call.
+    """All four Rules over one ``create_deep_agent(...)`` call.
 
     The boundary is reported first because it is what the verdict falls back to:
     :func:`skillspector.deepagents.writability.assess` returns nothing for a
@@ -347,11 +401,14 @@ def _configuration_findings(
     written in a shape the verdict cannot read is the same partition seen from
     the other side -- it lands on the boundary, and this is where it is spelled.
 
-    ``DA-SHADOW`` is orthogonal to both: it asks what the sources *contain*
-    rather than what the call permits, so a source can carry a shadowing verdict
-    and a writability one at once. *manifests* is the ``SKILL.md`` half of the
-    same Applicability result the ledger rows are built from, so the collision is
-    confirmed out of files this Analyzer has already said it opened.
+    The other two are orthogonal to that partition and to each other.
+    ``DA-SHADOW`` asks what the sources *contain* rather than what the call
+    permits, so a source can carry a shadowing verdict and a writability one at
+    once; *manifests* is the ``SKILL.md`` half of the same Applicability result
+    the ledger rows are built from, so the collision is confirmed out of files
+    this Analyzer has already said it opened. ``DA-SUBAGENT-SKILLS`` asks what
+    the call's subagent definitions were given, which is decided inside one
+    definition and needs nothing this call read from disk.
     """
     findings = _boundary_findings(path, configuration)
     assessment = writability.assess(configuration)
@@ -380,6 +437,17 @@ def _configuration_findings(
             _shadow_message(shadowing),
         )
         for shadowing in skill_sources.find_shadowing(configuration, manifests)
+    )
+    findings.extend(
+        _finding(
+            _SUBAGENT_RULE_ID,
+            _SUBAGENT_SEVERITY,
+            _SUBAGENT_CONFIDENCE,
+            path,
+            definition.line,
+            _SUBAGENT_MESSAGE,
+        )
+        for definition in subagents.without_own_skills(configuration)
     )
     return findings
 

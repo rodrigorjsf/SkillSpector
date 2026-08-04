@@ -1,7 +1,7 @@
 # SkillSpector-Polyglot
 
 LangGraph pipeline that scans `SKILL.md` skill directories for vulnerabilities and emits SARIF plus a 0–100 risk score. This fork extends that to skills embedded in a programming-language framework's own source tree — LangChain4j (shipped) and Deep Agents (analyzer wired and reporting; `DA-UNRESOLVED`,
-`DA-SKILL-WRITABLE` and `DA-SHADOW` shipped, the subagent rule unbuilt).
+`DA-SKILL-WRITABLE`, `DA-SHADOW` and `DA-SUBAGENT-SKILLS` all shipped).
 
 The GitHub repository is `SkillSpector-Polyglot`; the distribution, the package under `src/skillspector/`, and the console script stay `skillspector`. Renaming them would break upstream merges and existing installs — never propose it as a cleanup.
 
@@ -162,3 +162,5 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - Vocabulary guard: exempt a homonym spelling by call site, never globally.
 - Bare `python` is absent; run throwaway scripts with `.venv/bin/python`.
 - A new `deepagents/` module must join the vocabulary guard's explicit module list.
+- A new vocabulary spelling also needs its guard test's `_EXPECTED_SPELLINGS` set.
+- Editing `pattern_defaults` prose rewrites every snapshot carrying that rule.

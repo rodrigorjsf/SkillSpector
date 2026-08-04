@@ -169,6 +169,31 @@ pattern upstream documents (`:196-204`).
 *"Custom subagents do not inherit the main agent's skills"* (`:228-231`) — is decidable in the
 configuration alone, in the same file. It forces nothing here.
 
+**Amendment, from implementing #74: the general-purpose exclusion is structural, and the definition
+shape is not captured.** The Ticket written from the paragraph above asked for two things of
+`DA-SUBAGENT-SKILLS`: that it fire on a custom subagent defined without its own `skills`, and that
+the general-purpose subagent never produce the Finding. The second needs no code. Upstream describes
+the general-purpose subagent as built in and inheriting automatically (`:228-229`), so nothing in a
+source file declares it and no `subagents=[...]` element can be it. A `name == "general-purpose"`
+check would match an identifier the captured page never spells as one — the silent-rename failure
+[ADR 0005](0005-langchain4j-upstream-vocabulary.md) exists to prevent — and would be pinned by a test
+that passes with or without it.
+
+The same gap decides how much of a definition is read. `:226-231` is prose: it names the `subagents`
+argument and the `skills` parameter a definition needs, and shows **no code example of a definition
+at all**. So the Rule matches one added spelling, `subagents`, and one it already owns, `skills` —
+twenty-two rather than the twenty-one enumerated under Consequences — and reads a definition's *keys*
+without ever reading its values. A Finding therefore names a file and the line the definition opens
+on, never the subagent. Reading values would also be wrong on its own terms: a real definition binds
+tools to objects no static Scan evaluates, so requiring the whole mapping to resolve would send every
+realistic definition to §1's boundary and the Rule would never fire. A definition that is *not* a
+mapping written here, and a `**` spread inside one, do reach that boundary — what they contribute may
+be the `skills` key itself.
+
+**Not dropped.** The Spec allows this Rule to be dropped if implementation shows it noisy, and
+implementation showed the opposite: it fires only inside a `subagents=[...]` list an application
+wrote, and it is silent on every one of the corpus's other 33 fixtures.
+
 ## Consequences
 
 **The vocabulary module is copied from [ADR 0005](0005-langchain4j-upstream-vocabulary.md); the

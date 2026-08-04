@@ -58,6 +58,7 @@ DETECTION_FIXTURES: dict[str, Framework] = {
     "deepagents_layered_skills": Framework.DEEPAGENTS,
     "deepagents_personal_skills": Framework.DEEPAGENTS,
     "deepagents_shadowed_skills": Framework.DEEPAGENTS,
+    "deepagents_subagent_skills": Framework.DEEPAGENTS,
     "deepagents_runtime_skills": Framework.DEEPAGENTS,
     "langchain4j_shell_skill": Framework.LANGCHAIN4J,
     "langchain4j_tool_mode": Framework.LANGCHAIN4J,

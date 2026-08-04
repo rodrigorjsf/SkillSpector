@@ -179,10 +179,31 @@ class FilesystemRoot:
 
 
 @dataclass(frozen=True)
+class SubagentDefinition:
+    """One element of a ``subagents=[...]`` list, read as far as its keys.
+
+    *keys* is every key the definition is written with, and the values are not
+    read at all. A realistic definition binds tools to objects no Scan can
+    evaluate, so requiring the whole mapping to resolve would send every one of
+    them to the boundary and the Rule that reads this would never fire. Which
+    keys are written is the whole question anyway: a custom subagent does not
+    inherit the main agent's Skills, so a definition without ``skills`` of its
+    own runs without them.
+
+    *line* is where the definition opens, which is what tells two of them apart:
+    the identifier a subagent is named by is not a spelling the captured
+    reference documents, so nothing here reads it.
+    """
+
+    line: int
+    keys: frozenset[str]
+
+
+@dataclass(frozen=True)
 class AgentConfiguration:
     """One ``create_deep_agent(...)`` call, read as far as this module resolves.
 
-    Each of the three arguments is ``None`` when it is not written at all, which
+    Each of these arguments is ``None`` when it is not written at all, which
     is a different statement from a ``Resolution`` that did not resolve. Absent
     is a configuration -- no Skills, no permission rules, the default backend --
     and the Analyzer says nothing about it. Unresolved is a boundary.
@@ -209,6 +230,12 @@ class AgentConfiguration:
     # resolve at all. That is a resolved fact rather than a boundary, and ADR
     # 0008 §3's amendment is why it raises nothing.
     filesystem_root: FilesystemRoot | None = None
+
+    # The custom subagents this call defines, or the boundary. Absent is a
+    # configuration here as everywhere else: an application that defines none has
+    # the general-purpose subagent, which upstream states inherits the main
+    # agent's Skills, so there is nothing to report and nothing to resolve.
+    subagents: Resolution | None = None
 
 
 def find_agent_configurations(tree: ast.Module) -> list[AgentConfiguration]:
@@ -270,6 +297,15 @@ def _configuration(call: ast.Call, constants: Mapping[str, ast.expr]) -> AgentCo
         else Resolution(interrupt_argument.lineno, _interrupt_tools(interrupt_argument, constants))
     )
 
+    subagent_argument = arguments.get(vocabulary.SUBAGENTS)
+    subagents = (
+        None
+        if subagent_argument is None
+        else Resolution(
+            subagent_argument.lineno, _subagent_definitions(subagent_argument, constants)
+        )
+    )
+
     return AgentConfiguration(
         line=call.lineno,
         skill_paths=skill_paths,
@@ -278,7 +314,43 @@ def _configuration(call: ast.Call, constants: Mapping[str, ast.expr]) -> AgentCo
         opaque_routes=covered,
         interrupt_on=interrupt_on,
         filesystem_root=filesystem_root,
+        subagents=subagents,
     )
+
+
+def _subagent_definitions(
+    node: ast.expr, constants: Mapping[str, ast.expr]
+) -> tuple[SubagentDefinition, ...] | None:
+    """The subagents a ``subagents=`` argument defines, or ``None``.
+
+    Every element must be a mapping written here, with every key a literal
+    string. One element this module cannot read makes the whole list unresolved,
+    for ``_string_sequence``'s reason: a partially read list of definitions would
+    be reported as a complete one, and the Rule that reads it reports an
+    *absence*.
+
+    A ``**spread`` inside a definition leaves a ``None`` key, and what it
+    contributes is exactly what this module will not guess at -- it may be the
+    ``skills`` the Rule looks for.
+    """
+    effective = _effective(node, constants)
+    if not isinstance(effective, ast.List | ast.Tuple):
+        return None
+    definitions: list[SubagentDefinition] = []
+    for element in effective.elts:
+        mapping = _effective(element, constants)
+        if not isinstance(mapping, ast.Dict):
+            return None
+        keys: set[str] = set()
+        for key in mapping.keys:
+            if key is None:
+                return None
+            name = _literal(key, constants)
+            if not isinstance(name, str):
+                return None
+            keys.add(name)
+        definitions.append(SubagentDefinition(line=mapping.lineno, keys=frozenset(keys)))
+    return tuple(definitions)
 
 
 def _interrupt_tools(node: ast.expr, constants: Mapping[str, ast.expr]) -> frozenset[str] | None:

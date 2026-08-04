@@ -39,6 +39,9 @@ what ``DA-SKILL-WRITABLE`` reads by name: the three keyword arguments of a
 permission rule, the two ``mode`` values upstream documents, the write operation,
 and the tool-level approval gate. Issues #73 and #74 add the rest of the
 inventory ADR 0008 enumerates; none of them writes a spelling anywhere else.
+Issue #74 is the last of them, and it added one spelling rather than the several
+a subagent definition is written with -- ADR 0008's amendment records why, and it
+is the same reason ``name`` is absent below.
 
 **A section of its own, because four of these spellings are ordinary English
 words.** ``skills`` and ``permissions`` are also an Agent Skills manifest field,
@@ -137,6 +140,18 @@ ROUTES: Final[str] = "routes"
 # it moves on the specification's clock, exactly as ``SKILL.md`` itself does in
 # :mod:`skillspector.deepagents.signals`.
 ROOT_DIR: Final[str] = "root_dir"
+
+# The list of subagent definitions the agent delegates to. A custom subagent
+# does not inherit the main agent's Skills, so a definition written without a
+# `SKILLS` key of its own runs without them.
+#
+# The keys a definition is written with -- the identifier it is named by, the
+# description it is chosen on, the prompt it runs -- are deliberately *not*
+# inventoried beside it. The captured reference documents this argument in prose
+# only and shows no example of the shape, so those spellings would be asserted
+# rather than captured; `DA-SUBAGENT-SKILLS` therefore reads one key it already
+# owns and reports a line rather than a name.
+SUBAGENTS: Final[str] = "subagents"
 
 # -- Homonyms: owned here, exempt from the sweep ------------------------------ #
 #
