@@ -44,7 +44,8 @@ refuse to guess without also having to decide what a refusal means.
 * :mod:`skillspector.deepagents.writability` decides, per resolved Skill source
   path, whether anything denies the agent write access to it -- walking the
   permission rules in the order they were written, because that order is
-  semantics upstream. It declines wherever the resolver reported a boundary, so
+  semantics upstream. It judges nothing wherever the resolver reported a
+  boundary, so
   the two Rules partition a call rather than overlapping on it.
 
 The Analyzer reaches for ``ast`` from the standard library, so unlike the

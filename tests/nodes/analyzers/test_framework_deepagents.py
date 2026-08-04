@@ -686,6 +686,20 @@ class TestPathCoverage:
             pytest.param('["/skills/shared"]', '["/skills/shared/"]', False, id="trailing-slash"),
             pytest.param('["/skills/**"]', '["skills/shared/"]', False, id="relative-path"),
             pytest.param('["/SKILLS/**"]', '["/skills/shared/"]', False, id="case-differs"),
+            # A single `*` stops at a separator and `**` crosses one. This is the
+            # distinction `fnmatch` cannot make -- its `*` crosses `/` -- and
+            # reading a rule the wide way would clear a Finding on a path the
+            # rule never named.
+            pytest.param('["/skills/*"]', '["/skills/shared/"]', False, id="star-stops-at-slash"),
+            pytest.param('["/skills/*/"]', '["/skills/shared/"]', True, id="star-within-a-segment"),
+            pytest.param(
+                '["/skills/*/"]', '["/skills/shared/team/"]', False, id="star-spans-one-segment"
+            ),
+            pytest.param(
+                '["/skills/**"]', '["/skills/shared/team/"]', True, id="globstar-crosses-slashes"
+            ),
+            pytest.param('["/skills/?hared/"]', '["/skills/shared/"]', True, id="single-character"),
+            pytest.param('["/skills/?/"]', '["/skills/shared/"]', False, id="single-is-one-only"),
         ],
     )
     def test_whether_a_deny_rule_covers_a_skill_source_path(

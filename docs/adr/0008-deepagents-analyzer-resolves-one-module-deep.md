@@ -44,7 +44,7 @@ exist upstream is what [ADR 0005](0005-langchain4j-upstream-vocabulary.md) exist
 `DA-SKILL-WRITABLE` reads the backend as a source of **unknowability** instead: where it routes a
 Skill path somewhere the Scan cannot see into, the path reaches the boundary Rule of §1 and no
 verdict at all. The joint verdict is therefore over two axes that decide and one that can only
-abstain. Note also that §3's "not on disk" boundary must not be borrowed here — files in agent state
+withhold. Note also that §3's "not on disk" boundary must not be borrowed here — files in agent state
 are exactly what a self-modifying agent rewrites.
 
 ## 1. Resolution stops at the module boundary

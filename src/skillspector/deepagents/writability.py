@@ -69,9 +69,10 @@ Captured from ``docs/references/langchain-deepagents-skills.md`` (upstream
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
-from fnmatch import fnmatchcase
+from functools import cache
 
 from skillspector.deepagents import vocabulary
 from skillspector.deepagents.host_config import AgentConfiguration, PermissionRule
@@ -117,15 +118,15 @@ class Assessment:
 
 
 def assess(configuration: AgentConfiguration) -> Assessment:
-    """Judge one call's Skill source paths, or decline where a boundary was reported.
+    """Judge one call's Skill source paths, or return nothing where a boundary was reported.
 
-    Declines -- returns nothing at all -- when the Skill list, the permission
-    rules or the backend did not resolve. Each of those is already a
+    Returns an empty assessment when the Skill list, the permission rules or the
+    backend did not resolve. Each of those is already a
     ``DA-UNRESOLVED`` Finding, and a writability verdict computed over a
     configuration the Scan admits it could not read would be a guess wearing the
     same severity as a measurement.
 
-    An *absent* argument is not a boundary and does not decline: no
+    An *absent* argument is not a boundary and is judged: no
     ``permissions`` is no rules, and no ``backend`` is the default one. Those are
     configurations, and they are the ones this Rule most exists to judge.
     """
@@ -235,7 +236,40 @@ def _covers(rule: PermissionRule, path: str) -> bool:
     which is the failure direction nothing downstream can recover from.
     """
     patterns = _string_sequence(rule.settings[vocabulary.PATHS]) or ()
-    return any(fnmatchcase(path, pattern) for pattern in patterns)
+    return any(_pattern(pattern).fullmatch(path) is not None for pattern in patterns)
+
+
+@cache
+def _pattern(pattern: str) -> re.Pattern[str]:
+    """One path pattern as a regular expression, with ``*`` stopping at a separator.
+
+    ``fnmatch`` is the obvious reader and it is the wrong one here: its ``*``
+    crosses ``/``, so a rule written ``paths=["/skills/*"]`` would be read as
+    covering ``/skills/personal/notes/`` and would clear a Finding on a path it
+    never named. Upstream's own examples are all ``**``, which is exactly the
+    distinction ``fnmatch`` cannot make -- so this reader makes it: ``**``
+    crosses separators, ``*`` and ``?`` stop at one.
+
+    Everything else is matched literally, character classes included. A pattern
+    this reader does not give a meaning to therefore matches less rather than
+    more, and matching less leaves a Finding standing -- the direction a
+    reviewer can correct.
+    """
+    expression: list[str] = []
+    index = 0
+    while index < len(pattern):
+        character = pattern[index]
+        if character == "*":
+            crossing = pattern.startswith("**", index)
+            expression.append(".*" if crossing else "[^/]*")
+            index += 2 if crossing else 1
+        elif character == "?":
+            expression.append("[^/]")
+            index += 1
+        else:
+            expression.append(re.escape(character))
+            index += 1
+    return re.compile("".join(expression))
 
 
 def _interrupts_every_write(configuration: AgentConfiguration) -> bool:
