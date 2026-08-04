@@ -168,3 +168,4 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - Upstream docs can name a method no release ships; sweep the artifacts, not the pages.
 - A non-spelling vocabulary constant needs the guard's `_NOT_A_SPELLING` set.
 - Renaming a vocabulary constant: fix both `vocabulary_sweep/roles.py` maps; no test covers them.
+- `gh pr checks --json` is unsupported here; grep its text output instead.
