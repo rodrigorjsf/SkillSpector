@@ -53,6 +53,18 @@ so the stability claim is evidence rather than assertion, and so a reader can te
 > to re-run it. It covers both Frameworks and is executable as
 > `python -m contrib.vocabulary_sweep langchain4j`. That closes issue #46, which this record opened
 > by naming the gap.
+>
+> Issue #46 asked whether that should be a script, a documented manual procedure, or a scheduled
+> check. It is **a script plus a written procedure, and deliberately not a scheduled check.** A
+> documented manual procedure was rejected for the reason #46 gave against it — it costs nothing and
+> is skipped — and because the measurement it replaces was skipped for a year. A scheduled check was
+> rejected because a sweep downloads roughly a hundred archives from two public indexes, and CI is
+> the wrong place to depend on them being up; the script exits non-zero on a blocking result
+> precisely so a schedule can be added later without re-deciding what counts as a failure. The
+> network dependency #46 worried about is real, so the tool lives in `contrib/` beside the batch
+> scanner, outside `testpaths` and outside the package — a sweep is a maintainer's deliberate act,
+> not a per-commit check. Where the result lives is settled the same way: in the vocabulary module,
+> so this record stays a decision rather than becoming a changelog.
 
 So the exposure to date is nil. It is not nil going forward: the artifact carrying the
 highest-severity Rule is still named `langchain4j-experimental-skills-shell`, and the day it
