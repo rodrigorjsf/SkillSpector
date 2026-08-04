@@ -203,7 +203,7 @@ class SubagentDefinition:
 class AgentConfiguration:
     """One ``create_deep_agent(...)`` call, read as far as this module resolves.
 
-    Each of the three arguments is ``None`` when it is not written at all, which
+    Each of these arguments is ``None`` when it is not written at all, which
     is a different statement from a ``Resolution`` that did not resolve. Absent
     is a configuration -- no Skills, no permission rules, the default backend --
     and the Analyzer says nothing about it. Unresolved is a boundary.

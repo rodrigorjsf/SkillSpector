@@ -5,8 +5,11 @@ and phases 1 and 4–7 of [§5](#5-phasing) have shipped: `detect_framework` and
 key (issue #21), then the LangChain4j-in-CI increment (issue #23) — the gated
 `framework_langchain4j` Analyzer carrying all five L4J rules of
 [§3.6](#36-java-parsing-and-definition-path-coverage), and the Repository Scan of
-[§3.7](#37-repository-level-discovery-cicd) behind `--repo-scan`. **Phases 2, 3 and 8 remain design
-proposal** — Deep Agents, spec conformance, and the deferred behavior-affecting changes.
+[§3.7](#37-repository-level-discovery-cicd) behind `--repo-scan`, and phase 2 — the gated
+`framework_deepagents` Analyzer carrying all four of the Deep Agents rules of
+[§2.3](#23-deep-agents-python-host) (issues #70–#74), with only the vocabulary
+stability measurement (#75) outstanding. **Phases 3 and 8 remain design proposal** — spec
+conformance and the deferred behavior-affecting changes.
 [§9](#9-recommended-next-step) carries the live status; each phase row in §5 names the Ticket that
 landed it.
 **Goal:** extend SkillSpector to evaluate skills hosted by **LangChain4j** (Java) and
@@ -665,8 +668,8 @@ record of what was open.
 
 ## 9. Recommended next step
 
-**Continue phase 2 — the last Rule of the `framework_deepagents` analyzer.** The analyzer is
-wired and gated (#70) and carries three Rules. `DA-UNRESOLVED` (#71) resolves a literal and a
+**Finish phase 2 — the vocabulary stability measurement.** The analyzer is
+wired and gated (#70) and carries all four of its Rules. `DA-UNRESOLVED` (#71) resolves a literal and a
 same-module constant and reports every place a host configuration stopped resolving —
 `src/skillspector/deepagents/host_config.py`, the boundary [ADR 0008 §1](adr/0008-deepagents-analyzer-resolves-one-module-deep.md)
 copied from the Java track. `DA-SKILL-WRITABLE` (#72) is the verdict the work exists for — one

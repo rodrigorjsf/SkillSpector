@@ -324,7 +324,7 @@ def _decline() -> AnalyzerNodeResponse:
 def _finding(
     rule_id: str, severity: str, confidence: float, path: str, start_line: int, message: str
 ) -> Finding:
-    """Build one Finding of either Rule.
+    """Build one Finding of any of the four Rules.
 
     Category, name, explanation and remediation are read from
     ``pattern_defaults`` rather than restated here. They are the same strings a
@@ -401,11 +401,14 @@ def _configuration_findings(
     written in a shape the verdict cannot read is the same partition seen from
     the other side -- it lands on the boundary, and this is where it is spelled.
 
-    ``DA-SHADOW`` is orthogonal to both: it asks what the sources *contain*
-    rather than what the call permits, so a source can carry a shadowing verdict
-    and a writability one at once. *manifests* is the ``SKILL.md`` half of the
-    same Applicability result the ledger rows are built from, so the collision is
-    confirmed out of files this Analyzer has already said it opened.
+    The other two are orthogonal to that partition and to each other.
+    ``DA-SHADOW`` asks what the sources *contain* rather than what the call
+    permits, so a source can carry a shadowing verdict and a writability one at
+    once; *manifests* is the ``SKILL.md`` half of the same Applicability result
+    the ledger rows are built from, so the collision is confirmed out of files
+    this Analyzer has already said it opened. ``DA-SUBAGENT-SKILLS`` asks what
+    the call's subagent definitions were given, which is decided inside one
+    definition and needs nothing this call read from disk.
     """
     findings = _boundary_findings(path, configuration)
     assessment = writability.assess(configuration)
