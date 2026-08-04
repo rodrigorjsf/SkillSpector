@@ -1,6 +1,7 @@
 # SkillSpector-Polyglot
 
-LangGraph pipeline that scans `SKILL.md` skill directories for vulnerabilities and emits SARIF plus a 0–100 risk score. This fork extends that to skills embedded in a programming-language framework's own source tree — LangChain4j (shipped) and Deep Agents (analyzer wired and reporting, rules unbuilt).
+LangGraph pipeline that scans `SKILL.md` skill directories for vulnerabilities and emits SARIF plus a 0–100 risk score. This fork extends that to skills embedded in a programming-language framework's own source tree — LangChain4j (shipped) and Deep Agents (analyzer wired and reporting; `DA-UNRESOLVED` shipped, the
+writability, shadowing and subagent rules unbuilt).
 
 The GitHub repository is `SkillSpector-Polyglot`; the distribution, the package under `src/skillspector/`, and the console script stay `skillspector`. Renaming them would break upstream merges and existing installs — never propose it as a cleanup.
 
@@ -158,3 +159,4 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - Undo a mutation test by hand; `git checkout --` drops the whole file's edits.
 - Mutate a module constant in a throwaway script instead; nothing to undo.
 - `Closes #N` no-ops in a Ticket PR; only a default-branch merge closes an issue.
+- Vocabulary guard: exempt a homonym spelling by call site, never globally.
