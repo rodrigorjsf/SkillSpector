@@ -247,6 +247,27 @@ whether the Agent Skills specification itself defines this axis as *tool-based* 
 *filesystem-based agents*. If it does, it is specification-level vocabulary and belongs in the
 glossary regardless of how many Frameworks implement it.
 
+> **Resolved, and the reopening is foreclosed.** It does not. Issue #49 swept the published
+> sources on 2026-08-02 — a fresh fetch of `agentskills.io/specification.md`, all fifteen revisions
+> of `docs/specification.mdx` in `agentskills/agentskills`, all nine pages listed at
+> `agentskills.io/llms.txt`, and Anthropic's own Agent Skills overview — and neither phrase, nor
+> "integration approach", occurs in any of them. The correspondence is upstream LangChain4j's own
+> framing; our capture is faithful, not partial. Evidence and reasoning:
+> [`docs/references/langchain4j-skills.md` § The two "integration approaches" are not specification
+> vocabulary](../references/langchain4j-skills.md#the-two-integration-approaches-are-not-specification-vocabulary).
+>
+> That sweep did surface a citable home for the axis, and it is not a third reopening. The
+> non-normative client-implementation guide (`agentskills.io/client-implementation/adding-skills-support`,
+> § *Step 4: Activate skills* → *Model-driven activation*) names *dedicated tool activation* and
+> *file-read activation*. Two reasons that changes nothing here. First, citability was never the
+> question this ADR answered: the two shipped Frameworks' axes are orthogonal — read-and-execute
+> against mutability — and a source naming the Java axis does not make the Python one an instance of
+> it. Second, *file-read activation* is an imprecise counterpart to Shell mode, because LangChain4j
+> hands the model a general `run_shell_command` rather than a file-read tool, so reading `SKILL.md`
+> is one use of a broader capability. A glossary term built on the guide's framing would blur
+> exactly the unsandboxed-execution distinction issue #48 called the most security-relevant one in
+> the Java track. Both branches are now closed, and `CONTEXT.md` gains nothing.
+
 **Issue #47 no longer constrains the ordering.** It has landed — `framework_langchain4j.py:78-86`
 imports `AnalyzerStatus` from `inspection_ledger` — so this Analyzer is written against a declared
 status value set from its first line.
