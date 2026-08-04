@@ -239,6 +239,22 @@ agent = create_deep_agent(
 )
 """
 
+# A filesystem backend that names no root at all. Upstream roots it at the
+# process working directory, which is not a fact in any scanned file, so it is
+# read as the Scan root -- the same limit a written relative root carries.
+BARE_ROOT_PY = """from deepagents import FilesystemPermission, create_deep_agent
+from deepagents.backends.filesystem import FilesystemBackend
+
+agent = create_deep_agent(
+    model="claude-sonnet-5",
+    backend=FilesystemBackend(),
+    skills=["/skills/shared/", "/skills/personal/"],
+    permissions=[
+        FilesystemPermission(operations=["write"], paths=["/skills/**"], mode="deny"),
+    ],
+)
+"""
+
 
 def _manifest(name: str) -> str:
     """An Agent Skills manifest declaring *name*."""
@@ -993,6 +1009,25 @@ class TestWhatCannotBeMapped:
             *sorted(COLLIDING_MANIFESTS),
             "pyproject.toml",
         ]
+
+    def test_a_backend_that_names_no_root_maps_from_the_scan_root(self) -> None:
+        """An absent ``root_dir`` is a configuration, and it is read the same way a relative one is.
+
+        Upstream roots it at the process working directory, which no scanned file
+        states. Reading it as the Scan root is the limit
+        ``host_config.FilesystemRoot`` states for a written relative root, applied
+        to the same value written by omission -- so the two do not disagree. It is
+        the one place in this Rule where the assumption can produce a Finding
+        rather than withhold one, which is why it is pinned rather than left to
+        the general case.
+        """
+        under_scan_root = {
+            "skills/shared/triage/SKILL.md": _manifest("ticket-triage"),
+            "skills/personal/triage/SKILL.md": _manifest("ticket-triage"),
+        }
+        result = analyzer.node(make_state({"agent.py": BARE_ROOT_PY, **under_scan_root}))
+
+        assert _rule_ids(result) == ["DA-SHADOW"]
 
     def test_a_root_the_scan_cannot_read_reaches_the_boundary_rule(self) -> None:
         result = analyzer.node(make_state({"agent.py": UNRESOLVED_ROOT_PY, **COLLIDING_MANIFESTS}))

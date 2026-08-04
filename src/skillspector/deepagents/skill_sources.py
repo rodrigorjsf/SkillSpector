@@ -133,8 +133,10 @@ def find_shadowing(
     if root is None or root.root is None:
         return ()
 
-    sources = tuple(path for path in _configured_paths(skills.value))
-    named = [(source, _names_under(_prefix(root.root, source), manifests)) for source in sources]
+    named = [
+        (source, _names_under(_prefix(root.root, source), manifests))
+        for source in _configured_paths(skills.value)
+    ]
 
     shadowings: list[Shadowing] = []
     for index, (source, names) in enumerate(named):
@@ -211,7 +213,13 @@ def _skill_name(content: str) -> str | None:
     Finding.
 
     Reads the cached content rather than a path, so the Analyzer confirms the
-    collision from the same bytes its ledger row says it opened.
+    collision from the same bytes its ledger row says it opened. That is also
+    what makes it a **deliberate** third copy of the frontmatter shape rather
+    than an oversight: ``build_context._parse_manifest`` and
+    ``multi_skill._skill_name`` both take a ``Path`` and both read the whole
+    Manifest, and folding the three together would mean editing two functions
+    whose output is in every committed snapshot -- the diff this fork keeps
+    append-only. Extract them only with a behavior-preserving change of its own.
     """
     if not content.startswith(_FRONTMATTER_FENCE):
         return None

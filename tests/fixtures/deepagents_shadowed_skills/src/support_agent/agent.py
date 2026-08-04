@@ -1,7 +1,7 @@
 """Builds the support agent from a shared library and a per-user directory.
 
 Both sources sit under the backend root below, and both are covered by the rule,
-so the library the agent reads from stays the one the support team publishes.
+so neither is left open to the agent itself.
 """
 
 from deepagents import FilesystemPermission, create_deep_agent
