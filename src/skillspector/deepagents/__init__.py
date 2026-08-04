@@ -29,7 +29,9 @@ folding the spellings into :mod:`skillspector.framework` would make detection an
 the Rules share one inventory, so a single upstream rename would move both at
 once.
 
-Three modules today:
+Four modules today, and the last two are deliberately a pair: one resolves, the
+other judges. Keeping the judgement out of the resolver is what lets the resolver
+refuse to guess without also having to decide what a refusal means.
 
 * :mod:`skillspector.deepagents.vocabulary` is every upstream spelling this
   package matches on, and nothing else. Parser-free.
@@ -39,6 +41,11 @@ Three modules today:
 * :mod:`skillspector.deepagents.host_config` reads ``create_deep_agent(...)`` and
   resolves a literal and a same-module constant, and says so rather than
   guessing when it cannot. ADR 0008 §1 is why the boundary sits exactly there.
+* :mod:`skillspector.deepagents.writability` decides, per resolved Skill source
+  path, whether anything denies the agent write access to it -- walking the
+  permission rules in the order they were written, because that order is
+  semantics upstream. It declines wherever the resolver reported a boundary, so
+  the two Rules partition a call rather than overlapping on it.
 
 The Analyzer reaches for ``ast`` from the standard library, so unlike the
 LangChain4j package there is no import ordering to preserve here: nothing this

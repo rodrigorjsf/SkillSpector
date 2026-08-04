@@ -36,11 +36,14 @@ whole point: a report that says nothing about the surface it never examined
 reads as a clean report.
 
 **What this module deliberately does not decide.** It says whether the backend
-was readable and which literal Skill source paths are routed somewhere whose
-contents are computed per request. It does **not** say whether any path is
-writable, whether a permission rule covers it, or which rule wins -- that verdict
-is issue #72, and the rule-order semantics it needs are stated in the captured
-reference rather than here. This module resolves; it does not judge.
+was readable, which literal Skill source paths are routed somewhere whose
+contents are computed per request, and which permission rules and interrupt
+gates were written -- in the order they were written, because that order is
+semantics. It does **not** say whether any path is writable, whether a rule
+covers it, or which rule wins: that verdict is
+:mod:`skillspector.deepagents.writability`, and the rule-order semantics it
+needs are stated in the captured reference rather than here. This module
+resolves; it does not judge.
 
 Known limits, stated rather than discovered:
 
@@ -113,10 +116,10 @@ class Resolution:
 class PermissionRule:
     """One ``FilesystemPermission(...)`` whose every keyword argument resolved.
 
-    *settings* is keyed by the keyword as written. The keywords are not
-    inventoried in :mod:`skillspector.deepagents.vocabulary` on purpose: this
-    module requires all of them to resolve without caring which they are, so it
-    never matches on their spellings. The Rule that reads them by name is #72.
+    *settings* is keyed by the keyword as written. This module requires all of
+    them to resolve without caring which they are, so it still matches on none
+    of their spellings; :mod:`skillspector.deepagents.writability` is where they
+    are read by name, and it is the only place that knows what a ``mode`` means.
     """
 
     line: int
@@ -154,6 +157,14 @@ class AgentConfiguration:
     permission_rules: Resolution | None
     backend: Resolution | None
     opaque_routes: tuple[OpaqueRoute, ...]
+
+    # Read for the writability verdict, and deliberately *not* reported as a
+    # boundary of its own. An `interrupt_on` this module cannot read is a
+    # mitigation that cannot be confirmed, and an unconfirmed mitigation is no
+    # mitigation -- which raises the severity of a Finding rather than removing
+    # one. Reporting it as a fifth `DA-UNRESOLVED` would describe a
+    # configuration that is already being reported, in the quieter direction.
+    interrupt_on: Resolution | None = None
 
 
 def find_agent_configurations(tree: ast.Module) -> list[AgentConfiguration]:
@@ -208,13 +219,34 @@ def _configuration(call: ast.Call, constants: Mapping[str, ast.expr]) -> AgentCo
         else tuple(route for route in routes if _covers_any(route.path, resolved_paths))
     )
 
+    interrupt_argument = arguments.get(vocabulary.INTERRUPT_ON)
+    interrupt_on = (
+        None
+        if interrupt_argument is None
+        else Resolution(interrupt_argument.lineno, _interrupt_tools(interrupt_argument, constants))
+    )
+
     return AgentConfiguration(
         line=call.lineno,
         skill_paths=skill_paths,
         permission_rules=permission_rules,
         backend=backend,
         opaque_routes=covered,
+        interrupt_on=interrupt_on,
     )
+
+
+def _interrupt_tools(node: ast.expr, constants: Mapping[str, ast.expr]) -> frozenset[str] | None:
+    """The tool names an ``interrupt_on=`` argument gates, or ``None``.
+
+    Only the names mapped to a value that is truthy at resolution time are
+    returned: upstream writes ``{"write_file": True, "edit_file": True}``, and a
+    key written with ``False`` is the developer turning the gate off.
+    """
+    value = _literal(node, constants)
+    if not isinstance(value, Mapping):
+        return None
+    return frozenset(str(tool) for tool, gated in value.items() if isinstance(tool, str) and gated)
 
 
 def _covers_any(prefix: str, paths: tuple[object, ...]) -> bool:

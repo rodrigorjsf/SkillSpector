@@ -31,7 +31,32 @@ Component it does not report.
 ``docs/adr/0008-deepagents-analyzer-resolves-one-module-deep.md`` §3 records why
 the set reaches past Python into every ``SKILL.md``.
 
-One Rule today.
+Two Rules today, and they partition every ``create_deep_agent(...)`` call
+between them: what resolved is judged, and what did not is reported as not
+having been.
+
+``DA-SKILL-WRITABLE`` (MEDIUM, LOW where a human approves the write). The verdict
+the Deep Agents work exists for: *can this agent rewrite its own instructions?*
+Upstream states the default in as many words -- agents can write to Skill files
+unless a permission rule blocks the path -- so the unsafe configuration is the
+one a developer gets by following the tutorial, and two applications differing by
+exactly that produced identical Scans before this Rule. One Finding **per
+resolved Skill source path**, so a reviewer who consciously accepts a writable
+personal directory can Baseline that path and still be told about a writable
+shared library. It is one composed Rule rather than three, and the mitigations
+lower its severity rather than raising Findings of their own;
+``docs/adr/0008-deepagents-analyzer-resolves-one-module-deep.md`` §2 settled
+both, and :mod:`skillspector.deepagents.writability` computes the verdict --
+walking the rules in the order they were written, because that order is what
+upstream's own advice to place specific rules before broad ones depends on.
+
+**The Ticket's "read-only backend" does not exist upstream, and this is the
+record of it.** Issue #72 asked for a path routed to a read-only backend not to
+be reported as writable. The captured reference documents four backends and none
+of them is read-only -- the only read-only-ness it describes is a ``deny`` rule.
+So the backend contributes unknowability rather than a verdict: a Skill path
+routed into a store whose contents are computed per request is reported by the
+Rule below and reaches no verdict at all.
 
 ``DA-UNRESOLVED`` (MEDIUM). A Deep Agents application can assemble its Skill list
 per request, build its backend in a helper this Scan cannot follow, or route a
@@ -48,11 +73,12 @@ boundary and copied it deliberately from the Java track's
 Framework.
 
 The Rule reports where the Scan stopped looking; it does not judge what it did
-see. Whether a resolved Skill source path is actually writable is
-``DA-SKILL-WRITABLE``, issue #72, and this Rule is deliberately built first
-because that verdict needs somewhere to fall when it cannot decide. Issues #73
-and #74 add Skill-name shadowing across sources and a subagent defined without
-its own Skills.
+see. It was deliberately built first, because the verdict above needs somewhere
+to fall when it cannot decide, and a fifth case joined it with that verdict: a
+permission rule written in a shape this Scan cannot read leaves the ordered walk
+undecided for every path, so the whole configuration reaches the boundary rather
+than a guess. Issues #73 and #74 add Skill-name shadowing across sources and a
+subagent defined without its own Skills.
 
 **The ``not_applicable`` branch cannot be reached through the graph.** Every
 signal ``skillspector.framework`` detects Deep Agents by is a Python module or a
@@ -72,7 +98,7 @@ from __future__ import annotations
 import ast
 from collections.abc import Mapping
 
-from skillspector.deepagents import host_config, signals
+from skillspector.deepagents import host_config, signals, writability
 from skillspector.framework import Framework
 from skillspector.inspection_ledger import (
     AnalyzerStatus,
@@ -100,12 +126,27 @@ _PHASE = "static"
 
 _UNRESOLVED_RULE_ID = "DA-UNRESOLVED"
 _UNRESOLVED_SEVERITY = "MEDIUM"
+_WRITABLE_RULE_ID = "DA-SKILL-WRITABLE"
 _TAGS = ["ASI02"]
 
 # The boundary is a fact about the shape of the source -- an argument that is
 # not a literal and not a name bound in this module -- rather than an inference
 # from it, so there is nothing left to doubt about the report.
 _UNRESOLVED_CONFIDENCE = 1.0
+
+# The writability verdict is an inference: three arguments read together, walked
+# in order, against what upstream documents the default to be. So it carries the
+# confidence the LangChain4j absence Rules carry rather than the boundary's --
+# `framework_langchain4j.py` sets 0.9 for the same reason.
+_WRITABLE_CONFIDENCE = 0.9
+
+# MEDIUM unmitigated, LOW where a human is put in front of the write. ADR 0008
+# §2 is why the mitigation moves the severity rather than clearing the Finding
+# or raising one of its own: an approval prompt is not a denial, and an
+# application that requires approval has still given the agent its own
+# instructions to rewrite.
+_WRITABLE_SEVERITY = "MEDIUM"
+_WRITABLE_MITIGATED_SEVERITY = "LOW"
 
 # Four cases, four messages. A report that said the same sentence about an
 # unknown Skill list and an unknown backend would leave a reviewer to work out
@@ -122,6 +163,31 @@ _UNRESOLVED_PERMISSIONS = (
     "The filesystem permission rules are not statically resolvable, so what this agent is allowed "
     "to do to its Skill files was not determined."
 )
+
+
+_UNREADABLE_PERMISSION_RULE = (
+    "A filesystem permission rule is written in a shape this Scan does not recognize, so which "
+    "rule decides a Skill path -- and therefore what the agent may do to it -- was not determined."
+)
+
+
+def _writable_message(path: str, mitigated: bool) -> str:
+    """The ``DA-SKILL-WRITABLE`` message for one Skill source path.
+
+    Names the path, because one Finding per path is what lets a reviewer accept
+    a writable personal directory without also accepting a writable shared
+    library, and a message that did not say which path was which would take that
+    back.
+    """
+    if mitigated:
+        return (
+            f"The agent is given the Skill source path {path} and nothing denies it write access, "
+            "so it can rewrite the instructions it runs on. A human is asked to approve the write."
+        )
+    return (
+        f"The agent is given the Skill source path {path} and nothing denies it write access, so "
+        "it can rewrite the instructions it runs on and no human is asked."
+    )
 
 
 def _unresolved_route_message(path: str) -> str:
@@ -142,8 +208,10 @@ def _decline() -> AnalyzerNodeResponse:
     return {"findings": []}
 
 
-def _finding(path: str, start_line: int, message: str) -> Finding:
-    """Build one ``DA-UNRESOLVED`` Finding.
+def _finding(
+    rule_id: str, severity: str, confidence: float, path: str, start_line: int, message: str
+) -> Finding:
+    """Build one Finding of either Rule.
 
     Category, name, explanation and remediation are read from
     ``pattern_defaults`` rather than restated here. They are the same strings a
@@ -151,40 +219,80 @@ def _finding(path: str, start_line: int, message: str) -> Finding:
     free to drift from the catalogue the README and the AST10 crosswalk cite.
     """
     return Finding(
-        rule_id=_UNRESOLVED_RULE_ID,
+        rule_id=rule_id,
         message=message,
-        severity=_UNRESOLVED_SEVERITY,
-        confidence=_UNRESOLVED_CONFIDENCE,
+        severity=severity,
+        confidence=confidence,
         file=path,
         start_line=start_line,
-        category=get_category(_UNRESOLVED_RULE_ID),
-        pattern=get_pattern_name(_UNRESOLVED_RULE_ID),
+        category=get_category(rule_id),
+        pattern=get_pattern_name(rule_id),
         tags=list(_TAGS),
-        explanation=get_explanation(_UNRESOLVED_RULE_ID),
-        remediation=get_remediation(_UNRESOLVED_RULE_ID),
+        explanation=get_explanation(rule_id),
+        remediation=get_remediation(rule_id),
     )
 
 
-def _boundary_findings(path: str, tree: ast.Module) -> list[Finding]:
-    """Every place one Python module's host configuration stopped resolving.
+def _unresolved(path: str, start_line: int, message: str) -> Finding:
+    """Build one ``DA-UNRESOLVED`` Finding."""
+    return _finding(
+        _UNRESOLVED_RULE_ID, _UNRESOLVED_SEVERITY, _UNRESOLVED_CONFIDENCE, path, start_line, message
+    )
+
+
+def _boundary_findings(path: str, configuration: host_config.AgentConfiguration) -> list[Finding]:
+    """Every place one host configuration stopped resolving.
 
     An argument that is absent is not a boundary: no ``skills`` is no Skills, no
     ``permissions`` is no rules, no ``backend`` is the default one. Each of those
-    is a configuration the later Rules judge, not a silence this one reports.
+    is a configuration the writability verdict judges, not a silence this one
+    reports.
     """
-    findings: list[Finding] = []
-    for configuration in host_config.find_agent_configurations(tree):
+    findings = [
+        _unresolved(path, resolution.line, message)
         for resolution, message in (
             (configuration.skill_paths, _UNRESOLVED_SKILL_LIST),
             (configuration.backend, _UNRESOLVED_BACKEND),
             (configuration.permission_rules, _UNRESOLVED_PERMISSIONS),
-        ):
-            if resolution is not None and resolution.unresolved:
-                findings.append(_finding(path, resolution.line, message))
-        findings.extend(
-            _finding(path, route.line, _unresolved_route_message(route.path))
-            for route in configuration.opaque_routes
         )
+        if resolution is not None and resolution.unresolved
+    ]
+    findings.extend(
+        _unresolved(path, route.line, _unresolved_route_message(route.path))
+        for route in configuration.opaque_routes
+    )
+    return findings
+
+
+def _configuration_findings(
+    path: str, configuration: host_config.AgentConfiguration
+) -> list[Finding]:
+    """Both Rules over one ``create_deep_agent(...)`` call.
+
+    The boundary is reported first because it is what the verdict falls back to:
+    :func:`skillspector.deepagents.writability.assess` returns nothing for a
+    configuration whose Skill list, backend or permission rules did not resolve,
+    so the two Rules partition the call rather than overlapping on it. A rule
+    written in a shape the verdict cannot read is the same partition seen from
+    the other side -- it lands on the boundary, and this is where it is spelled.
+    """
+    findings = _boundary_findings(path, configuration)
+    assessment = writability.assess(configuration)
+    findings.extend(
+        _unresolved(path, line, _UNREADABLE_PERMISSION_RULE)
+        for line in assessment.unreadable_rule_lines
+    )
+    findings.extend(
+        _finding(
+            _WRITABLE_RULE_ID,
+            _WRITABLE_MITIGATED_SEVERITY if writable.mitigated else _WRITABLE_SEVERITY,
+            _WRITABLE_CONFIDENCE,
+            path,
+            writable.line,
+            _writable_message(writable.path, writable.mitigated),
+        )
+        for writable in assessment.writable
+    )
     return findings
 
 
@@ -221,7 +329,11 @@ def _open(path: str, source: str) -> tuple[InspectionLedgerEvent, list[Finding]]
                 ),
                 [],
             )
-        findings = _boundary_findings(path, tree)
+        findings = [
+            finding
+            for configuration in host_config.find_agent_configurations(tree)
+            for finding in _configuration_findings(path, configuration)
+        ]
     else:
         findings = []
     return (
