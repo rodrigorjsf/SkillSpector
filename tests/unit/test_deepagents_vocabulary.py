@@ -258,6 +258,7 @@ class TestHomonyms:
             _SRC / "deepagents" / "host_config.py",
             _SRC / "deepagents" / "signals.py",
             _SRC / "deepagents" / "skill_sources.py",
+            _SRC / "deepagents" / "subagents.py",
             _SRC / "deepagents" / "writability.py",
             _SRC / "deepagents" / "__init__.py",
             _ANALYZER,

@@ -30,11 +30,12 @@ confirmed clean. Full per-fixture numbers are in the #8 close-out comment.
   fixture. 23 of the 34 bear a `SKILL.md` **at their root**, which is the only place the Manifest
   parser looks; `mcp_registry` bears none and is in the corpus anyway,
   because it is a scan target in practice, the two `*_detection` fixtures (#21) bear none because
-  they carry one Framework signal and nothing else, and the seven application trees —
+  they carry one Framework signal and nothing else, and the eight application trees —
   `langchain4j_shell_skill` (#28), `langchain4j_tool_mode` (#53),
   `deepagents_runtime_skills` (#71), `deepagents_personal_skills` (#72),
-  `deepagents_denied_skills` (#72), `deepagents_shadowed_skills` (#73) and
-  `deepagents_layered_skills` (#73) — bear none at their root because their Skills are nested
+  `deepagents_denied_skills` (#72), `deepagents_shadowed_skills` (#73),
+  `deepagents_layered_skills` (#73) and `deepagents_subagent_skills` (#74) — bear none at their
+  root because their Skills are nested
   under `src/main/resources/skills/`, `skills/` and `library/skills/` respectively.
 - **The three fixture family parents (`sdi/`, `sqp/`, `ssd/`) are out of the corpus** and will stay
   out: they are fixture-layout containers, not Skills. Scanned as targets they behave as anonymous
@@ -102,6 +103,16 @@ confirmed clean. Full per-fixture numbers are in the #8 close-out comment.
   matters more here than elsewhere, because three of those four are required to raise **nothing**,
   and a Rule that started reporting them would put a Finding on the configuration the upstream
   tutorial teaches without moving any snapshot in this corpus.
+- **`DA-SUBAGENT-SKILLS` is guarded in both directions inside one fixture, and its boundary in
+  neither.** `deepagents_subagent_skills` (#74) defines two custom subagents that differ only in
+  whether one names Skill sources of its own, so a Rule that stopped firing and a Rule that started
+  firing on a definition that *does* declare them would each move the snapshot — the pair is inside
+  a single scan target rather than across two, because the verdict is decided inside one
+  `create_deep_agent(...)` call. What no fixture holds is the boundary the Rule falls to: a subagent
+  list assembled elsewhere, a definition that is not a mapping written in the file, and a `**` spread
+  inside one live in the Analyzer's own suite only. Nor does any fixture pin the general-purpose
+  exclusion, which is structural — no definition declares that subagent — so there is nothing a
+  snapshot could hold.
 - **SARIF is no longer a coverage limit.** It was previously listed here as unguarded on the grounds
   that it is derived and reintroduces the timestamp; the timestamp claim was measured false, and
   `sarif_report` is in the projection minus `tool.driver.version` (ADR 0003).

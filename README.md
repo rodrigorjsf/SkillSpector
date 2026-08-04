@@ -199,6 +199,7 @@ in the *same* pull request. Concretely:
 | An environment variable | [Environment Variables](#environment-variables) and the [Configuration](#configuration) summary |
 | An exit code or an output format | [Integrating SkillSpector](#integrating-skillspector) |
 | Anything that ships a designed-but-unbuilt capability | the **Status** column above, and [`docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md`](docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md) |
+| Any detection rule, again | [`docs/OWASP-AST10-COVERAGE.md`](docs/OWASP-AST10-COVERAGE.md) — the row the rule belongs to, or the gaps list where it belongs to none |
 
 A capability that ships without its row updated is a documentation bug — report it as one.
 

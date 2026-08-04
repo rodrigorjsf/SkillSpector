@@ -57,8 +57,10 @@ Coverage labels are intentionally conservative:
   is the one rule in the catalog whose claim is correctness rather than security: a Deep Agents
   custom subagent defined without its own `skills` runs without the capability its author believes it
   has, which upstream documents as a bug and not as a risk. This matrix maps rules onto risk
-  categories, so a rule that asserts no risk earns no row; recording the absence here is what keeps
-  it visible.
+  categories, so a rule whose claim is correctness earns no row; recording the absence here is what
+  keeps it visible. Its findings do still carry the `ASI02` tag, because that tag is set once for
+  every rule the Deep Agents analyzer emits and is not derived from this matrix; the two are
+  independent taxonomies and this page maps only its own.
 - AST10 remains partial because cross-platform translation can drop or reinterpret security metadata in ways that require source-to-target manifest comparison, not only single-manifest analysis.
 
 ## What stays out of scope here

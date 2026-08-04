@@ -187,10 +187,11 @@ Four new nodes, appended to `ANALYZER_NODE_IDS` after `semantic_quality_policy` 
 ordering is preserved.
 
 Two of them now exist. `framework_langchain4j` ships all five of its Rules (#28, #30, #31).
-`framework_deepagents` is wired and reports its status (#70) and carries two of its Rules:
-`DA-UNRESOLVED` (#71), the resolution boundary, which the row below does not propose at all, and
+`framework_deepagents` is wired and reports its status (#70) and carries all four of its Rules:
+`DA-UNRESOLVED` (#71), the resolution boundary, which the row below does not propose at all,
 `DA-SKILL-WRITABLE` (#72), the writability verdict, which is the row's first three collapsed into
-one. The rest are issues #73–#74, and the shape they take is
+one, `DA-SHADOW` (#73), the cross-source collision, and `DA-SUBAGENT-SKILLS` (#74), the subagent
+defined without Skills of its own. The shape they take is
 [ADR 0008](adr/0008-deepagents-analyzer-resolves-one-module-deep.md)'s rather than this row's — it
 collapsed the first three into one composed verdict per Skill source path, and added the boundary
 that #71 shipped. Read the row as the original proposal, not as what is running.
@@ -557,7 +558,7 @@ Ordered by value-to-risk. Each phase is independently shippable and independentl
 |-------|---------|----------------------|
 | **0** | This document + [`docs/references/`](references/README.md) | Yes — docs only |
 | **1** | ~~`detect_framework` + `framework` state key~~ **Done** (#21) — no analyzer read it at the time; `framework_langchain4j` does now. Unit tests assert correct detection on new fixtures and `"agent_skills"` on every existing fixture | Yes |
-| **2** | `framework_deepagents` analyzer, gated. Cheapest — reuses Python AST. **Started** (#58): the analyzer is wired and reports its status (#70), `DA-UNRESOLVED` ships its resolution boundary (#71), `DA-SKILL-WRITABLE` the writability verdict (#72) and `DA-SHADOW` the cross-source collision (#73); the remaining rule is #74, and the vocabulary stability measurement is #75 | Yes, via gate |
+| **2** | `framework_deepagents` analyzer, gated. Cheapest — reuses Python AST. **Started** (#58): the analyzer is wired and reports its status (#70), `DA-UNRESOLVED` ships its resolution boundary (#71), `DA-SKILL-WRITABLE` the writability verdict (#72) `DA-SHADOW` the cross-source collision (#73) and `DA-SUBAGENT-SKILLS` the subagent defined without Skills of its own (#74); what remains is the vocabulary stability measurement, #75 | Yes, via gate |
 | **3** | `structure_agent_skills_spec` behind `--spec-checks` (default `off`), plus the advisory-section rendering in [§3.5](#35-spec-conformance-rules-and-scoring) | Yes, via opt-in |
 | **4** | ~~**Dependency decision:** accept `tree-sitter` + `tree-sitter-java`~~ **Done** (#23) — accepted in [ADR 0001](adr/0001-tree-sitter-for-java-parsing.md), both ship `cp39-abi3` wheels | N/A |
 | **5** | ~~LangChain4j fixture~~ **Done** (#28, extended by #30 and #31) — `tests/fixtures/langchain4j_shell_skill/` | Yes — test data only |

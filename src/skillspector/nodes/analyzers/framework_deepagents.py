@@ -81,8 +81,8 @@ permission rule written in a shape this Scan cannot read leaves the ordered walk
 undecided for every path, so the whole configuration reaches the boundary rather
 than a guess. A sixth arrived with the Rule below -- a ``FilesystemBackend``
 whose ``root_dir`` this Scan cannot read, so no configured Skill source path can
-be mapped onto a file. A seventh arrived with the Rule below: a subagent list, or
-one definition inside it, written in a shape this Scan cannot read.
+be mapped onto a file. A seventh arrived with the last Rule below: a subagent
+list, or one definition inside it, written in a shape this Scan cannot read.
 
 ``DA-SHADOW`` (HIGH). The supply-chain substitution that is expressible entirely
 in configuration and invisible to any single-directory Scan: *"Later sources
@@ -117,7 +117,8 @@ An application that defines one without is not exposed to anything; it is runnin
 a subagent that cannot do what its author believes it can, and nothing at runtime
 says so. It reads no path, opens no second file and needs no mapping -- the
 definitions are in the same call as everything above -- which is why ADR 0008
-recorded it as the one "cross-source" Rule that crosses nothing.
+recorded it as the one "cross-source" Rule that crosses nothing, and
+:mod:`skillspector.deepagents.subagents` is the verdict.
 
 **The Ticket's general-purpose exclusion needs no code, and this is the record of
 it.** Issue #74 asked for the general-purpose subagent to be excluded from this
@@ -155,7 +156,7 @@ from __future__ import annotations
 import ast
 from collections.abc import Mapping
 
-from skillspector.deepagents import host_config, signals, skill_sources, vocabulary, writability
+from skillspector.deepagents import host_config, signals, skill_sources, subagents, writability
 from skillspector.framework import Framework
 from skillspector.inspection_ledger import (
     AnalyzerStatus,
@@ -225,9 +226,12 @@ _SHADOW_CONFIDENCE = 0.9
 _SUBAGENT_SEVERITY = "LOW"
 _SUBAGENT_CONFIDENCE = 0.9
 
-# Four cases, four messages. A report that said the same sentence about an
-# unknown Skill list and an unknown backend would leave a reviewer to work out
-# which surface went unexamined, which is the work this Rule exists to save.
+# One message per surface the Scan can stop at. A report that said the same
+# sentence about an unknown Skill list and an unknown backend would leave a
+# reviewer to work out which surface went unexamined, which is the work this Rule
+# exists to save. The two shapes a subagent list stops at share one message
+# deliberately: an unreadable list and an unreadable definition inside it leave
+# the same thing undetermined.
 _UNRESOLVED_SKILL_LIST = (
     "The Skill source list is assembled at runtime, so the Scan cannot say which Skill "
     "directories this agent was given and examined none of them."
@@ -259,6 +263,12 @@ _UNRESOLVED_BACKEND_ROOT = (
 )
 
 
+_SUBAGENT_MESSAGE = (
+    "This custom subagent is defined without Skills of its own. A custom subagent does not inherit "
+    "the main agent's Skills, so it runs without the Skills the application around it was given."
+)
+
+
 def _shadow_message(shadowing: skill_sources.Shadowing) -> str:
     """The ``DA-SHADOW`` message for one confirmed collision.
 
@@ -272,12 +282,6 @@ def _shadow_message(shadowing: skill_sources.Shadowing) -> str:
         f"the later source {shadowing.shadowing}. Later sources override earlier ones for Skills "
         f"of the same name, so the agent loads {shadowing.loaded} and the earlier one never runs."
     )
-
-
-_SUBAGENT_MESSAGE = (
-    "This custom subagent is defined without Skills of its own. A custom subagent does not inherit "
-    "the main agent's Skills, so it runs without the Skills the application around it was given."
-)
 
 
 def _writable_message(path: str, mitigated: bool) -> str:
@@ -440,35 +444,9 @@ def _configuration_findings(
             definition.line,
             _SUBAGENT_MESSAGE,
         )
-        for definition in _definitions_without_skills(configuration)
+        for definition in subagents.without_own_skills(configuration)
     )
     return findings
-
-
-def _definitions_without_skills(
-    configuration: host_config.AgentConfiguration,
-) -> tuple[host_config.SubagentDefinition, ...]:
-    """The custom subagents of one call that carry no ``skills`` of their own.
-
-    Nothing here is a fallback of anything else: a subagent definition is read
-    out of the same call as the rest and decided inside it, so this Rule and the
-    three above are orthogonal rather than partitioned. Where the list itself did
-    not resolve, :func:`_boundary_findings` has already said so and this returns
-    nothing -- reporting an absent ``skills`` in a list that was never read would
-    be the guess the whole Analyzer is built not to make.
-    """
-    subagents = configuration.subagents
-    if subagents is None or subagents.unresolved:
-        return ()
-    definitions = subagents.value
-    if not isinstance(definitions, tuple):
-        return ()
-    return tuple(
-        definition
-        for definition in definitions
-        if isinstance(definition, host_config.SubagentDefinition)
-        and vocabulary.SKILLS not in definition.keys
-    )
 
 
 def _open(

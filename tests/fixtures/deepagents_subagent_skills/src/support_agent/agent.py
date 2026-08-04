@@ -1,8 +1,8 @@
 """Builds the support agent and the two subagents it delegates to.
 
 The main agent's Skill source is covered by the rule below, so nothing here can
-rewrite the procedure it runs on. Each subagent is declared with the Skill
-sources it is meant to read.
+rewrite the procedure it runs on. The triager is declared with the same Skill
+source the main agent reads; the summarizer is declared with none.
 """
 
 from deepagents import FilesystemPermission, create_deep_agent
