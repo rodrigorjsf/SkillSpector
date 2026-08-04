@@ -35,11 +35,24 @@ Every published release of `dev.langchain4j:langchain4j-skills` was checked — 
 matches has ever been removed**. The only change is `ClassPathSkillLoader`, added at
 `1.13.0-beta23`.
 
+> **Corrected by the 2026-08-03 re-measurement.** `ClassPathSkillLoader` was not the only change:
+> the `tools` builder argument was added in the same release, on `AbstractSkill$BaseBuilder`. The
+> measurement above compared **class listings**, and a builder argument added to a class that
+> already exists changes no listing — so the claim was not wrong about what it measured, it was
+> measuring something narrower than the sentence said. The range itself was confirmed unchanged.
+> The same re-measurement found that `toolFilter` has never been published in any release of
+> `langchain4j-mcp`; see [the procedure](../VOCABULARY_REMEASUREMENT.md#worked-example-the-2026-08-03-re-measurement).
+
 That measurement was made by reading the published Maven metadata for both artifacts and comparing
 the class listings of the first and latest releases, then sweeping every release for the matched
 identifiers — not read off documentation. It is recorded in the module as `OBSERVED_VERSION_RANGE`
 so the stability claim is evidence rather than assertion, and so a reader can tell how stale it is.
-Re-measuring it has no procedure and no trigger; that gap is issue #46.
+
+> **Re-measuring it now has both.** `docs/VOCABULARY_REMEASUREMENT.md` is the procedure — what to
+> run, what it reads, what output constitutes the new claim — and the trigger that obliges someone
+> to re-run it. It covers both Frameworks and is executable as
+> `python -m contrib.vocabulary_sweep langchain4j`. That closes issue #46, which this record opened
+> by naming the gap.
 
 So the exposure to date is nil. It is not nil going forward: the artifact carrying the
 highest-severity Rule is still named `langchain4j-experimental-skills-shell`, and the day it
@@ -140,6 +153,15 @@ matching, and the report reads as clean. That is the failure this record opened 
 decision does not close it: it reduces the fix to one line and gives a maintainer one file to read
 against a release. Detecting that the rename happened is issue #45; re-measuring the stability claim
 on a schedule is issue #46. Neither should be read as delivered here.
+
+> **Both have since been delivered, and the second one immediately earned itself.** #45 landed as
+> [ADR 0007](0007-l4j-shell-survives-the-graduation-rename.md). #46 landed as
+> [the re-measurement procedure](../VOCABULARY_REMEASUREMENT.md), and its first run found exactly the
+> failure this paragraph describes, in the inventory this record created: `toolFilter` is a spelling
+> no published release has ever declared, so `L4J-MCP-FILTER` reports every builder chain compiled
+> against a real release as unfiltered. Nothing in the test suite could have said so — the guard
+> here fires on a spelling written in the wrong *place*, never on one that is wrong. Tracked as
+> issue #82; correcting it changes what a Scan reports, which the measurement that found it did not.
 
 **This change altered no behavior, and that is its proof.** No Rule logic changed, no Rule was added
 or removed, no Finding changed. Regenerating the Behavior Snapshot corpus left the working tree

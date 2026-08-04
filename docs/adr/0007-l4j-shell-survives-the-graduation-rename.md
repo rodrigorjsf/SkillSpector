@@ -178,6 +178,13 @@ procedure and no trigger. This record narrows what #46 has to catch, because a g
 no longer the case that silently breaks a Rule; it is now a case where a maintainer wants to update
 `SHELL_ARTIFACT_ID` for accuracy.
 
+> **#46 closed.** [`docs/VOCABULARY_REMEASUREMENT.md`](../VOCABULARY_REMEASUREMENT.md) is the
+> procedure and the trigger, and `python -m contrib.vocabulary_sweep langchain4j` is what runs it.
+> The shell artifact's id is swept as a published coordinate, so the graduation this record
+> describes shows up as that spelling ceasing to be served — the accuracy update a maintainer wants,
+> arriving as an output line rather than as a thing nobody watches. As of 2026-08-03 it has not
+> happened: the artifact is still published under its `experimental` name across all 17 releases.
+
 ## Consequences
 
 **`SHELL_ARTIFACT_ID` is no longer what the Rule matches.** It stays inventoried as the only

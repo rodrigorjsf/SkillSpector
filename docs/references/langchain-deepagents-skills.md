@@ -2,6 +2,16 @@
 
 > **Source:** <https://docs.langchain.com/oss/python/deepagents/skills>
 > **Captured:** 2026-08-01
+>
+> **Upstream releases swept:** 2026-08-03 — the spellings this capture documents were read out of
+> every published `deepagents` wheel, `0.0.1` through `0.7.3`, 78 final releases. None has ever
+> been removed; the permission vocabulary arrives together at `0.5.2`, below the
+> `deepagents>=0.6.8` floor quoted under [Usage](#usage). The range is recorded as
+> `OBSERVED_VERSION_RANGE` in
+> [`vocabulary.py`](../../src/skillspector/deepagents/vocabulary.py); re-measuring it is
+> [`docs/VOCABULARY_REMEASUREMENT.md`](../VOCABULARY_REMEASUREMENT.md). Stated here rather than
+> re-measured, so a reader can tell how far this capture's spellings have been checked and not
+> only when they were captured.
 > **Scope note:** Deep Agents is the LangChain Python framework that consumes `SKILL.md`
 > directories. The general LangChain OSS docs (`/oss/python/langchain/overview`) describe
 > agents, tools, and middleware but have no on-disk skill format, so Deep Agents is the

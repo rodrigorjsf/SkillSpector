@@ -24,12 +24,11 @@ as clean. So the spellings live in one file, and
 ``tests/unit/test_deepagents_vocabulary.py`` fails the build when one is written
 inline anywhere else in the source tree.
 
-What ADR 0005's second half is *not* copied: it measured the stability claim
-rather than asserting it -- seventeen Maven releases swept, recorded in
-``OBSERVED_VERSION_RANGE``. No equivalent measurement exists for Deep Agents yet.
-Producing it, and the re-measurement procedure for both Frameworks, is issue #75.
-Until that lands this module carries no version range, deliberately, rather than
-carrying an unmeasured one.
+ADR 0005's second half is copied too, and issue #75 is where it landed: the
+stability claim below is measured rather than asserted. Every published release
+of the distribution was swept -- 78 of them -- and ``OBSERVED_VERSION_RANGE``
+records how far, so a reader can tell how stale the claim is. What re-runs that
+sweep, and what obliges someone to, is ``docs/VOCABULARY_REMEASUREMENT.md``.
 
 Issue #70 seeded this module with two spellings while the Analyzer that owns them
 carried no Rule, so the guard would be in force from the first Rule rather than
@@ -71,12 +70,54 @@ Provenance
 ----------
 
 Captured from ``docs/references/langchain-deepagents-skills.md`` (upstream
-<https://docs.langchain.com/labs/deep-agents/skills>).
+<https://docs.langchain.com/labs/deep-agents/skills>), and cross-checked against
+the published PyPI distributions by ``contrib/vocabulary_sweep``.
+
+Every final release was swept for the spellings below: 78 versions, ``0.0.1``
+through ``0.7.3``, read out of the wheels rather than off the documentation.
+**No spelling here has ever been removed.** Most were added during that history,
+which is what a distribution still on ``0.x`` looks like, and the table under
+``OBSERVED_VERSION_RANGE`` records each one's first release.
 """
 
 from __future__ import annotations
 
 from typing import Final
+
+# The releases the sweep covered, oldest and newest. Every spelling below was
+# observed in the *role* upstream writes it in -- defined as a name, bound as a
+# parameter or field, or written as a string value -- rather than merely
+# occurring somewhere in the archive, which for ordinary English words such as
+# ``skills`` and ``mode`` would have measured nothing.
+#
+# When each spelling first appears, for the ones that are not in the first
+# release. Nothing was ever removed, so each is present from its release to the
+# end of the range:
+#
+#   0.0.6   write_file, edit_file
+#   0.0.8   interrupt_on
+#   0.2.0   CompositeBackend, StoreBackend, StateBackend, FilesystemBackend,
+#           backend, routes, root_dir
+#   0.2.8   paths
+#   0.3.2   skills
+#   0.5.2   FilesystemPermission, permissions, operations, mode, deny,
+#           interrupt, write
+#
+# ``create_deep_agent``, ``subagents`` and the distribution name itself span the
+# whole range. The practical floor is therefore **0.5.2**, the release where the
+# permission vocabulary arrives and every spelling here exists together; the
+# ``deepagents>=0.6.8`` in the captured reference is a floor for a different
+# question -- filesystem-permission interrupts -- and sits above it.
+#
+# One annotation is a human's correction rather than the sweep's raw output.
+# ``interrupt`` is a bare string value, and a sweep for one cannot tell the
+# ``mode`` value from any other use of the word: 0.5.0 and 0.5.1 write
+# ``multitask_strategy="interrupt"`` in an unrelated middleware. The permission
+# value arrives at 0.5.2 with the rest of its cluster, and 0.5.2 is what is
+# recorded. ``docs/VOCABULARY_REMEASUREMENT.md`` names this as the one step a
+# re-measurement cannot leave to the tool.
+OBSERVED_VERSION_RANGE: Final[tuple[str, str]] = ("0.0.1", "0.7.3")
+
 
 # -- The Framework itself ---------------------------------------------------- #
 

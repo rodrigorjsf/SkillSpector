@@ -124,7 +124,9 @@ whoever the user says. Do not manufacture an Umbrella Branch for a single PR.
 - Architecture, node and provider walkthroughs, env vars — `docs/DEVELOPMENT.md`
 - Extending the scanner to LangChain4j and Deep Agents skills — `docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md`
 - Captured upstream framework docs — `docs/references/README.md`
+- Re-measuring a Framework vocabulary's version range, and its trigger — `docs/VOCABULARY_REMEASUREMENT.md`
 - Batch scanner, own runners, excluded from `make test` — `contrib/batch_scan/CLAUDE.md`
+- Vocabulary sweep, own runner, excluded from `make test` — `contrib/vocabulary_sweep/CLAUDE.md`
 
 ## Applied Learning
 
@@ -164,3 +166,5 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - A new `deepagents/` module must join the vocabulary guard's explicit module list.
 - A new vocabulary spelling also needs its guard test's `_EXPECTED_SPELLINGS` set.
 - Editing `pattern_defaults` prose rewrites every snapshot carrying that rule.
+- Upstream docs can name a method no release ships; sweep the artifacts, not the pages.
+- A non-spelling vocabulary constant needs the guard's `_NOT_A_SPELLING` set.

@@ -181,6 +181,12 @@ The complete variable table is in [Environment Variables](#environment-variables
   framework-specific rules exactly as they apply to the base catalog.
 - **Sending skill content to a third party is opt-out, not opt-in.** The LLM stage is on by default
   and transmits skill content to the configured provider. `--no-llm` keeps every scan local.
+- **The framework rules match upstream spellings, and a rename breaks them silently.** When upstream
+  renames an identifier, the rule that matched it stops producing findings and the report still reads
+  as clean. Each framework's spellings therefore live in one inventory carrying a *measured* range of
+  published releases, re-measured by reading those releases rather than the documentation:
+  [`docs/VOCABULARY_REMEASUREMENT.md`](docs/VOCABULARY_REMEASUREMENT.md) is the procedure, its trigger,
+  and what the last run found.
 
 ## Contributing, and keeping these docs true
 
@@ -200,6 +206,7 @@ in the *same* pull request. Concretely:
 | An exit code or an output format | [Integrating SkillSpector](#integrating-skillspector) |
 | Anything that ships a designed-but-unbuilt capability | the **Status** column above, and [`docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md`](docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md) |
 | Any detection rule, again | [`docs/OWASP-AST10-COVERAGE.md`](docs/OWASP-AST10-COVERAGE.md) — the row the rule belongs to, or the gaps list where it belongs to none |
+| An upstream spelling a framework rule matches | the framework's `vocabulary.py` — never a literal elsewhere — and, if the spelling is new, a re-measured range per [`docs/VOCABULARY_REMEASUREMENT.md`](docs/VOCABULARY_REMEASUREMENT.md) |
 
 A capability that ships without its row updated is a documentation bug — report it as one.
 
