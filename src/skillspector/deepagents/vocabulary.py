@@ -34,16 +34,20 @@ carrying an unmeasured one.
 Issue #70 seeded this module with two spellings while the Analyzer that owns them
 carried no Rule, so the guard would be in force from the first Rule rather than
 retrofitted around five. Issue #71 is that first Rule -- the resolution boundary
-``DA-UNRESOLVED`` -- and it is what starts importing from here. Issues #72
-through #74 add the rest of the inventory ADR 0008 enumerates; none of them
-writes a spelling anywhere else.
+``DA-UNRESOLVED`` -- and it is what started importing from here. Issue #72 added
+what ``DA-SKILL-WRITABLE`` reads by name: the three keyword arguments of a
+permission rule, the two ``mode`` values upstream documents, the write operation,
+and the tool-level approval gate. Issues #73 and #74 add the rest of the
+inventory ADR 0008 enumerates; none of them writes a spelling anywhere else.
 
-**Two sections, because two of these spellings are ordinary English words.**
-``skills`` and ``permissions`` are also an Agent Skills manifest field, a
-repository directory name and a CLI report key, and
-:mod:`skillspector` writes all three as bare literals in modules that have
+**A section of its own, because four of these spellings are ordinary English
+words.** ``skills`` and ``permissions`` are also an Agent Skills manifest field,
+a repository directory name and a CLI report key; ``mode`` is the keyword
+argument of a call to ``open``; ``write`` is a capability in an MCP tool map. And
+:mod:`skillspector` writes all of them as bare literals in modules that have
 nothing to do with Deep Agents -- ``build_context``, ``mcp_least_privilege``,
-``repository_scan``, ``cli``. Making the guard demand those call sites import a
+``repository_scan``, ``cli``, ``behavioral_taint_tracking``,
+``static_patterns_supply_chain``. Making the guard demand those call sites import a
 Deep Agents constant would be wrong rather than strict: they are homonyms, not
 leaks. So the inventory still owns them -- an upstream rename is still one edit
 here -- and the guard's *sweep* exempts them, on evidence rather than on
@@ -82,11 +86,30 @@ DISTRIBUTION: Final[str] = "deepagents"
 
 # -- What the constructor is configured with --------------------------------- #
 
-# The declarative permission rule. Its own keyword arguments are deliberately
-# *not* inventoried: the resolver requires every one of them to resolve to a
-# literal without caring which they are, so it never spells `operations`,
-# `paths` or `mode`. The Rule that reads those three by name is issue #72.
+# The declarative permission rule. The resolver in
+# :mod:`skillspector.deepagents.host_config` still reads it without caring which
+# keyword arguments it carries -- it requires every one of them to resolve to a
+# literal and nothing more. The three below are inventoried because
+# ``DA-SKILL-WRITABLE`` reads them *by name* to compute its verdict.
 FILESYSTEM_PERMISSION: Final[str] = "FilesystemPermission"
+
+# Which operations a rule governs, which paths it governs them on, and what it
+# does where it applies. Upstream writes all three on every rule it documents.
+OPERATIONS: Final[str] = "operations"
+PATHS: Final[str] = "paths"
+
+# The two `mode` values upstream documents. A covering rule written with any
+# other value decides nothing this Scan can read, and reaches the boundary Rule
+# rather than a verdict.
+DENY: Final[str] = "deny"
+INTERRUPT: Final[str] = "interrupt"
+
+# The tool-level approval gate, and the two write tools it is written over.
+# Unlike `mode="interrupt"`, which mitigates only its own rule's paths, this one
+# "requires approval for all filesystem writes, not only skills paths".
+INTERRUPT_ON: Final[str] = "interrupt_on"
+WRITE_FILE: Final[str] = "write_file"
+EDIT_FILE: Final[str] = "edit_file"
 
 # The keyword argument that decides whether the Skill files are on disk at all,
 # and therefore whether any writability verdict is knowable.
@@ -106,9 +129,10 @@ ROUTES: Final[str] = "routes"
 
 # -- Homonyms: owned here, exempt from the sweep ------------------------------ #
 #
-# Both are ordinary English words this repository already writes inline for
+# All four are ordinary English words this repository already writes inline for
 # unrelated reasons -- an Agent Skills manifest field, a discovery directory
-# name, a CLI report key. See the module docstring: the exemption is asserted
+# name, a CLI report key, the ``mode=`` of a call to ``open``, the ``write`` of
+# an MCP capability map. See the module docstring: the exemption is asserted
 # against real occurrences elsewhere in the tree, not merely declared.
 
 # The Skill source paths the agent is given.
@@ -116,3 +140,10 @@ SKILLS: Final[str] = "skills"
 
 # The declarative rules that decide what the agent may do to those paths.
 PERMISSIONS: Final[str] = "permissions"
+
+# What a permission rule does where it applies.
+MODE: Final[str] = "mode"
+
+# The operation a Skill file is rewritten by, and therefore the only one
+# ``DA-SKILL-WRITABLE`` asks a rule about.
+WRITE: Final[str] = "write"

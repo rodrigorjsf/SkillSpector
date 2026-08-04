@@ -42,11 +42,12 @@ prose and containment cannot tell the two apart. Regex-escaped forms *are*
 caught, so recomposing ``re.compile(r"create_deep_agent")`` inline fails the
 same way the plain spelling does.
 
-**Homonyms are exempt from the sweep by call site, not by spelling.** Two of the
+**Homonyms are exempt from the sweep by call site, not by spelling.** Four of the
 inventory's spellings are ordinary English words this repository already writes
 inline for reasons that have nothing to do with Deep Agents -- an Agent Skills
-manifest field, a discovery directory name, a CLI report key. Demanding those
-call sites import a Deep Agents constant would be wrong rather than strict.
+manifest field, a discovery directory name, a CLI report key, the ``mode=`` of a
+call to ``open``, the ``write`` of an MCP capability map. Demanding those call
+sites import a Deep Agents constant would be wrong rather than strict.
 
 Exempting the *word* everywhere would be a hole, and the hole would sit exactly
 where it matters: the modules that read Deep Agents configuration are the ones
@@ -100,13 +101,22 @@ _EXPECTED_SPELLINGS = {
     "StateBackend",
     "FilesystemBackend",
     "routes",
+    "operations",
+    "paths",
+    "deny",
+    "interrupt",
+    "interrupt_on",
+    "write_file",
+    "edit_file",
     "skills",
     "permissions",
+    "mode",
+    "write",
 }
 
-# The two homonyms. Owned by the inventory, and skipped by the sweep everywhere
+# The four homonyms. Owned by the inventory, and skipped by the sweep everywhere
 # except the modules below. See the module docstring.
-_HOMONYMS = {"skills", "permissions"}
+_HOMONYMS = {"skills", "permissions", "mode", "write"}
 
 # Where a homonym is not a homonym: the package that reads Deep Agents
 # configuration and the Analyzer that drives it. A ``"skills"`` written inline in
@@ -245,6 +255,7 @@ class TestHomonyms:
         assert {
             _SRC / "deepagents" / "host_config.py",
             _SRC / "deepagents" / "signals.py",
+            _SRC / "deepagents" / "writability.py",
             _SRC / "deepagents" / "__init__.py",
             _ANALYZER,
         } == set(_DEEPAGENTS_MODULES)

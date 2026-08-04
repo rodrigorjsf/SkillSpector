@@ -35,6 +35,18 @@ A Rule that tests for the presence of the token `permissions=` is therefore wron
 directions. It fires on a read-only backend, and it stays silent on a broad `deny` that a more
 specific earlier rule has already overridden.
 
+**Amendment, from implementing #72: there is no read-only backend.** The sentence above, and the
+Ticket written from it, assumed the `backend=` axis could clear a path on its own. The captured
+reference documents four backends (`:167-171`) and describes none of them as read-only — the only
+read-only-ness on the page is the `deny` rule of its own "Enforce read-only skills" example
+(`:240-266`), which is the `permissions=` axis. Inventing a spelling for a backend that does not
+exist upstream is what [ADR 0005](0005-langchain4j-upstream-vocabulary.md) exists to prevent, so
+`DA-SKILL-WRITABLE` reads the backend as a source of **unknowability** instead: where it routes a
+Skill path somewhere the Scan cannot see into, the path reaches the boundary Rule of §1 and no
+verdict at all. The joint verdict is therefore over two axes that decide and one that can only
+withhold. Note also that §3's "not on disk" boundary must not be borrowed here — files in agent state
+are exactly what a self-modifying agent rewrites.
+
 ## 1. Resolution stops at the module boundary
 
 The Analyzer resolves a literal, and a constant declared in the same module. Anything else is not

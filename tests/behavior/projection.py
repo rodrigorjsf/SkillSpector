@@ -302,6 +302,17 @@ FIXTURES_DIR = _BEHAVIOR_DIR.parent / "fixtures"
 # rather than a Skill list. Its root bears no ``SKILL.md`` either -- the Skill is
 # nested under ``skills/``, as an application's is.
 #
+# ``deepagents_personal_skills`` and ``deepagents_denied_skills`` (#72) are the
+# writability verdict's pair. The first is the arrangement upstream recommends
+# for letting an agent refine its own notes -- a shared source under a rule and a
+# per-user source left open -- so its snapshot carries exactly one
+# ``DA-SKILL-WRITABLE``, which is what a per-path verdict means. The second is
+# the negative control: every source the agent is given is covered, so its
+# snapshot pins **silence**. That silence is the point. This Rule fires on the
+# configuration the upstream tutorial teaches, so the way it fails is by firing
+# on configuration that is already right, and without a pinned-silent fixture
+# that failure would land in a report rather than in this gate.
+#
 # ``langchain4j_shell_skill`` (#28) is the first fixture a Framework Analyzer
 # actually reads: a LangChain4j application whose Skill sits at
 # ``src/main/resources/skills/`` and whose host code wires shell mode. Its root
@@ -312,7 +323,9 @@ FIXTURES_DIR = _BEHAVIOR_DIR.parent / "fixtures"
 # ``sdi/``, ``sqp/`` and ``ssd/`` are excluded: they are fixture-layout
 # containers holding a family of Skills, not Skills themselves.
 CORPUS_NAMES: tuple[str, ...] = (
+    "deepagents_denied_skills",
     "deepagents_detection",
+    "deepagents_personal_skills",
     "deepagents_runtime_skills",
     "langchain4j_detection",
     "langchain4j_shell_skill",

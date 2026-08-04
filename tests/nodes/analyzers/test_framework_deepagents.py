@@ -31,6 +31,7 @@ Analyzer. The rows are what separate the two.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import pytest
@@ -148,10 +149,30 @@ NO_ARGUMENTS_PY = """from deepagents import create_deep_agent
 agent = create_deep_agent(model="claude-sonnet-5")
 """
 
+# The negative control of the whole Ticket: every Skill source the agent is
+# given is denied write access, so a correctly configured application is silent
+# and a future false positive on ordinary configuration is visible as noise
+# rather than as one more Finding among several.
+DENIED_PY = """from deepagents import FilesystemPermission, create_deep_agent
+
+agent = create_deep_agent(
+    model="claude-sonnet-5",
+    skills=["/skills/shared/"],
+    permissions=[
+        FilesystemPermission(operations=["write"], paths=["/skills/**"], mode="deny"),
+    ],
+)
+"""
+
 
 def _messages(result: dict[str, Any]) -> list[str]:
     """The Finding messages a node call produced, in the order it produced them."""
     return [finding.message for finding in result["findings"]]
+
+
+def _rule_ids(result: dict[str, Any]) -> list[str]:
+    """The Rule each Finding belongs to, in the order the node produced them."""
+    return [finding.rule_id for finding in result["findings"]]
 
 
 def make_state(
@@ -338,7 +359,14 @@ class TestTheResolutionBoundary:
 
 
 class TestWhatResolvesRaisesNothing:
-    """The boundary is only worth anything if ordinary code lands on the other side."""
+    """The boundary is only worth anything if ordinary code lands on the other side.
+
+    Asserted as the absence of ``DA-UNRESOLVED`` rather than of every Finding:
+    a configuration that resolves is exactly the one the writability verdict
+    then judges, and several of these are judged writable. Which is the
+    partition the two Rules are built on -- what resolved is judged, what did
+    not is reported as not having been.
+    """
 
     @pytest.mark.parametrize(
         "source",
@@ -346,10 +374,11 @@ class TestWhatResolvesRaisesNothing:
             pytest.param(WRITABLE_SKILLS_PY, id="literal-list"),
             pytest.param(MODULE_CONSTANT_PY, id="same-module-constants"),
             pytest.param(NO_ARGUMENTS_PY, id="no-arguments"),
+            pytest.param(DENIED_PY, id="denied"),
         ],
     )
-    def test_a_resolvable_configuration_is_silent(self, source: str) -> None:
-        assert analyzer.node(make_state({"agent.py": source}))["findings"] == []
+    def test_a_resolvable_configuration_raises_no_boundary(self, source: str) -> None:
+        assert "DA-UNRESOLVED" not in _rule_ids(analyzer.node(make_state({"agent.py": source})))
 
     def test_an_absent_argument_is_a_configuration_rather_than_a_silence(self) -> None:
         """No Skills, no rules and the default backend are answers, not boundaries."""
@@ -378,7 +407,7 @@ class TestWhatResolvesRaisesNothing:
         """A store routed somewhere the agent was never given Skills from."""
         source = ROUTED_STORE_PY.replace('skills=["/skills/"]', 'skills=["/vetted/"]')
 
-        assert analyzer.node(make_state({"agent.py": source}))["findings"] == []
+        assert "DA-UNRESOLVED" not in _rule_ids(analyzer.node(make_state({"agent.py": source})))
 
     def test_an_unresolved_skill_list_is_not_also_reported_as_an_opaque_route(self) -> None:
         """One silence, described once, in the vocabulary that fits it."""
@@ -398,6 +427,289 @@ class TestWhatResolvesRaisesNothing:
 
         assert result["findings"] == []
         assert len(result["inspection_ledger"]) == 2
+
+
+def _writable_paths(result: dict[str, Any]) -> list[str]:
+    """Which Skill source path each ``DA-SKILL-WRITABLE`` Finding is about.
+
+    Read out of the message rather than tracked separately, because "the Finding
+    names the path it is about" is the property the Ticket asks for and a helper
+    that read it from anywhere else would go green on a Finding whose prose said
+    nothing.
+    """
+    named = [
+        re.search(r"Skill source path (\S+) and nothing denies", finding.message)
+        for finding in result["findings"]
+        if finding.rule_id == "DA-SKILL-WRITABLE"
+    ]
+    assert all(match is not None for match in named), "a verdict named no path"
+    return [match.group(1) for match in named if match is not None]
+
+
+def _permissioned(paths: str, mode: str, skills: str = '["/skills/shared/"]') -> str:
+    """One agent given *skills*, under a single write rule over *paths*."""
+    return f"""from deepagents import FilesystemPermission, create_deep_agent
+
+agent = create_deep_agent(
+    model="claude-sonnet-5",
+    skills={skills},
+    permissions=[
+        FilesystemPermission(operations=["write"], paths={paths}, mode="{mode}"),
+    ],
+)
+"""
+
+
+class TestTheWritabilityVerdict:
+    """``DA-SKILL-WRITABLE``: one composed verdict per resolved Skill source path."""
+
+    def test_the_tutorial_default_is_reported_once_per_path(self) -> None:
+        """No ``permissions`` and no ``backend`` -- the configuration upstream teaches.
+
+        The single case the whole Deep Agents work exists to report, and the one
+        a "not on disk, so not writable" reading of the backend would silence:
+        state files are exactly what a self-modifying agent rewrites.
+        """
+        source = WRITABLE_SKILLS_PY.replace(
+            'skills=["/skills/"]', 'skills=["/skills/shared/", "/skills/personal/"]'
+        )
+        result = analyzer.node(make_state({"agent.py": source}))
+
+        assert _rule_ids(result) == ["DA-SKILL-WRITABLE", "DA-SKILL-WRITABLE"]
+        assert _writable_paths(result) == ["/skills/shared/", "/skills/personal/"]
+        assert all(finding.severity == "MEDIUM" for finding in result["findings"])
+        assert all(finding.confidence == 0.9 for finding in result["findings"])
+
+    def test_a_denied_path_produces_nothing(self) -> None:
+        result = analyzer.node(make_state({"agent.py": _permissioned('["/skills/**"]', "deny")}))
+
+        assert result["findings"] == []
+
+    def test_a_deny_that_does_not_cover_the_path_leaves_the_verdict_standing(self) -> None:
+        """The control for the test above: the rule is what cleared it, not its presence."""
+        result = analyzer.node(make_state({"agent.py": _permissioned('["/vetted/**"]', "deny")}))
+
+        assert _writable_paths(result) == ["/skills/shared/"]
+
+    def test_a_rule_governing_another_operation_does_not_end_the_walk(self) -> None:
+        source = _permissioned('["/skills/**"]', "deny").replace(
+            'operations=["write"]', 'operations=["read"]'
+        )
+
+        assert _writable_paths(analyzer.node(make_state({"agent.py": source}))) == [
+            "/skills/shared/"
+        ]
+
+    def test_the_finding_carries_the_catalog_prose_rather_than_its_own(self) -> None:
+        finding = analyzer.node(make_state({"agent.py": WRITABLE_SKILLS_PY}))["findings"][0]
+
+        assert finding.rule_id == "DA-SKILL-WRITABLE"
+        assert finding.category == "Deep Agents Framework"
+        assert finding.pattern == "Writable Skill Source"
+        assert finding.explanation
+        assert finding.remediation
+
+
+class TestRulePrecedence:
+    """Rule order is semantics, so the verdict is a walk rather than a search."""
+
+    _SPECIFIC_BEFORE_BROAD = """from deepagents import FilesystemPermission, create_deep_agent
+
+agent = create_deep_agent(
+    model="claude-sonnet-5",
+    skills=["/skills/shared/", "/skills/personal/"],
+    permissions=[
+        FilesystemPermission(operations=["write"], paths=["/skills/personal/**"], mode="interrupt"),
+        FilesystemPermission(operations=["write"], paths=["/skills/**"], mode="deny"),
+    ],
+)
+"""
+
+    def test_a_specific_rule_placed_first_decides_the_paths_it_covers(self) -> None:
+        """Upstream's own advice, and what a "is there any deny" predicate would miss.
+
+        The broad ``deny`` covers both paths. Only the shared library is denied,
+        because the personal directory is decided by the more specific rule
+        written above it.
+        """
+        result = analyzer.node(make_state({"agent.py": self._SPECIFIC_BEFORE_BROAD}))
+
+        assert _writable_paths(result) == ["/skills/personal/"]
+
+    def test_reordering_the_same_two_rules_reverses_the_verdict(self) -> None:
+        """The mutation that separates an ordered walk from an unordered one.
+
+        Same two rules, same two paths, broad ``deny`` first: nothing is
+        writable. A predicate blind to order reports both files identically.
+        """
+        lines = self._SPECIFIC_BEFORE_BROAD.splitlines(keepends=True)
+        specific, broad = lines[6], lines[7]
+        reordered = "".join(lines[:6] + [broad, specific] + lines[8:])
+
+        assert analyzer.node(make_state({"agent.py": reordered}))["findings"] == []
+        assert analyzer.node(make_state({"agent.py": self._SPECIFIC_BEFORE_BROAD}))["findings"]
+
+
+class TestTheInterruptMitigation:
+    """A human in front of the write lowers the verdict; it never raises one."""
+
+    def test_an_interrupt_rule_lowers_the_severity_rather_than_clearing_it(self) -> None:
+        result = analyzer.node(
+            make_state({"agent.py": _permissioned('["/skills/**"]', "interrupt")})
+        )
+
+        assert _rule_ids(result) == ["DA-SKILL-WRITABLE"]
+        assert result["findings"][0].severity == "LOW"
+
+    def test_the_unmitigated_control_is_the_same_configuration_at_medium(self) -> None:
+        """So the LOW above comes from the mitigation rather than from the Rule."""
+        result = analyzer.node(make_state({"agent.py": WRITABLE_SKILLS_PY}))
+
+        assert result["findings"][0].severity == "MEDIUM"
+
+    def test_an_interrupt_gate_over_both_write_tools_mitigates_every_path(self) -> None:
+        """Wider than a rule's ``mode``, because upstream says it is."""
+        source = WRITABLE_SKILLS_PY.replace(
+            'skills=["/skills/"]',
+            'skills=["/skills/shared/", "/skills/personal/"], '
+            'interrupt_on={"write_file": True, "edit_file": True}',
+        )
+        result = analyzer.node(make_state({"agent.py": source}))
+
+        assert [finding.severity for finding in result["findings"]] == ["LOW", "LOW"]
+
+    @pytest.mark.parametrize(
+        "gate",
+        [
+            pytest.param('{"write_file": True}', id="one-tool-only"),
+            pytest.param('{"write_file": True, "edit_file": False}', id="turned-off"),
+            pytest.param("gate_for_tenant()", id="unresolvable"),
+        ],
+    )
+    def test_a_gate_that_is_not_over_both_write_tools_mitigates_nothing(self, gate: str) -> None:
+        """Half a gate is an agent still editing a Skill file with nobody asked.
+
+        The unresolvable case is deliberately the same answer rather than a
+        fifth boundary: an unconfirmed mitigation left in place would lower a
+        real Finding's severity on evidence nobody has.
+        """
+        source = WRITABLE_SKILLS_PY.replace(
+            'skills=["/skills/"]', f'skills=["/skills/"], interrupt_on={gate}'
+        )
+        result = analyzer.node(make_state({"agent.py": source}))
+
+        assert _rule_ids(result) == ["DA-SKILL-WRITABLE"]
+        assert result["findings"][0].severity == "MEDIUM"
+
+    def test_a_gate_never_produces_a_finding_of_its_own(self) -> None:
+        """On a fully denied application, adding a gate adds nothing."""
+        source = _permissioned('["/skills/**"]', "deny").replace(
+            'model="claude-sonnet-5",',
+            'model="claude-sonnet-5",\n    interrupt_on={"write_file": True, "edit_file": True},',
+        )
+
+        assert analyzer.node(make_state({"agent.py": source}))["findings"] == []
+
+
+class TestWhatTheVerdictRefusesToDecide:
+    """Everything unresolvable reaches the boundary Rule instead of a verdict."""
+
+    @pytest.mark.parametrize(
+        "source",
+        [
+            pytest.param(RUNTIME_SKILLS_PY, id="skill-list"),
+            pytest.param(HELPER_BACKEND_PY, id="backend"),
+            pytest.param(HELPER_PERMISSIONS_PY, id="permissions"),
+            pytest.param(ROUTED_STORE_PY, id="routed-store"),
+        ],
+    )
+    def test_a_boundary_case_produces_no_writability_verdict(self, source: str) -> None:
+        assert _rule_ids(analyzer.node(make_state({"agent.py": source}))) == ["DA-UNRESOLVED"]
+
+    def test_only_the_routed_path_loses_its_verdict(self) -> None:
+        """The control for the routed-store case: the route is what cleared it.
+
+        A second Skill source the route does not cover is still judged, so the
+        silence above is the route rather than a call the verdict skipped whole.
+        """
+        source = ROUTED_STORE_PY.replace('skills=["/skills/"]', 'skills=["/skills/", "/personal/"]')
+        result = analyzer.node(make_state({"agent.py": source}))
+
+        assert _rule_ids(result) == ["DA-UNRESOLVED", "DA-SKILL-WRITABLE"]
+        assert _writable_paths(result) == ["/personal/"]
+
+    @pytest.mark.parametrize(
+        "rule",
+        [
+            pytest.param(
+                'FilesystemPermission(operations=["write"], paths=["/skills/**"], mode="allow")',
+                id="unknown-mode",
+            ),
+            pytest.param(
+                'FilesystemPermission(operations=["write"], paths=["/skills/**"])',
+                id="no-mode",
+            ),
+            pytest.param(
+                'FilesystemPermission(operations="write", paths=["/skills/**"], mode="deny")',
+                id="operations-not-a-list",
+            ),
+            pytest.param(
+                'FilesystemPermission(operations=["write"], paths=42, mode="deny")',
+                id="paths-not-a-list",
+            ),
+        ],
+    )
+    def test_a_rule_written_in_an_unreadable_shape_reaches_the_boundary(self, rule: str) -> None:
+        """A rule this Scan cannot read leaves the ordered walk undecided.
+
+        Undecided for **every** path, not only the ones the rule names: the part
+        that could not be read may be the ``paths`` that would have decided them.
+        """
+        source = _permissioned('["/skills/**"]', "deny").replace(
+            'FilesystemPermission(operations=["write"], paths=["/skills/**"], mode="deny")', rule
+        )
+        result = analyzer.node(make_state({"agent.py": source}))
+
+        assert _rule_ids(result) == ["DA-UNRESOLVED"]
+        assert "does not recognize" in result["findings"][0].message
+
+
+class TestPathCoverage:
+    """Glob matching, and the near-misses it deliberately does not forgive."""
+
+    @pytest.mark.parametrize(
+        ("pattern", "skill", "denied"),
+        [
+            pytest.param('["/skills/**"]', '["/skills/shared/"]', True, id="glob-covers-below"),
+            pytest.param('["/skills/shared/"]', '["/skills/shared/"]', True, id="exact"),
+            pytest.param('["/skills/**"]', '["/other/skills/x/"]', False, id="not-a-substring"),
+            pytest.param('["/skills/shared"]', '["/skills/shared/"]', False, id="trailing-slash"),
+            pytest.param('["/skills/**"]', '["skills/shared/"]', False, id="relative-path"),
+            pytest.param('["/SKILLS/**"]', '["/skills/shared/"]', False, id="case-differs"),
+            # A single `*` stops at a separator and `**` crosses one. This is the
+            # distinction `fnmatch` cannot make -- its `*` crosses `/` -- and
+            # reading a rule the wide way would clear a Finding on a path the
+            # rule never named.
+            pytest.param('["/skills/*"]', '["/skills/shared/"]', False, id="star-stops-at-slash"),
+            pytest.param('["/skills/*/"]', '["/skills/shared/"]', True, id="star-within-a-segment"),
+            pytest.param(
+                '["/skills/*/"]', '["/skills/shared/team/"]', False, id="star-spans-one-segment"
+            ),
+            pytest.param(
+                '["/skills/**"]', '["/skills/shared/team/"]', True, id="globstar-crosses-slashes"
+            ),
+            pytest.param('["/skills/?hared/"]', '["/skills/shared/"]', True, id="single-character"),
+            pytest.param('["/skills/?/"]', '["/skills/shared/"]', False, id="single-is-one-only"),
+        ],
+    )
+    def test_whether_a_deny_rule_covers_a_skill_source_path(
+        self, pattern: str, skill: str, denied: bool
+    ) -> None:
+        result = analyzer.node(
+            make_state({"agent.py": _permissioned(pattern, "deny", skills=skill)})
+        )
+
+        assert (result["findings"] == []) is denied
 
 
 class TestAnUnparseablePythonFile:
@@ -452,12 +764,12 @@ class TestTheLedgerContract:
             for path in ("agent.py", "pyproject.toml")
         ]
 
-    def test_a_fully_resolved_configuration_emits_no_finding_at_all(self) -> None:
-        """A literal Skill list resolves, so there is no boundary to report."""
+    def test_a_correctly_permissioned_configuration_emits_no_finding_at_all(self) -> None:
+        """It resolves, so no boundary; every path is denied, so no verdict."""
         result = analyzer.node(
             make_state(
                 {
-                    "agent.py": WRITABLE_SKILLS_PY,
+                    "agent.py": DENIED_PY,
                     "pyproject.toml": PYPROJECT,
                     "skills/ops/SKILL.md": SKILL_MD,
                 }
@@ -505,6 +817,33 @@ class TestTheDetectionFixtureThroughTheRealGraph:
         assert mine[0]["skipped"] == 0
         assert mine[0]["failed"] == 0
         assert mine[0]["unaccounted"] == 0
+
+    def test_the_writability_fixtures_are_the_verdict_and_its_negative_control(self) -> None:
+        """The two committed applications of issue #72, driven end to end.
+
+        Chosen from a throwaway prototype rather than authored: the scenario
+        matrix was scanned through this same entry point first, and these two
+        are what it returned. One Finding on the arrangement upstream
+        recommends -- a shared source under a rule, a per-user source left open
+        -- which is what a per-path verdict means; nothing at all on the
+        application whose every source is covered.
+
+        The silence is asserted here as well as pinned by the snapshot because
+        this Rule fires on the configuration the tutorial teaches, so the way it
+        fails is by firing on configuration that is already right.
+        """
+        from tests.behavior.projection import FIXTURES_DIR, scan_state
+
+        writable = [
+            finding
+            for finding in scan_state(FIXTURES_DIR / "deepagents_personal_skills")["findings"]
+            if finding.rule_id == analyzer._WRITABLE_RULE_ID
+        ]
+        assert [finding.severity for finding in writable] == ["MEDIUM"]
+        assert "/skills/personal/" in writable[0].message
+        assert "/skills/shared/" not in writable[0].message
+
+        assert scan_state(FIXTURES_DIR / "deepagents_denied_skills")["findings"] == []
 
     def test_it_contributes_no_limitation_and_moves_no_coverage(self) -> None:
         """The behavioral cost of this Ticket is one status row and nothing else."""
