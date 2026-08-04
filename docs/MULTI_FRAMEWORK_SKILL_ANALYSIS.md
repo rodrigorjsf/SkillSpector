@@ -7,9 +7,9 @@ key (issue #21), then the LangChain4j-in-CI increment (issue #23) — the gated
 [§3.6](#36-java-parsing-and-definition-path-coverage), and the Repository Scan of
 [§3.7](#37-repository-level-discovery-cicd) behind `--repo-scan`, and phase 2 — the gated
 `framework_deepagents` Analyzer carrying all four of the Deep Agents rules of
-[§2.3](#23-deep-agents-python-host) (issues #70–#74), with only the vocabulary
-stability measurement (#75) outstanding. **Phases 3 and 8 remain design proposal** — spec
-conformance and the deferred behavior-affecting changes.
+[§2.3](#23-deep-agents-python-host) (issues #70–#74) and the vocabulary stability measurement
+that closes it (#75). **Phases 3 and 8 remain design proposal** — spec conformance and the
+deferred behavior-affecting changes.
 [§9](#9-recommended-next-step) carries the live status; each phase row in §5 names the Ticket that
 landed it.
 **Goal:** extend SkillSpector to evaluate skills hosted by **LangChain4j** (Java) and
@@ -561,7 +561,7 @@ Ordered by value-to-risk. Each phase is independently shippable and independentl
 |-------|---------|----------------------|
 | **0** | This document + [`docs/references/`](references/README.md) | Yes — docs only |
 | **1** | ~~`detect_framework` + `framework` state key~~ **Done** (#21) — no analyzer read it at the time; `framework_langchain4j` does now. Unit tests assert correct detection on new fixtures and `"agent_skills"` on every existing fixture | Yes |
-| **2** | `framework_deepagents` analyzer, gated. Cheapest — reuses Python AST. **Started** (#58): the analyzer is wired and reports its status (#70), `DA-UNRESOLVED` ships its resolution boundary (#71), `DA-SKILL-WRITABLE` the writability verdict (#72) `DA-SHADOW` the cross-source collision (#73) and `DA-SUBAGENT-SKILLS` the subagent defined without Skills of its own (#74); what remains is the vocabulary stability measurement, #75 | Yes, via gate |
+| **2** | ~~`framework_deepagents` analyzer, gated~~ **Done** (#58): the analyzer is wired and reports its status (#70), `DA-UNRESOLVED` ships its resolution boundary (#71), `DA-SKILL-WRITABLE` the writability verdict (#72), `DA-SHADOW` the cross-source collision (#73) and `DA-SUBAGENT-SKILLS` the subagent defined without Skills of its own (#74); the vocabulary stability measurement (#75) closed the phase and brought LangChain4j's own measurement under the same procedure, [`docs/VOCABULARY_REMEASUREMENT.md`](VOCABULARY_REMEASUREMENT.md) | Yes, via gate |
 | **3** | `structure_agent_skills_spec` behind `--spec-checks` (default `off`), plus the advisory-section rendering in [§3.5](#35-spec-conformance-rules-and-scoring) | Yes, via opt-in |
 | **4** | ~~**Dependency decision:** accept `tree-sitter` + `tree-sitter-java`~~ **Done** (#23) — accepted in [ADR 0001](adr/0001-tree-sitter-for-java-parsing.md), both ship `cp39-abi3` wheels | N/A |
 | **5** | ~~LangChain4j fixture~~ **Done** (#28, extended by #30 and #31) — `tests/fixtures/langchain4j_shell_skill/` | Yes — test data only |
@@ -668,7 +668,7 @@ record of what was open.
 
 ## 9. Recommended next step
 
-**Finish phase 2 — the vocabulary stability measurement.** The analyzer is
+**Phase 2 is finished; phase 3 is next.** The analyzer is
 wired and gated (#70) and carries all four of its Rules. `DA-UNRESOLVED` (#71) resolves a literal and a
 same-module constant and reports every place a host configuration stopped resolving —
 `src/skillspector/deepagents/host_config.py`, the boundary [ADR 0008 §1](adr/0008-deepagents-analyzer-resolves-one-module-deep.md)
@@ -684,8 +684,11 @@ correctness rather than security: upstream states that a custom subagent does no
 agent's Skills, so a definition inside `subagents=[...]` written without its own `skills` runs
 without them and nothing at runtime says so. It reads a definition's keys and never its values, and
 the general-purpose subagent is excluded structurally rather than by name — nothing declares it, so
-there is nothing to exclude. What remains is
-#75, the vocabulary stability measurement. Spec conformance (phase 3) follows.
+there is nothing to exclude. The vocabulary stability measurement (#75) closed the phase: 78
+published `deepagents` releases swept, nothing ever removed, recorded in `OBSERVED_VERSION_RANGE`,
+with the re-measurement procedure and trigger of [`docs/VOCABULARY_REMEASUREMENT.md`](VOCABULARY_REMEASUREMENT.md)
+covering both Frameworks — which closed #46 and found, on its first run, that `L4J-MCP-FILTER`
+matches a method no published release declares (#82). **Spec conformance (phase 3) is next.**
 
 The boundary went first on purpose: the writability verdict of #72 needed somewhere to fall when it
 cannot decide, and building that landing place afterwards would have meant building it twice. It

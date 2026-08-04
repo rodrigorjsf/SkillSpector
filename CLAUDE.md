@@ -1,7 +1,6 @@
 # SkillSpector-Polyglot
 
-LangGraph pipeline that scans `SKILL.md` skill directories for vulnerabilities and emits SARIF plus a 0–100 risk score. This fork extends that to skills embedded in a programming-language framework's own source tree — LangChain4j (shipped) and Deep Agents (analyzer wired and reporting; `DA-UNRESOLVED`,
-`DA-SKILL-WRITABLE`, `DA-SHADOW` and `DA-SUBAGENT-SKILLS` all shipped).
+LangGraph pipeline that scans `SKILL.md` skill directories for vulnerabilities and emits SARIF plus a 0–100 risk score. This fork extends that to skills embedded in a programming-language framework's own source tree — LangChain4j and Deep Agents, both shipped. The Deep Agents Analyzer carries `DA-UNRESOLVED`, `DA-SKILL-WRITABLE`, `DA-SHADOW` and `DA-SUBAGENT-SKILLS`; both Frameworks' upstream vocabularies carry a measured version range, re-measured by `docs/VOCABULARY_REMEASUREMENT.md`.
 
 The GitHub repository is `SkillSpector-Polyglot`; the distribution, the package under `src/skillspector/`, and the console script stay `skillspector`. Renaming them would break upstream merges and existing installs — never propose it as a cleanup.
 
