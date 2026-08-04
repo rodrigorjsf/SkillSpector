@@ -181,6 +181,12 @@ The complete variable table is in [Environment Variables](#environment-variables
   framework-specific rules exactly as they apply to the base catalog.
 - **Sending skill content to a third party is opt-out, not opt-in.** The LLM stage is on by default
   and transmits skill content to the configured provider. `--no-llm` keeps every scan local.
+- **The framework rules match upstream spellings, and a rename breaks them silently.** When upstream
+  renames an identifier, the rule that matched it stops producing findings and the report still reads
+  as clean. Each framework's spellings therefore live in one inventory carrying a *measured* range of
+  published releases, re-measured by reading those releases rather than the documentation:
+  [`docs/VOCABULARY_REMEASUREMENT.md`](docs/VOCABULARY_REMEASUREMENT.md) is the procedure, its trigger,
+  and what the last run found.
 
 ## Contributing, and keeping these docs true
 
@@ -200,6 +206,7 @@ in the *same* pull request. Concretely:
 | An exit code or an output format | [Integrating SkillSpector](#integrating-skillspector) |
 | Anything that ships a designed-but-unbuilt capability | the **Status** column above, and [`docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md`](docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md) |
 | Any detection rule, again | [`docs/OWASP-AST10-COVERAGE.md`](docs/OWASP-AST10-COVERAGE.md) — the row the rule belongs to, or the gaps list where it belongs to none |
+| An upstream spelling a framework rule matches | the framework's `vocabulary.py` — never a literal elsewhere — and, if the spelling is new, a re-measured range per [`docs/VOCABULARY_REMEASUREMENT.md`](docs/VOCABULARY_REMEASUREMENT.md) |
 
 A capability that ships without its row updated is a documentation bug — report it as one.
 
@@ -794,7 +801,7 @@ these rules are inert and the scan is unchanged.
 | L4J-SHELL | Unsandboxed Shell Mode | HIGH | `ShellSkills` wiring, or any `langchain4j-…shell…` dependency (`langchain4j-experimental-skills-shell` today), gives the agent arbitrary command execution with no sandbox. A Maven build file that names the artifact only to *refuse* it — in a comment, a dependency's `<exclusions>`, or Enforcer's `<bannedDependencies>` — is not declaring it and raises nothing. Gradle's `exclude group:`/`module:` form is not recognised as a refusal, so a Gradle build file that excludes the module is still reported |
 | L4J-UNRESOLVED | Unresolvable Skill Content | MEDIUM | A Java-defined Skill's content, name, description, or loader path is built at runtime, so the instruction surface was never scanned |
 | L4J-TOOL-DESC | Instruction-Carrying Tool Description | MEDIUM | A `@Tool` description instructs the model instead of describing the tool — tool poisoning written in Java rather than in an MCP manifest |
-| L4J-MCP-FILTER | Unfiltered MCP Tool Provider | MEDIUM | `McpToolProvider` built without `.toolFilter(...)`, so every tool the server exposes reaches the agent |
+| L4J-MCP-FILTER | Unfiltered MCP Tool Provider | MEDIUM | `McpToolProvider` built without `.toolFilter(...)`, so every tool the server exposes reaches the agent. **Known defective — [#82](https://github.com/rodrigorjsf/SkillSpector-Polyglot/issues/82).** No published release of `langchain4j-mcp` declares `toolFilter`; the builder method is `filter`. Host code written against a real release is therefore reported whatever it does |
 | L4J-WORKDIR | Unset Shell Working Directory | MEDIUM | `RunShellCommandToolConfig` built without `workingDirectory`, so commands run wherever the JVM started |
 
 ### Deep Agents Framework (4 patterns)

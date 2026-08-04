@@ -212,6 +212,13 @@ only a version floor quoted in the capture, `deepagents>=0.6.8` for filesystem-p
 (`:288`). The measurement is a Ticket of its own inside this work, and that Ticket defines the
 *procedure* and applies it to both Frameworks, which closes issue #46 rather than duplicating it.
 
+> **Delivered.** The second half is now copied: 78 published releases swept, `0.0.1` through
+> `0.7.3`, nothing ever removed, recorded in `OBSERVED_VERSION_RANGE` with each spelling's first
+> release beside it. The procedure and its trigger are
+> [`docs/VOCABULARY_REMEASUREMENT.md`](../VOCABULARY_REMEASUREMENT.md), which covers both Frameworks
+> and closed issue #46. The `deepagents>=0.6.8` floor quoted in the capture is above the measured
+> one: every spelling here exists together from `0.5.2`.
+
 **The code lives in `src/skillspector/deepagents/`, mirroring `langchain4j/`.** Not for size —
 `langchain4j/` is seven modules largely because `java_parser.py` isolates a native dependency that
 Deep Agents does not have — but because the vocabulary enforcement test needs a boundary to sweep,

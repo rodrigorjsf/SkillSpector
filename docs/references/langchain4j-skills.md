@@ -13,7 +13,15 @@
 > in future releases.* Artifact versions below are `1.18.1-beta28` as published at capture
 > time; the identifiers this capture documents were published unchanged across
 > `1.12.1-beta21` — `1.18.1-beta28`, 17 releases with the two artifacts released in lockstep,
-> the sole exception being `ClassPathSkillLoader`, which first appears at `1.13.0-beta23`.
+> the exceptions being `ClassPathSkillLoader` and the `tools` builder argument, which both
+> first appear at `1.13.0-beta23`.
+>
+> **Re-measured:** 2026-08-03 — the range confirmed unchanged under
+> [the re-measurement procedure](../VOCABULARY_REMEASUREMENT.md). Two corrections came out of
+> it: `tools` was added alongside `ClassPathSkillLoader` rather than nothing being, and
+> `toolFilter` — used in this capture's own MCP example below — has **never been published**
+> in any release of `langchain4j-mcp`. See
+> [Where this capture disagrees with the published artifacts](#where-this-capture-disagrees-with-the-published-artifacts).
 
 Skills is a mechanism for equipping an LLM with reusable, self-contained behavioral
 instructions. A skill bundles a name, a short description, and a body of instructions (its
@@ -419,8 +427,26 @@ in [`vocabulary.py`](../../src/skillspector/langchain4j/vocabulary.py) and reaso
 re-measured, so a reader can tell how far this capture's identifiers have been checked and
 not only when they were captured — a capture date says the page was read on a day, and the
 range says the type and method names on it held still for 17 releases. Re-measuring that
-claim is issue #46; what the report should say when the shell artifact drops its
-`experimental` prefix is issue #45.
+claim is [`docs/VOCABULARY_REMEASUREMENT.md`](../VOCABULARY_REMEASUREMENT.md), which closed
+issue #46; what the report should say when the shell artifact drops its `experimental`
+prefix was issue #45, decided in [ADR 0007](../adr/0007-l4j-shell-survives-the-graduation-rename.md).
+
+### Where this capture disagrees with the published artifacts
+
+Upstream's own pages are not consistent with each other, and this capture inherited one of the
+inconsistencies. The 2026-08-03 re-measurement read the published jars and found it.
+
+The MCP example under [Modes](#modes) writes `.toolFilter(...)`. **No release of
+`langchain4j-mcp` has ever declared a `toolFilter` method** — `McpToolProvider.Builder` declares
+`filter` and `filterToolNames`, at `1.12.1-beta21` as at `1.18.1-beta28`, and upstream's own
+[MCP tutorial](https://docs.langchain4j.dev/tutorials/mcp) writes `.filter(...)`. The example above
+is reproduced as upstream wrote it, because this file is a capture; it is not code that compiles
+against any published release.
+
+The consequence for SkillSpector is a Rule, not a document. `L4J-MCP-FILTER` reports a
+`McpToolProvider` builder chain that never called `toolFilter`, so host code written against a
+published release is reported as unfiltered whatever it does. What the Rule should match instead is
+issue #82 — the measurement that found this deliberately changed no Scan behavior.
 
 ### What already works unchanged
 

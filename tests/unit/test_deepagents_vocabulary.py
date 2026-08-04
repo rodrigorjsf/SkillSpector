@@ -88,6 +88,11 @@ _GUARDED_FILES: tuple[Path, ...] = tuple(
     sorted(path for path in _SRC.rglob("*.py") if path not in (_VOCABULARY, _DETECTION))
 )
 
+# Released versions, not spellings a Rule matches on. Left out so the inventory
+# stays derived from the module rather than restated here. The LangChain4j guard
+# excludes the same constant for the same reason.
+_NOT_A_SPELLING = frozenset({"OBSERVED_VERSION_RANGE"})
+
 # Every spelling this inventory holds today, as an exact set. Asserted rather
 # than counted loosely: a loop over a silently emptied inventory would pass
 # every assertion below while guarding nothing.
@@ -142,7 +147,7 @@ def _read_inventory(module: ModuleType = vocabulary) -> tuple[dict[str, str], li
     spellings: dict[str, str] = {}
     unreadable: list[str] = []
     for constant, value in vars(module).items():
-        if constant not in module.__annotations__:
+        if constant not in module.__annotations__ or constant in _NOT_A_SPELLING:
             continue
         if isinstance(value, str):
             members: tuple[object, ...] = (value,)
