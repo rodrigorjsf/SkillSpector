@@ -120,8 +120,8 @@ _TOOL_DESC_MESSAGE = (
     "this text as guidance, so it is a prompt-injection surface sitting in an annotation."
 )
 _MCP_FILTER_MESSAGE = (
-    "McpToolProvider is built without a toolFilter, so every tool the MCP server exposes reaches "
-    "the agent rather than a scoped subset."
+    "McpToolProvider is built without a filter or filterToolNames, so every tool the MCP server "
+    "exposes reaches the agent rather than a scoped subset."
 )
 _WORKDIR_MESSAGE = (
     "RunShellCommandToolConfig is built without a workingDirectory, so commands run in the JVM's "
@@ -305,17 +305,17 @@ def _tool_surface_findings(path: str, source: str) -> list[Finding]:
         if _carries_instructions(annotation.description)
     ]
 
-    for rule_id, receiver, setter, message in (
+    for rule_id, receiver, setters, message in (
         (
             _MCP_FILTER_RULE_ID,
             vocabulary.MCP_TOOL_PROVIDER,
-            vocabulary.TOOL_FILTER_SETTER,
+            vocabulary.TOOL_FILTER_SETTERS,
             _MCP_FILTER_MESSAGE,
         ),
         (
             _WORKDIR_RULE_ID,
             vocabulary.SHELL_COMMAND_CONFIG,
-            vocabulary.WORKING_DIRECTORY_SETTER,
+            (vocabulary.WORKING_DIRECTORY_SETTER,),
             _WORKDIR_MESSAGE,
         ),
     ):
@@ -323,12 +323,12 @@ def _tool_surface_findings(path: str, source: str) -> list[Finding]:
             _finding(
                 rule_id,
                 path,
-                unset.line,
+                chain.line,
                 message,
                 _TOOL_SURFACE_CONFIDENCE,
                 severity=_TOOL_SURFACE_SEVERITY,
             )
-            for unset in tool_surface.find_unset_setter(source, receiver, setter)
+            for chain in tool_surface.find_chains_missing_setters(source, receiver, setters)
         )
     return findings
 

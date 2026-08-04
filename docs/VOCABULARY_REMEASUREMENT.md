@@ -153,9 +153,11 @@ watches for has not happened. Two corrections came out of it.
 - **`toolFilter` has never been published.** `McpToolProvider.Builder` declares `filter` and
   `filterToolNames`, at `1.12.1-beta21` as at `1.18.1-beta28`. The spelling entered this project from
   upstream's Skills tutorial, whose MCP example writes `.toolFilter(...)` — contradicted by
-  upstream's own MCP tutorial and by every jar it publishes. `L4J-MCP-FILTER` therefore reports a
-  builder chain as unfiltered whatever it does, since no chain compiled against a published release
-  can call the setter it looks for. Filed as issue #82; the Rule is deliberately unchanged here.
+  upstream's own MCP tutorial and by every jar it publishes. `L4J-MCP-FILTER` therefore reported a
+  builder chain as unfiltered whatever it did, since no chain compiled against a published release
+  could call the setter it looked for. Filed as issue #82 and left unchanged here, because a
+  measurement must not move behavior; #82 has since replaced the spelling with `filter` and
+  `filterToolNames` and regenerated the two Behavior Snapshots that carried it.
 
 The second finding is the one to remember when deciding whether this procedure earns its cost. A
 capability the project reasoned about, documented, fixtured and shipped rested on a method name that

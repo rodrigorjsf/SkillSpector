@@ -951,7 +951,27 @@ FILTERED_PROVIDER = """class Wiring {
     ToolProvider tools(McpClient client) {
         return McpToolProvider.builder()
                 .mcpClients(client)
-                .toolFilter((tool, mcpClient) -> tool.name().startsWith("inventory_"))
+                .filter((mcpClient, tool) -> tool.name().startsWith("inventory_"))
+                .build();
+    }
+}
+"""
+NAME_FILTERED_PROVIDER = """class Wiring {
+    ToolProvider tools(McpClient client) {
+        return McpToolProvider.builder()
+                .mcpClients(client)
+                .filterToolNames("inventory_lookup", "inventory_reserve")
+                .build();
+    }
+}
+"""
+# Names the tools that stay visible *past* a filter rather than narrowing the
+# set, so a chain that calls only this one is still unscoped.
+ALWAYS_VISIBLE_PROVIDER = """class Wiring {
+    ToolProvider tools(McpClient client) {
+        return McpToolProvider.builder()
+                .mcpClients(client)
+                .alwaysVisibleToolNames("inventory_lookup")
                 .build();
     }
 }
@@ -1040,6 +1060,18 @@ class TestUnfilteredMcpProvider:
         result = analyzer.node(make_state({"Wiring.java": FILTERED_PROVIDER}))
 
         assert findings_for(result, "L4J-MCP-FILTER") == []
+
+    def test_a_provider_filtered_by_tool_name_reports_nothing(self) -> None:
+        # The second published way to narrow the set. Either satisfies the Rule,
+        # so neither may be the only spelling the Rule accepts.
+        result = analyzer.node(make_state({"Wiring.java": NAME_FILTERED_PROVIDER}))
+
+        assert findings_for(result, "L4J-MCP-FILTER") == []
+
+    def test_naming_always_visible_tools_does_not_scope_the_set(self) -> None:
+        result = analyzer.node(make_state({"Wiring.java": ALWAYS_VISIBLE_PROVIDER}))
+
+        assert len(findings_for(result, "L4J-MCP-FILTER")) == 1
 
 
 class TestUnsetWorkingDirectory:

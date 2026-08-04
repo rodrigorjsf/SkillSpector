@@ -154,7 +154,8 @@ inventory per Framework, and a discovery table composed from all of them, become
 **The enforcement test catches a spelling written as a literal of its own, not one embedded in a
 longer string.** That is the shape a matcher takes, and the shape every leak this change relocated
 had. Containment was measured and rejected: the Finding messages in `framework_langchain4j`
-legitimately quote type names in prose — *"McpToolProvider is built without a toolFilter"* — and
+legitimately quote type names in prose — *"McpToolProvider is built without a filter or
+filterToolNames"* — and
 containment cannot tell a quoted name from a matcher. Regex-escaped forms *are* caught, so
 recomposing `re.compile(r"dev\.langchain4j")` inline fails the same way the plain spelling does.
 
@@ -174,6 +175,15 @@ on a schedule is issue #46. Neither should be read as delivered here.
 > against a real release as unfiltered. Nothing in the test suite could have said so — the guard
 > here fires on a spelling written in the wrong *place*, never on one that is wrong. Tracked as
 > issue #82; correcting it changes what a Scan reports, which the measurement that found it did not.
+>
+> **Issue #82 has since reversed that.** The inventory no longer holds `toolFilter`. It holds
+> `TOOL_FILTER_SETTERS`, the two spellings `McpToolProvider.Builder` actually declares — `filter`
+> and `filterToolNames` — and `L4J-MCP-FILTER` reports a chain only when it called neither. The
+> deferral above was the right call for a *measurement*, which must not move behavior, and the wrong
+> thing to leave standing: the Rule could not be satisfied by any code that compiles. What changed
+> is a Rule and its Finding text, so the two LangChain4j Behavior Snapshots changed with it;
+> `L4J-WORKDIR`, which shares the unset-setter machinery, did not. `toolFilter` survives in this
+> record and in the module's comments as history, and nowhere as a setter to call.
 
 **This change altered no behavior, and that is its proof.** No Rule logic changed, no Rule was added
 or removed, no Finding changed. Regenerating the Behavior Snapshot corpus left the working tree

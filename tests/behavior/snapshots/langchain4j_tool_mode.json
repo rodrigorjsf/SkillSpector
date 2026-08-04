@@ -274,7 +274,7 @@
       "executable": false,
       "lines": 24,
       "path": "src/main/java/com/example/McpWiring.java",
-      "size_bytes": 850,
+      "size_bytes": 846,
       "type": "other"
     },
     {
@@ -325,9 +325,9 @@
       "finding": null,
       "intent": null,
       "matched_text": null,
-      "message": "McpToolProvider is built without a toolFilter, so every tool the MCP server exposes reaches the agent rather than a scoped subset.",
+      "message": "McpToolProvider is built without a filter or filterToolNames, so every tool the MCP server exposes reaches the agent rather than a scoped subset.",
       "pattern": "Unfiltered MCP Tool Provider",
-      "remediation": "Add .toolFilter(...) to the McpToolProvider builder and name the tools this agent needs, so a tool added on the server does not silently reach the agent.",
+      "remediation": "Add .filter(...) or .filterToolNames(...) to the McpToolProvider builder and name the tools this agent needs, so a tool added on the server does not silently reach the agent.",
       "rule_id": "L4J-MCP-FILTER",
       "severity": "MEDIUM",
       "start_line": 20,
@@ -490,14 +490,14 @@
               }
             ],
             "message": {
-              "text": "McpToolProvider is built without a toolFilter, so every tool the MCP server exposes reaches the agent rather than a scoped subset."
+              "text": "McpToolProvider is built without a filter or filterToolNames, so every tool the MCP server exposes reaches the agent rather than a scoped subset."
             },
             "properties": {
               "category": "LangChain4j Framework",
               "confidence": 0.9,
               "explanation": "An MCP tool provider is built without a tool filter, so every tool the MCP server exposes reaches the agent instead of a scoped subset. The agent's capability is then whatever the server offers, which can widen without any change to this application.",
               "pattern": "Unfiltered MCP Tool Provider",
-              "remediation": "Add .toolFilter(...) to the McpToolProvider builder and name the tools this agent needs, so a tool added on the server does not silently reach the agent.",
+              "remediation": "Add .filter(...) or .filterToolNames(...) to the McpToolProvider builder and name the tools this agent needs, so a tool added on the server does not silently reach the agent.",
               "severity": "MEDIUM",
               "tags": [
                 "ASI02"
@@ -641,7 +641,7 @@
               {
                 "id": "L4J-MCP-FILTER",
                 "shortDescription": {
-                  "text": "McpToolProvider is built without a toolFilter, so every tool the MCP server exposes reaches the agent rather than a scoped subset."
+                  "text": "McpToolProvider is built without a filter or filterToolNames, so every tool the MCP server exposes reaches the agent rather than a scoped subset."
                 }
               },
               {
