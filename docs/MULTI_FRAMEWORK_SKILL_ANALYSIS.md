@@ -501,7 +501,7 @@ and **is delivered**: the gate lives in [`tests/behavior/`](../tests/behavior/),
   fears — `component_metadata[].type`, `has_executable_scripts`, the ledger's
   `EXCLUDED_DIRECTORY` events — live *outside* findings and risk score. A snapshot narrowed to
   those two would catch none of them. Measurement confirmed the breadth is affordable: the
-  specified projection is 323–859 lines per fixture and 11 079 across the corpus, well inside
+  specified projection is 323–859 lines per fixture and 11 079 across the original 24, well inside
   what a reviewer reads.
 - **Corpus: 33 leaf directories.** Every fixture directory bearing a root `SKILL.md` (23), plus
   `tests/fixtures/mcp_registry`, which bears none and scans as an anonymous Skill, plus the two
