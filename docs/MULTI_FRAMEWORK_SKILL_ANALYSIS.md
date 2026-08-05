@@ -507,13 +507,14 @@ and **is delivered**: the gate lives in [`tests/behavior/`](../tests/behavior/),
   those two would catch none of them. Measurement confirmed the breadth is affordable: the
   specified projection is 323–859 lines per fixture and 11 079 across the original 24, well inside
   what a reviewer reads.
-- **Corpus: 34 leaf directories.** Every fixture directory bearing a root `SKILL.md` (23), plus
+- **Corpus: 35 leaf directories.** Every fixture directory bearing a root `SKILL.md` (23), plus
   `tests/fixtures/mcp_registry`, which bears none and scans as an anonymous Skill, plus the two
   `*_detection` fixtures phase 1 added, which bear none either and carry one Framework signal each,
-  plus the two LangChain4j applications the `framework_langchain4j` Analyzer reads —
-  `langchain4j_shell_skill` in shell mode, and `langchain4j_tool_mode`, which declares only
+  plus the three LangChain4j applications the `framework_langchain4j` Analyzer reads —
+  `langchain4j_shell_skill` in shell mode, `langchain4j_tool_mode`, which declares only
   `dev.langchain4j:langchain4j-skills` and proves the Rules that are not about shell mode fire
-  without the shell artifact anywhere in its tree — plus the six Deep Agents applications
+  without the shell artifact anywhere in its tree, and `langchain4j_gradle_skill`, the one built by
+  Gradle rather than Maven — plus the six Deep Agents applications
   `framework_deepagents` reads: `deepagents_runtime_skills`, whose agent picks its Skill sources
   per request and therefore exercises the resolution boundary, `deepagents_personal_skills`, which
   leaves one of two Skill sources open and carries the per-path writability verdict,
@@ -757,7 +758,7 @@ Framework fails the gate on the key's appearance.
 The recommendation before that was to make the behavior gate executable before any analyzer
 work, because until it existed every phase in [§5](#5-phasing) carried an acceptance criterion
 nobody could demonstrate. **That is done.** Issue #4, sliced into #5–#9, landed the committed
-snapshot corpus in [`tests/behavior/`](../tests/behavior/): 34 fixtures, blocking in
+snapshot corpus in [`tests/behavior/`](../tests/behavior/): 35 fixtures, blocking in
 `make test-unit`, verified in CI, demonstrated red on a real behavior change, with its blind
 spots stated in [`COVERAGE_LIMITS.md`](../tests/behavior/COVERAGE_LIMITS.md). Every phase below
 can now be claimed behavior-preserving against evidence rather than against a promise: the
