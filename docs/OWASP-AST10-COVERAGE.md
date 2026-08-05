@@ -6,6 +6,42 @@ Status: Informational, documentation only
 
 > Addresses https://github.com/NVIDIA/SkillSpector/issues/221.
 
+## Provenance of this page, and what the fork holds
+
+**Upstream withdrew this page; this fork holds it.** `NVIDIA/SkillSpector` deleted
+`docs/OWASP-AST10-COVERAGE.md` in its entirety on 2026-08-03 (`c54967a`, a pure revert of
+`5b07626`), and said on both `NVIDIA/SkillSpector#288` and `#338` that it would
+"bring updated wording next week with product team approval". So every line below that is not
+marked as this fork's is upstream text **withdrawn pending a reword that has not landed yet**.
+It is kept because this fork's own crosswalk lives here and nowhere else, and because
+[README § Contributing](../README.md#contributing-and-keeping-these-docs-true) names this page as
+where every detection rule is recorded.
+
+Measured against `5b07626` — the last revision upstream published — this fork's additions are the
+two places listed below, and nothing else. Re-measure rather than trust this list:
+`git diff 5b07626 HEAD -- docs/OWASP-AST10-COVERAGE.md`.
+
+- **Five matrix rows extended in place**, each keeping upstream's original rule list and rationale
+  and appending to it: `AST02` (`DA-SHADOW`), `AST03` (`L4J-MCP-FILTER`, `DA-SKILL-WRITABLE`),
+  `AST04` (`L4J-TOOL-DESC`), `AST06` (`L4J-SHELL`, `L4J-WORKDIR`), `AST08` (`L4J-UNRESOLVED`,
+  `DA-UNRESOLVED`). Rows `AST01`, `AST05`, `AST07`, `AST09` and `AST10` are untouched upstream text.
+- **Two bullets under "Coverage gaps and unknowns"** — the `DA-SUBAGENT-SKILLS` bullet and the
+  five-`MCP-*`-checks bullet.
+
+Those two bullets are **absence records**: each states that a rule maps to *no* row in the matrix,
+and why. That is a claim about upstream's row set, not just about the fork's rules. When upstream
+republishes, the five row extensions can be re-applied mechanically, but the two absence records
+must be **re-validated against the new row set** before being re-applied — a reworded matrix may
+give one of them a row, which would make the bullet wrong rather than merely stale.
+
+Also fork-authored: this section. Whoever runs the next `/upstream-sync` should not have to read
+`c54967a` to know any of the above.
+
+Whether the fork's rows are then merged onto upstream's republished text or moved to a fork-owned
+page of their own is a decision deliberately left open until that text exists and its row set is
+known. It is tracked as
+[issue #111](https://github.com/rodrigorjsf/SkillSpector-Polyglot/issues/111).
+
 ## Scope
 
 This page is a revision-pinned crosswalk between SkillSpector's current rule catalog and one concrete OWASP AST10 revision. It helps readers reason about where current SkillSpector rules align with AST10 categories, where the alignment is partial, and where the repo has a documented gap.

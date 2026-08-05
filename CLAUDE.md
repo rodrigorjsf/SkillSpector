@@ -198,3 +198,4 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - An upstream sync's test failures are the fork's own guards, not upstream's tests.
 - Upstream can add a fixture directory that is not a Skill; `NON_TARGET_DIRS` excludes it.
 - A dist-info may ship no LICENSE; read the tagged repo LICENSE instead.
+- `push --delete` saying "remote ref does not exist" means GitHub already deleted it.
