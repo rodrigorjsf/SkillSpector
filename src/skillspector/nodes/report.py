@@ -42,6 +42,7 @@ from skillspector.logging_config import get_logger
 from skillspector.manifest_status import MANIFEST_STATUS_MESSAGES, ManifestStatus
 from skillspector.models import Finding
 from skillspector.nodes.deduplicate import deduplicate
+from skillspector.python_ast import clear_python_ast_cache
 from skillspector.sarif_models import (
     SARIF_SCHEMA_URI,
     SarifArtifactLocation,
@@ -897,6 +898,7 @@ def report(state: SkillspectorState) -> dict[str, object]:
     Finalization owns completeness derivation. The report node only selects the
     validated finding IDs, applies baseline suppression, and renders all surfaces.
     """
+    clear_python_ast_cache(state.get("python_ast_cache_key"))
     raw_findings = state.get("findings", [])
     findings_by_id = {finding.finding_id: finding for finding in raw_findings}
     effective_ids = state.get("effective_finding_ids")
@@ -964,7 +966,6 @@ def report(state: SkillspectorState) -> dict[str, object]:
     risk_score, risk_severity, risk_recommendation = _compute_risk_score(
         findings_for_scoring, has_executable_scripts, component_metadata
     )
-
     exceptions = analysis_completeness.get("ledger_exceptions", [])
     fatal_exception = (
         any(
