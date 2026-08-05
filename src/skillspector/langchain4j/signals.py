@@ -100,6 +100,39 @@ def _refusal_subtree(tag: str, enclosing: str) -> re.Pattern[str]:
 _XML_EXCLUSIONS: Final[re.Pattern[str]] = _refusal_subtree("exclusions", "dependency")
 _XML_BANNED_DEPENDENCIES: Final[re.Pattern[str]] = _refusal_subtree("bannedDependencies", "rules")
 
+# Gradle says in an ``exclude`` call what Maven says in ``<exclusions>``, and
+# says it in many spellings: two DSLs, an optional group, named or positional
+# arguments, wrapped across lines or not. Issue #88 read ten of them off 262 real
+# build files.
+#
+# The anchor is the call and its argument list -- never the line holding them.
+# Anchoring to the call is what collapses every spelling into one recognizer:
+# what is sought is the word ``exclude`` and its arguments, not which arguments
+# it was given. It is also what keeps a real declaration that excludes something
+# else on the *same* line, a shape Maven cannot produce: the text before the call
+# survives the blanking.
+#
+# Two boundaries, because the two DSLs end an argument list differently. A
+# parenthesised list ends at its ``)``, one level of nesting deep so Shadow's
+# ``exclude(dependency("g:a:v"))`` is one match. An unparenthesised Groovy list
+# runs to end of line, and continues while the line ends in a comma -- the shape
+# any 100-column formatter produces.
+#
+# Both are tempered the way ``_refusal_subtree`` is. The argument list may cross
+# neither ``{`` nor ``}``, which no legitimate ``exclude`` argument contains, so
+# an unclosed ``exclude(`` cannot pair with the next ``)`` anywhere later in the
+# file and blank a real declaration between them -- the false negative issue #45
+# exists to prevent. The line branch refuses to start where a ``(`` does, so an
+# unclosed call falls through to no match at all rather than eating lines by
+# their trailing commas. Either way the build file loses the blanking rather than
+# losing a Finding.
+_GRADLE_EXCLUDE_CALL: Final[re.Pattern[str]] = re.compile(
+    r"\bexclude\b(?:"
+    r"\s*\((?:[^(){}]|\([^(){}]*\))*\)"
+    r"|(?!\s*\()(?:[^\n]*,[ \t]*\n)*[^\n]*"
+    r")"
+)
+
 # Compiled here rather than in ``vocabulary``, which stays import-free.
 _SHELL_ARTIFACT: Final[re.Pattern[str]] = re.compile(SHELL_ARTIFACT_PATTERN)
 
@@ -189,24 +222,35 @@ def _without_comments(path: str, content: str) -> str:
 
 
 def _without_refusals(path: str, content: str) -> str:
-    """Blank out the Maven subtrees that name an artifact only to refuse it.
+    """Blank out the regions that name an artifact only to refuse it.
 
-    Maven-only, because the two subtrees are Maven's. Gradle spells the same
-    intent as ``exclude group:``/``module:`` on a coordinate line, which is a
-    different shape and is not blanked -- so a Gradle build file that refuses
-    the shell module still raises the Finding this function exists to stop,
-    issue #68.
+    Per build system, because a Refusal has no shape the two share: Maven says
+    it as a ``<exclusions>`` or ``<bannedDependencies>`` subtree, Gradle as an
+    ``exclude`` call. Issue #64 settled the Maven side, issue #68 the Gradle one.
+
+    The Gradle recognizer is deliberately **context-free**: any ``exclude`` in a
+    ``build.gradle*``, with no tracking of the closure it sits in. Requiring the
+    call to sit inside a dependency closure would take the brace-nesting the
+    module exists without -- the same parsing ``_refusal_subtree``'s docstring
+    declines on the Maven side. Context-freedom buys ``configurations.all`` at no
+    cost, and it also blanks Gradle's file-filter ``exclude``
+    (``jar { exclude("META-INF/*.SF") }``), which is harmless unless such a call
+    names a shell coordinate in its own arguments.
 
     Run *after* ``_without_comments``: a commented-out ``<exclusions>`` is
-    already spaces by then and cannot pair with a live closing tag.
+    already spaces by then and cannot pair with a live closing tag, and a
+    commented-out ``exclude`` cannot swallow the line below it.
 
     Textual, like everything else here. Reading the element nesting would need
     the XML parser this module exists without, and would buy nothing the
     tempered patterns do not already give.
     """
-    if not _is_maven_build_file(path):
-        return content
-    for pattern in (_XML_EXCLUSIONS, _XML_BANNED_DEPENDENCIES):
+    patterns = (
+        (_XML_EXCLUSIONS, _XML_BANNED_DEPENDENCIES)
+        if _is_maven_build_file(path)
+        else (_GRADLE_EXCLUDE_CALL,)
+    )
+    for pattern in patterns:
         content = pattern.sub(_blanked, content)
     return content
 
@@ -243,12 +287,11 @@ def shell_artifact_declarations(file_cache: Mapping[str, str]) -> dict[str, Shel
     A build file that names the artifact only to say it is *not* taken is not
     read as declaring it -- a textual scan cannot tell the two apart, and would
     report the false positive at the refusing line, flagging the reader HIGH for
-    the one action that removes the risk. Three spellings say it: a comment, a
-    dependency's ``<exclusions>`` subtree, and Enforcer's
-    ``<bannedDependencies>``. All three are blanked before matching, comments
-    first so a commented-out subtree cannot pair with a live closing tag.
-    Gradle's ``exclude group:``/``module:`` form is not among them, so the same
-    inversion is still live for a Gradle build file -- issue #68.
+    the one action that removes the risk. Four spellings say it: a comment, a
+    dependency's ``<exclusions>`` subtree, Enforcer's ``<bannedDependencies>``,
+    and Gradle's ``exclude`` call in any of its spellings. All four are blanked
+    before matching, comments first so a commented-out subtree cannot pair with
+    a live closing tag.
 
     One declaration per file: the first live one. A second in the same build
     file is the same capability, and pointing at both would add noise rather

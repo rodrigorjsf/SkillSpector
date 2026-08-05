@@ -337,17 +337,21 @@ DECLARING_AND_EXCLUDING_GRADLE_TWO_LINES = (
 )
 DECLARING_AND_EXCLUDING_GRADLE_LINE = 2
 
-# Malformed on purpose: the `exclude(` is never closed, and a real declaration
-# follows it. A recognizer that pairs the open paren with the next `)` anywhere
-# later blanks the declaration between them -- the false negative issue #45
-# existed to fix, reintroduced in the other build system. What saves the
-# declaration is refusing to let an argument list cross a brace.
+# Malformed on purpose, and in the shape that discriminates -- the Gradle twin
+# of UNCLOSED_EXCLUSIONS_POM. The `exclude(` is never closed, a real declaration
+# follows it, and the only unpaired `)` in the file is an orphan *after* that
+# declaration. An argument list that may run to the next `)` anywhere later
+# pairs the two and blanks the declaration between them: the false negative
+# issue #45 existed to fix, reintroduced in the other build system. Every paren
+# in between is balanced, so refusing to cross a second `exclude` would not save
+# it either -- what saves it is refusing to let an argument list cross a brace.
 UNCLOSED_EXCLUDE_GRADLE = (
     "dependencies {\n"
     "    implementation('com.example:app:1.0') {\n"
     "        exclude(group: 'dev.langchain4j'\n"
     "    }\n"
     f"    implementation 'dev.langchain4j:{SHELL_ARTIFACT_ID}:1.18.1-beta28'\n"
+    "    testImplementation 'junit:junit:4.13.2')\n"
     "}\n"
 )
 UNCLOSED_EXCLUDE_GRADLE_LINE = 5
@@ -664,7 +668,6 @@ class TestRefusingTheModuleInGradleIsNotDeclaringIt:
     something *else* must still fire, at its own line, on one line or two.
     """
 
-    @pytest.mark.xfail(strict=True, reason="issue #68: no Gradle refusal is recognised yet")
     @pytest.mark.parametrize(
         "gradle", [source for _, source in GRADLE_REFUSALS], ids=[id for id, _ in GRADLE_REFUSALS]
     )
