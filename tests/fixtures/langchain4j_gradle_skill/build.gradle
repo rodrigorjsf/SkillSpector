@@ -1,0 +1,31 @@
+// The corpus entry built by Gradle rather than Maven. Every other LangChain4j
+// fixture declares its dependencies in a `pom.xml`, so the Gradle half of the
+// LangChain4j Analyzer -- detection, applicability, Finding construction and
+// SARIF emission -- is exercised end to end only here.
+//
+// The shell module below is declared *and* trimmed: the coordinate is a live
+// L4J-SHELL signal, and the `exclude` inside its block names an unrelated
+// logging artifact. That pairing is the discriminating case for issue #68 --
+// whatever a later recognizer does with Gradle's `exclude` spelling, this file
+// still declares shell mode, at this line, and the Finding here is expected to
+// stay exactly where the committed snapshot records it.
+//
+// Versions are inside OBSERVED_VERSION_RANGE in
+// src/skillspector/langchain4j/vocabulary.py, not re-measured here.
+plugins {
+    id 'java'
+}
+
+group = 'com.example'
+version = '0.1.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'dev.langchain4j:langchain4j:1.18.0'
+    implementation('dev.langchain4j:langchain4j-experimental-skills-shell:1.18.1-beta28') {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
+}
