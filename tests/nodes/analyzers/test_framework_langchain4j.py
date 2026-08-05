@@ -227,9 +227,10 @@ UNCLOSED_EXCLUSIONS_POM_LINE = 14
 # Gradle spells the Maven <exclusions> intent as an `exclude` call, and spells it
 # many ways: two DSLs, an optional group, positional or named arguments, wrapped
 # or not. Every entry below names the shell module in order to *refuse* it, so
-# every entry must raise nothing. The spellings and their real-world frequency
-# were measured over 262 GitHub build files in issue #88; the survey comment on
-# issue #68 keeps the counts.
+# every entry must raise nothing. Issue #88 surveyed 262 GitHub build files and
+# observed eight of them; the two wrapped spellings are predicted rather than
+# observed -- absent from that population, but produced by any 100-column
+# formatter and firing today. The survey comment on issue #68 keeps the counts.
 #
 # Kept as one table rather than one constant apiece: what the recognizer must
 # collapse is the *set*, and a reader comparing two spellings should not have to
@@ -662,14 +663,17 @@ class TestRefusingTheModuleInGradleIsNotDeclaringIt:
     follows from reading either as a declaration: the build file is flagged HIGH
     for the one action that removes the risk. Issue #68, following #64.
 
-    ``GRADLE_REFUSALS`` is the measured set of spellings rather than a guessed
-    one -- issue #88 read them off 262 real build files. The bound on the
-    blanking is the rest of this class: a real declaration that excludes
-    something *else* must still fire, at its own line, on one line or two.
+    ``GRADLE_REFUSALS`` is a surveyed set of spellings rather than a guessed one
+    -- issue #88 read eight of them off 262 real build files, and its comment
+    says which two are predicted instead. The bound on the blanking is the rest
+    of this class: a real declaration that excludes something *else* must still
+    fire, at its own line, on one line or two.
     """
 
     @pytest.mark.parametrize(
-        "gradle", [source for _, source in GRADLE_REFUSALS], ids=[id for id, _ in GRADLE_REFUSALS]
+        "gradle",
+        [source for _, source in GRADLE_REFUSALS],
+        ids=[label for label, _ in GRADLE_REFUSALS],
     )
     def test_a_refused_shell_module_is_not_a_declaration(self, gradle: str) -> None:
         assert shell_findings(analyzer.node(make_state({"build.gradle": gradle}))) == []
@@ -705,6 +709,10 @@ class TestRefusingTheModuleInGradleIsNotDeclaringIt:
         file blanks every declaration in between. Barring ``{`` and ``}`` from
         the argument list stops the runaway at the enclosing closure: the build
         file loses the blanking rather than losing a Finding.
+
+        The bound of that temper, and what this test does *not* claim: the same
+        pair with no brace between them still swallows the declaration. That
+        residue is accepted rather than fixed, as the Maven one is -- issue #91.
         """
         findings = shell_findings(
             analyzer.node(make_state({"build.gradle": UNCLOSED_EXCLUDE_GRADLE}))

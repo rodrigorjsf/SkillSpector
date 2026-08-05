@@ -102,8 +102,10 @@ _XML_BANNED_DEPENDENCIES: Final[re.Pattern[str]] = _refusal_subtree("bannedDepen
 
 # Gradle says in an ``exclude`` call what Maven says in ``<exclusions>``, and
 # says it in many spellings: two DSLs, an optional group, named or positional
-# arguments, wrapped across lines or not. Issue #88 read ten of them off 262 real
-# build files.
+# arguments, wrapped across lines or not. Issue #88 surveyed 262 real build files
+# and observed eight of the ten below; the two wrapped forms are predicted rather
+# than observed -- measured against this function, which does fire on them, and
+# produced by any 100-column formatter, but absent from the surveyed population.
 #
 # The anchor is the call and its argument list -- never the line holding them.
 # Anchoring to the call is what collapses every spelling into one recognizer:
@@ -118,14 +120,22 @@ _XML_BANNED_DEPENDENCIES: Final[re.Pattern[str]] = _refusal_subtree("bannedDepen
 # runs to end of line, and continues while the line ends in a comma -- the shape
 # any 100-column formatter produces.
 #
-# Both are tempered the way ``_refusal_subtree`` is. The argument list may cross
+# Each branch is tempered, the way ``_refusal_subtree`` is, and each keeps a
+# residual hole the way that one does too. The parenthesised branch may cross
 # neither ``{`` nor ``}``, which no legitimate ``exclude`` argument contains, so
-# an unclosed ``exclude(`` cannot pair with the next ``)`` anywhere later in the
-# file and blank a real declaration between them -- the false negative issue #45
-# exists to prevent. The line branch refuses to start where a ``(`` does, so an
-# unclosed call falls through to no match at all rather than eating lines by
-# their trailing commas. Either way the build file loses the blanking rather than
-# losing a Finding.
+# an unclosed ``exclude(`` inside a closure stops at that closure's brace rather
+# than pairing with a ``)`` further down the file and blanking a real declaration
+# between them -- the false negative issue #45 exists to prevent. It also refuses
+# to start the line branch, so an unclosed call cannot fall through and eat lines
+# by their trailing commas instead.
+#
+# What survives both tempers, and is accepted rather than fixed: an unclosed
+# ``exclude(`` and an orphan ``)`` with no brace between them, and a Groovy
+# ``exclude`` line whose trailing comma is followed by a declaration rather than
+# by the rest of its own argument list. Both take malformed or unformattable
+# input, both blank a declaration a reader can see, and closing either needs the
+# brace-nesting this module exists without -- exactly the tradeoff
+# ``_refusal_subtree`` records for the Maven side. Issue #91 keeps the analysis.
 _GRADLE_EXCLUDE_CALL: Final[re.Pattern[str]] = re.compile(
     r"\bexclude\b(?:"
     r"\s*\((?:[^(){}]|\([^(){}]*\))*\)"
