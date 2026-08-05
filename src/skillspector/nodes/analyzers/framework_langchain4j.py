@@ -43,11 +43,12 @@ the artifact's name does not silently retire it; the Finding names the spelling
 the build file used. ``docs/adr/0007-l4j-shell-survives-the-graduation-rename.md``
 records the decision and what it deliberately does not solve.
 
-``L4J-UNRESOLVED`` (MEDIUM). A Java-defined Skill's content, name, description
-or loader path can be assembled at runtime, and then the instruction text the
-model reads exists in no file this Scan can open. Resolving arbitrary Java
-dataflow is out of scope; reporting the boundary is not. Silence there would let
-the report read as clean on the one surface that was never examined.
+``L4J-UNRESOLVED`` (MEDIUM). A Java-defined Skill's content, name, description,
+loader path or attached tool set can be assembled at runtime, and then the
+surface the model reaches exists in no file this Scan can open. Resolving
+arbitrary Java dataflow is out of scope; reporting the boundary is not. Silence
+there would let the report read as clean on the one surface that was never
+examined.
 
 ``L4J-TOOL-DESC`` (MEDIUM). A ``@Tool`` description that instructs the model
 rather than describing the tool is a prompt-injection surface sitting in an
@@ -144,6 +145,10 @@ _UNRESOLVED_MESSAGES = {
         "activates was not scanned."
     ),
 }
+_UNRESOLVED_TOOLS_MESSAGE = (
+    "A tool set is attached to this Skill without naming the classes it holds, so the Scan cannot "
+    "say what capability the Skill was granted. The tools are assembled somewhere it cannot follow."
+)
 _UNRESOLVED_CONFIDENCE = 1.0
 
 # The wiring is the decision; the declaration only puts the capability within
@@ -369,6 +374,23 @@ def _skill_definition_findings(path: str, source: str) -> list[Finding]:
                         f"{call.loader}.{call.method} is called with a path that is not a literal, "
                         "so the Skills it loads were not located or scanned."
                     ),
+                    _UNRESOLVED_CONFIDENCE,
+                    severity=_UNRESOLVED_SEVERITY,
+                )
+            )
+
+    # A third shape of the same silence. `L4J-TOOL-DESC` already reads every
+    # `@Tool` annotation in a scanned file, so a tool class written out in full
+    # is examined wherever it sits -- what is unreadable is a tool set assembled
+    # at runtime, where the Scan cannot say what capability the Skill was given.
+    for tools in skill_definitions.find_attached_tools(source):
+        if tools.opaque:
+            findings.append(
+                _finding(
+                    _UNRESOLVED_RULE_ID,
+                    path,
+                    tools.line,
+                    _UNRESOLVED_TOOLS_MESSAGE,
                     _UNRESOLVED_CONFIDENCE,
                     severity=_UNRESOLVED_SEVERITY,
                 )

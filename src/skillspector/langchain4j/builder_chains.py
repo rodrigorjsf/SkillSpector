@@ -63,12 +63,17 @@ class BuilderChain:
         return setter in self.setters
 
 
-def sole_argument(invocation: Node) -> Node | None:
-    """The single argument of *invocation*, or ``None`` if it takes another count."""
+def argument_list(invocation: Node) -> list[Node]:
+    """Every argument of *invocation*, in source order, punctuation removed."""
     arguments = invocation.child_by_field_name("arguments")
     if arguments is None:
-        return None
-    values = [child for child in arguments.children if child.type not in _ARGUMENT_PUNCTUATION]
+        return []
+    return [child for child in arguments.children if child.type not in _ARGUMENT_PUNCTUATION]
+
+
+def sole_argument(invocation: Node) -> Node | None:
+    """The single argument of *invocation*, or ``None`` if it takes another count."""
+    values = argument_list(invocation)
     return values[0] if len(values) == 1 else None
 
 

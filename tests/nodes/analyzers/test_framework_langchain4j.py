@@ -1056,6 +1056,66 @@ class TestUnresolvableDefinitions:
         assert [f.rule_id for f in findings] == ["L4J-UNRESOLVED"]
         assert findings[0].severity == "MEDIUM"
 
+    def test_a_tool_set_assembled_at_runtime_reports(self) -> None:
+        """``.tools(variable)`` is the loader silence in another shape.
+
+        The tool set is built somewhere the Scan cannot follow, so it cannot say
+        what capability the Skill was granted. Issue #57.
+        """
+        source = "class A { void m(Object t) { skill.toBuilder().tools(t).build(); } }"
+
+        findings = analyzer.node(make_state({"A.java": source}))["findings"]
+
+        assert [f.rule_id for f in findings] == ["L4J-UNRESOLVED"]
+        assert findings[0].severity == "MEDIUM"
+
+    @pytest.mark.parametrize(
+        ("label", "call"),
+        [
+            ("a variable", "tools(runtimeTools)"),
+            ("a map built by a call", "tools(Map.of(spec, executor))"),
+            ("one named class beside an opaque one", "tools(new OrderTools(), runtimeTools)"),
+        ],
+    )
+    def test_any_unnamed_argument_reports(self, label: str, call: str) -> None:
+        """Per argument, not per call. A named sibling does not redeem the set.
+
+        The Rule reads ``AttachedTools.opaque``, which asks whether *any*
+        argument failed to name its class -- so a call mixing a plain
+        ``new X()`` with a variable is reported, and the README and the
+        definition-path table in ``MULTI_FRAMEWORK_SKILL_ANALYSIS.md`` say the
+        same. A per-call reading would have let the mixed shape through.
+        """
+        source = f"class A {{ void m() {{ skill.toBuilder().{call}.build(); }} }}"
+
+        findings = analyzer.node(make_state({"A.java": source}))["findings"]
+
+        unresolved = [f for f in findings if f.rule_id == "L4J-UNRESOLVED"]
+        assert len(unresolved) == 1, label
+
+    @pytest.mark.parametrize(
+        ("label", "call"),
+        [
+            ("one named class", "tools(new OrderTools())"),
+            ("several named classes", "tools(new OrderTools(), new RefundTools())"),
+            ("no tools at all", "tools()"),
+            # `.tools(...)` is varargs, so an explicit array passes the same set.
+            ("an explicit array of named classes", "tools(new OrderTools[]{new OrderTools()})"),
+        ],
+    )
+    def test_a_nameable_tool_set_reports_nothing(self, label: str, call: str) -> None:
+        """The bound on the Rule: it names a silence, not the ``tools`` setter.
+
+        Without this the Rule would read as "any ``.tools(...)`` call", firing on
+        source where every attached class is written out in full -- and on a call
+        that attaches nothing at all.
+        """
+        source = f"class A {{ void m() {{ skill.toBuilder().{call}.build(); }} }}"
+
+        findings = analyzer.node(make_state({"A.java": source}))["findings"]
+
+        assert [f for f in findings if f.rule_id == "L4J-UNRESOLVED"] == [], label
+
     def test_literal_loader_paths_report_nothing(self) -> None:
         source = (
             "class A { void m() {"
@@ -1108,14 +1168,36 @@ class TestDefinitionPathCoverage:
 
         attached = find_attached_tools(source)
 
-        assert [tools.type_name for tools in attached] == ["OrderTools"]
+        assert [tools.type_names for tools in attached] == [("OrderTools",)]
 
     def test_tools_attached_from_a_variable_resolve_to_nothing(self) -> None:
         from skillspector.langchain4j.skill_definitions import find_attached_tools
 
         source = "class A { void m() { skill.toBuilder().tools(myToolMap).build(); } }"
 
-        assert [tools.type_name for tools in find_attached_tools(source)] == [None]
+        assert [tools.type_names for tools in find_attached_tools(source)] == [(None,)]
+
+    def test_each_argument_resolves_on_its_own(self) -> None:
+        """Per-argument, not per-call: one opaque argument must not hide the rest.
+
+        The distinction the Rule below rests on. ``.tools(new A(), new B())``
+        attaches two classes the Scan can name, and reading only a *sole*
+        argument would report that call as resolving to nothing -- the same
+        answer it gives for ``.tools(someVariable)``, where nothing is knowable.
+        """
+        from skillspector.langchain4j.skill_definitions import find_attached_tools
+
+        source = (
+            "class A { void m() { skill.toBuilder().tools(new A1(), new B1()).build();"
+            " skill.toBuilder().tools(new A1(), runtimeTools).build();"
+            " skill.toBuilder().tools().build(); } }"
+        )
+
+        assert [tools.type_names for tools in find_attached_tools(source)] == [
+            ("A1", "B1"),
+            ("A1", None),
+            (),
+        ]
 
     def test_a_malformed_file_still_yields_what_parsed(self) -> None:
         """Error-tolerant parsing is load-bearing: one typo must not blind a Scan."""

@@ -126,13 +126,29 @@ class SkillLoaderCall:
 class AttachedTools:
     """One ``.tools(...)`` call on a builder chain.
 
-    ``type_name`` is the class whose ``@Tool`` methods the Skill gains, when the
-    argument is a plain ``new X()``. Tools attached any other way -- a map, a
-    variable -- leave it ``None``.
+    ``type_names`` holds one entry per argument, in source order: the class whose
+    ``@Tool`` methods the Skill gains when that argument is a plain ``new X()``,
+    and ``None`` when it is anything else -- a map, a variable, a call. Reading
+    it per argument rather than per call is what separates the two cases a Rule
+    must not confuse: ``.tools(new A(), new B())`` names every class it attaches,
+    while ``.tools(someVariable)`` names none. An empty tuple is a call that
+    attaches nothing.
     """
 
     line: int
-    type_name: str | None
+    type_names: tuple[str | None, ...]
+
+    @property
+    def opaque(self) -> bool:
+        """Whether any argument failed to name the tool class it attaches.
+
+        Precisely that, and not the broader "the tool set is out of view": a
+        class the Scan *can* name is still only a name. ``new ToolBag(runtime)``
+        reads as resolvable here, because ``ToolBag`` is a class whose ``@Tool``
+        methods ``L4J-TOOL-DESC`` reads wherever its file is scanned, and what
+        was passed to its constructor is the arbitrary dataflow §3.6 declines.
+        """
+        return None in self.type_names
 
 
 def _unescape(text: str) -> str:
@@ -337,15 +353,45 @@ def find_attached_tools(source: str) -> list[AttachedTools]:
         if _skill_builder(node) is None:
             continue
         attached.append(
-            AttachedTools(line=java_parser.line(node), type_name=_constructed_type(node))
+            AttachedTools(
+                line=java_parser.line(node),
+                type_names=tuple(
+                    name
+                    for argument in builder_chains.argument_list(node)
+                    for name in _attached_types(argument)
+                ),
+            )
         )
     return attached
 
 
-def _constructed_type(invocation: Node) -> str | None:
-    """The class name of a sole ``new X()`` argument, or ``None``."""
-    argument = builder_chains.sole_argument(invocation)
-    if argument is None or argument.type != "object_creation_expression":
+def _attached_types(argument: Node) -> list[str | None]:
+    """The tool classes *argument* attaches, one entry each, ``None`` where unnamed.
+
+    Usually one entry. ``.tools(...)`` is varargs, so an explicit array is a legal
+    -- if unidiomatic -- way to pass the same set: ``new OrderTools[]{new
+    OrderTools()}`` names its classes exactly as ``.tools(new OrderTools())``
+    does, and reading it as one unnameable argument would report an unresolved
+    tool set over source that hides nothing.
+
+    A sized array with no initializer -- ``new Object[n]`` -- stays unnamed. Its
+    contents are filled in somewhere else, which is the case this Rule exists
+    for; ``new Object[0]`` is caught by the same reading, and nobody writes it.
+    """
+    if argument.type == "array_creation_expression":
+        initializer = next(
+            (child for child in argument.children if child.type == "array_initializer"), None
+        )
+        if initializer is None:
+            return [None]
+        elements = [child for child in initializer.children if child.type not in {"{", "}", ","}]
+        return [_constructed_type(element) for element in elements] or [None]
+    return [_constructed_type(argument)]
+
+
+def _constructed_type(argument: Node) -> str | None:
+    """The class name *argument* constructs, or ``None`` if it is not a ``new X()``."""
+    if argument.type != "object_creation_expression":
         return None
     for child in argument.children:
         if child.type == "type_identifier":
