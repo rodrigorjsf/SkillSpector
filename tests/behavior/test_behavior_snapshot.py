@@ -42,6 +42,7 @@ from typing import Any
 
 import pytest
 
+from skillspector import framework
 from tests.behavior import projection as proj
 
 FIXTURE = proj.REFERENCE_FIXTURE
@@ -187,15 +188,25 @@ def test_every_non_target_directory_is_excluded_and_is_really_not_a_target() -> 
     """The non-target directories stay out, and the reason they are out still holds.
 
     They are excluded for holding sample inputs rather than anything scannable,
-    so the control is what every one of the 35 corpus members has and these do
-    not: a ``SKILL.md``, a Framework manifest, or child directories. A real
-    fixture dropped into one of these fails here rather than being skipped.
+    so the control is what every corpus member has and these do not: a
+    ``SKILL.md``, a Framework manifest, or child directories. A real fixture
+    dropped into one of these fails here rather than being skipped.
+
+    "Framework manifest" is asked of ``framework`` rather than restated as a
+    list of file names. Restating it would leave this control passing while
+    silently ceasing to discriminate the day a Framework gains a manifest kind,
+    and it would miss ``build.gradle.kts``, which ``framework`` matches by prefix
+    rather than by literal.
     """
-    manifests = ("SKILL.md", "pyproject.toml", "pom.xml", "build.gradle", "build.gradle.kts")
     for name in proj.NON_TARGET_DIRS:
         directory = proj.FIXTURES_DIR / name
         assert directory.is_dir()
-        assert not any((directory / manifest).exists() for manifest in manifests), (
+        assert not any(
+            child.name == "SKILL.md"
+            or framework._is_jvm_build_file(child.name)
+            or framework._is_python_requirement_file(child.name)
+            for child in directory.iterdir()
+        ), (
             f"{name} now carries a manifest, so it may be a scan target -- "
             "drop it from NON_TARGET_DIRS and give it a snapshot."
         )
