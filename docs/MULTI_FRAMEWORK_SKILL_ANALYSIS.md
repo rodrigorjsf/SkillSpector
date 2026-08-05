@@ -374,9 +374,11 @@ interpreter.
 | `Skill.builder().content(CONSTANT)` | Usually | Resolvable when the constant is a literal in the same compilation unit |
 | `Skill.builder().content(someVar)` — DB, remote API, runtime-generated | **No** | See below |
 | `SkillResource.builder().relativePath(…).content(…)` | Same rules as `Skill.builder()` | |
-| `skill.toBuilder().tools(new OrderTools())` | Yes | Resolve the class, read its `@Tool` annotations |
+| `skill.toBuilder().tools(new OrderTools())` | Yes | The class is named, so its `@Tool` annotations are read wherever the file holding them is scanned — by `L4J-TOOL-DESC`, per file. Which Skill was granted which tools is *not* attributed; see issue #94 |
+| `skill.toBuilder().tools(someVariable)` | **No** | The tool set is assembled out of view, so the Scan cannot say what capability the Skill was granted. Reported as `L4J-UNRESOLVED` (issue #57) |
+| `skill.toBuilder().tools(new OrderTools(), runtimeTools)` | **No** | Per argument, not per call: one unreadable argument leaves the tool set unknown even though the other is named. Also `L4J-UNRESOLVED` |
 | `.toolProviders(McpToolProvider.builder()…)` | Yes | Presence and the absence of both `.filter(…)` and `.filterToolNames(…)` are visible |
-| `.tools(Map.of(spec, executor))` | Partially | The `ToolSpecification` literal is readable; the `ToolExecutor` lambda body is not analyzed |
+| `.tools(Map.of(spec, executor))` | Partially | The `ToolSpecification` literal is readable; the `ToolExecutor` lambda body is not analyzed. Since #57 this also raises `L4J-UNRESOLVED`, on the same test as the row above — the argument is a call rather than a `new X()`, so no tool class is named — which is the honest reading: what the map grants is decided by an executor nothing here reads |
 | `Skills.from(…)` vs `ShellSkills.from(…)` | Yes | Mode selection is a type reference |
 
 #### The coverage limit, stated as a finding
