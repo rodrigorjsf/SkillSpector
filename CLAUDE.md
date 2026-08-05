@@ -126,6 +126,12 @@ whoever the user says. Do not manufacture an Umbrella Branch for a single PR.
 - Triage labels pair one state role from the canonical five with one category — `docs/agents/triage-labels.md`
 - Domain-doc and ADR conventions — `docs/agents/domain.md`
 
+Two project skills live in `.claude/skills/`, both **user-invoked** — ask the user to run one rather
+than reaching for it. `/upstream-sync` measures how far this fork has drifted from
+`NVIDIA/SkillSpector` and merges upstream's new work in; it is the one operation where a moved
+Behavior Snapshot is correct rather than a regression. `/license-audit` measures this fork against
+Apache-2.0 §4 and fixes the drift, and it is the natural follow-up to a sync.
+
 ## References
 
 - Domain glossary — use these terms, not their synonyms — `CONTEXT.md`
