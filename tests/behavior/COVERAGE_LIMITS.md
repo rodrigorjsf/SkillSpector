@@ -85,8 +85,10 @@ confirmed clean. Full per-fixture numbers are in the #8 close-out comment.
   `langchain4j_gradle_skill` (#88) is built by Gradle rather than Maven, so detection, applicability,
   Finding construction and SARIF emission are pinned over a `build.gradle` as well as over a
   `pom.xml`. What its snapshot does *not* hold is a Gradle build file whose `exclude` refuses the
-  shell module: that shape raises a Finding today, issue #68 is where it is settled, and this fixture
-  is deliberately built so its snapshot reads the same before and after that change.
+  shell module: that shape raises nothing since #68, and the ten spellings it can be written in live
+  in the Analyzer's own suite. This fixture holds the discriminating shape instead — a real
+  declaration that excludes something else — which is why its snapshot read the same before and
+  after that fix.
 - **The Deep Agents boundary is exercised in one mode only; the writability verdict in three.**
   `deepagents_runtime_skills` (#71) assembles its Skill list per request, so `DA-UNRESOLVED` is
   behind the gate for the Skill-list case and for that case alone. The other four boundary cases —

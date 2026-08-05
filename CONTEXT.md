@@ -66,6 +66,12 @@ _Avoid_: checker, detector, scanner, plugin
 The named check an Analyzer applies, and the identity a Finding is attributed to.
 _Avoid_: pattern, signature, check
 
+**Refusal**:
+A Component naming a capability in order to state that it is *not* taken. The opposite of declaring
+it, and never a Finding: reporting one would flag the reader for the action that removes the risk.
+Defined by that intent alone — each build system spells it its own way, and the spellings are syntax
+rather than synonyms of the term.
+
 **Finding**:
 One instance of a Rule matching at a location in a Component. The atomic claim SkillSpector makes.
 _Avoid_: vulnerability, issue, alert, detection

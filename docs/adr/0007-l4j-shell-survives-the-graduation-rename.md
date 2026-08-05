@@ -130,8 +130,33 @@ What survives both tempers is an unclosed tag and an orphan close inside *one* `
 declaration between them. A textual scan cannot tell that apart from a well-formed subtree containing
 the same line, and neither can a reader; it is accepted rather than fixed.
 
-Gradle's `exclude group:`/`module:` form is a coordinate line rather than a subtree, is not blanked,
-and therefore still carries the inversion — issue #68.
+**Fixed for Gradle, by issue #68.** Gradle says the same Refusal as an `exclude` call rather than as
+a subtree, and says it in ten spellings — two DSLs, an optional group, named or positional
+arguments, wrapped across lines or not, plus Shadow's `exclude(dependency(…))`. Issue #88's survey of
+262 real build files observed eight of them; the two wrapped forms are predicted rather than
+observed, measured against this function rather than found in the population. One recognizer
+collapses all of them because it is anchored to the *call and its argument list*, not to the
+arguments it was given and not to the line holding it. The line would be the wrong anchor: in Gradle
+a real declaration and an exclusion of something else fit on one line, a shape Maven cannot produce,
+and a line-anchored suppression turns it into a false negative.
+
+The recognizer is context-free — any `exclude` in a `build.gradle*`, with no tracking of the closure
+around it. That buys `configurations.all` at no cost and also blanks Gradle's file-filter `exclude`,
+which is harmless unless such a call's own arguments name a shell coordinate. Requiring a dependency
+closure would take the brace-nesting this module exists without.
+
+It carries the same temper as the Maven side, spelled for parentheses: a parenthesised argument list
+may cross neither `{` nor `}`, which no legitimate `exclude` argument contains, so an unclosed
+`exclude(` inside a closure stops at that closure's brace rather than pairing with a `)` further down
+the file and blanking a real declaration between them. Measured on the malformed build file the test
+drives: the shipped pattern reports the declaration at its line, while the untempered one reports
+nothing.
+
+And it keeps a residual hole, the way the Maven patterns do. An unclosed `exclude(` and an orphan `)`
+with *no* brace between them still pair, and a Groovy `exclude` line whose trailing comma is followed
+by a declaration rather than by the rest of its own argument list still eats it. Both need malformed
+or unformattable input, and closing either needs brace-nesting — so, like the Maven residue above,
+they are accepted rather than fixed. Issue #91 carries the analysis and the options.
 
 ## What the report says when a Rule stops matching
 

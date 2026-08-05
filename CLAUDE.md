@@ -172,3 +172,5 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - A non-spelling vocabulary constant needs the guard's `_NOT_A_SPELLING` set.
 - Renaming a vocabulary constant: fix both `vocabulary_sweep/roles.py` maps; no test covers them.
 - `gh pr checks --json` is unsupported here; grep its text output instead.
+- A trailing greedy `[^\n]*` never backtracks into a following optional group.
+- Editing a behavior fixture's comments moves its snapshot's `size_bytes`.
