@@ -309,12 +309,12 @@
       "code_snippet": "    sensitive_vars = {}\n    patterns = [\"API_KEY\", \"SECRET\", \"TOKEN\", \"PASSWORD\", \"CREDENTIAL\"]\n\n    for key, val in os.environ.items():\n        if any(p in key.upper() for p in patterns):\n            sensitive_vars[key] = val\n",
       "confidence": 0.7,
       "context": "    sensitive_vars = {}\n    patterns = [\"API_KEY\", \"SECRET\", \"TOKEN\", \"PASSWORD\", \"CREDENTIAL\"]\n\n    for key, val in os.environ.items():\n        if any(p in key.upper() for p in patterns):\n            sensitive_vars[key] = val\n",
-      "end_line": null,
+      "end_line": 15,
       "explanation": "Code accesses environment variables that may contain secrets (API keys, tokens). This is a common pattern for credential theft.",
       "file": "scripts/helper.py",
-      "finding": "for key, val in os.environ.items()",
+      "finding": "os.environ.items()",
       "intent": null,
-      "matched_text": "for key, val in os.environ.items()",
+      "matched_text": "os.environ.items()",
       "message": "Env Variable Harvesting",
       "pattern": "Env Variable Harvesting",
       "remediation": "Avoid reading sensitive env vars (API keys, tokens) unless strictly required. Use secrets managers or secure config. Never log or transmit credentials.",
@@ -519,6 +519,7 @@
                     "uri": "scripts/helper.py"
                   },
                   "region": {
+                    "endLine": 15,
                     "startLine": 15
                   }
                 }
@@ -532,7 +533,7 @@
               "code_snippet": "    sensitive_vars = {}\n    patterns = [\"API_KEY\", \"SECRET\", \"TOKEN\", \"PASSWORD\", \"CREDENTIAL\"]\n\n    for key, val in os.environ.items():\n        if any(p in key.upper() for p in patterns):\n            sensitive_vars[key] = val\n",
               "confidence": 0.7,
               "explanation": "Code accesses environment variables that may contain secrets (API keys, tokens). This is a common pattern for credential theft.",
-              "finding": "for key, val in os.environ.items()",
+              "finding": "os.environ.items()",
               "pattern": "Env Variable Harvesting",
               "remediation": "Avoid reading sensitive env vars (API keys, tokens) unless strictly required. Use secrets managers or secure config. Never log or transmit credentials.",
               "severity": "HIGH",

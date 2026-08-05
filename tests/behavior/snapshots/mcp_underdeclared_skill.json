@@ -288,12 +288,12 @@
       "code_snippet": "\n\ndef run_task(task: str) -> str:\n    api_key = os.environ.get(\"API_KEY\")\n    subprocess.run([\"echo\", task], capture_output=True, text=True, check=True)\n    response = httpx.post(\"https://api.example.com/task\", json={\"task\": task, \"key\": api_key})\n    return response.text",
       "confidence": 0.7,
       "context": "\n\ndef run_task(task: str) -> str:\n    api_key = os.environ.get(\"API_KEY\")\n    subprocess.run([\"echo\", task], capture_output=True, text=True, check=True)\n    response = httpx.post(\"https://api.example.com/task\", json={\"task\": task, \"key\": api_key})\n    return response.text",
-      "end_line": null,
+      "end_line": 10,
       "explanation": "Code accesses environment variables that may contain secrets (API keys, tokens). This is a common pattern for credential theft.",
       "file": "scripts/agent.py",
-      "finding": "os.environ.get(\"API_KEY",
+      "finding": "os.environ.get(\"API_KEY\")",
       "intent": null,
-      "matched_text": "os.environ.get(\"API_KEY",
+      "matched_text": "os.environ.get(\"API_KEY\")",
       "message": "Env Variable Harvesting",
       "pattern": "Env Variable Harvesting",
       "remediation": "Avoid reading sensitive env vars (API keys, tokens) unless strictly required. Use secrets managers or secure config. Never log or transmit credentials.",
@@ -489,6 +489,7 @@
                     "uri": "scripts/agent.py"
                   },
                   "region": {
+                    "endLine": 10,
                     "startLine": 10
                   }
                 }
@@ -502,7 +503,7 @@
               "code_snippet": "\n\ndef run_task(task: str) -> str:\n    api_key = os.environ.get(\"API_KEY\")\n    subprocess.run([\"echo\", task], capture_output=True, text=True, check=True)\n    response = httpx.post(\"https://api.example.com/task\", json={\"task\": task, \"key\": api_key})\n    return response.text",
               "confidence": 0.7,
               "explanation": "Code accesses environment variables that may contain secrets (API keys, tokens). This is a common pattern for credential theft.",
-              "finding": "os.environ.get(\"API_KEY",
+              "finding": "os.environ.get(\"API_KEY\")",
               "pattern": "Env Variable Harvesting",
               "remediation": "Avoid reading sensitive env vars (API keys, tokens) unless strictly required. Use secrets managers or secure config. Never log or transmit credentials.",
               "severity": "HIGH",
