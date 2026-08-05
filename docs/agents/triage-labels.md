@@ -30,9 +30,32 @@ So a fully triaged issue reads `enhancement` + `ready-for-agent`, or `bug` + `re
 `documentation` + `ready-for-human`. An untriaged issue may carry `needs-triage` alone, with its
 category assigned during triage.
 
+## `blocked` is a modifier, not a state
+
+One further label sits alongside both of the above:
+
+| Label | Meaning |
+|-------|---------|
+| `blocked` | The issue cannot be worked until something else lands, and that something is named in its body |
+
+It is deliberately **not** a sixth state. A state answers "where is this in triage"; `blocked`
+answers "may work start", and the two are independent — an issue can be fully specified and still
+unworkable. Keeping it orthogonal means the one-state-at-a-time rule is untouched, and the `triage`
+skill's five-state machine keeps working without knowing this label exists. Made a state instead, it
+would collide with `ready-for-agent` and lose the distinction between *not yet specified* and
+*specified but waiting*.
+
+So a blocked-but-specified issue reads `bug` + `ready-for-agent` + `blocked`. `blocked` overrides
+`ready-for-agent` in practice: an agent picking work up skips a blocked issue regardless of its
+state.
+
+`blocked` is removed by whoever closes the blocker — it is not a state transition, so removing it
+touches neither the state nor the category label. An issue carrying `blocked` whose body names no
+blocker is a defect in the labelling, not a blocked issue.
+
 ## Consumer rules
 
-The `triage` skill reads and writes these labels. Do not invent new labels or deviate from this set — the triage workflow depends on a stable vocabulary.
+The `triage` skill reads and writes the state and category labels. Do not invent new labels or deviate from this set — the triage workflow depends on a stable vocabulary. `blocked` is outside that vocabulary by design: the skill neither sets nor clears it, so a human or an agent working from an issue applies and removes it directly.
 
 When an issue transitions state (e.g. from `needs-triage` to `ready-for-agent`), remove the old state label and add the new one. An issue should have exactly one **state** label at all times.
 
