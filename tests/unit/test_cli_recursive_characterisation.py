@@ -248,6 +248,38 @@ class TestTheAdvisoryOnAnOrdinaryScan:
         assert "--repo-scan" not in _unwrapped(result.output)
 
 
+class TestTheAdvisoryStaysOutOfTheReport:
+    """Which stream the warning goes to, which is not a cosmetic question.
+
+    Without ``--output``, a non-terminal ``--format`` writes the report to
+    **stdout**, so ``skillspector scan . -f json | jq`` is a real pipeline and a
+    CI step people run. An advisory printed to stdout lands ahead of the report
+    and breaks it — and this advisory fires on any directory declaring no
+    ``SKILL.md``, which is exactly the input such a pipeline points at.
+
+    Every other assertion in this file reads ``result.output``, which cannot
+    distinguish the streams. These read them apart.
+    """
+
+    def test_the_json_report_on_stdout_is_still_parseable(self, tmp_path: Path) -> None:
+        _write_skill(tmp_path / "modules" / "billing" / "skills" / "invoice", "invoice")
+
+        result = runner.invoke(app, ["scan", str(tmp_path), "--no-llm", "-f", "json"])
+
+        assert result.exit_code == 0, result.output
+        # The assertion that would have caught the regression: parse, don't grep.
+        assert json.loads(result.stdout)["skill"]["name"] == "unknown"
+        assert "Warning" not in result.stdout
+
+    def test_the_advice_is_on_stderr_where_a_pipe_leaves_it(self, tmp_path: Path) -> None:
+        """The other half: routing it away from stdout must not silence it."""
+        _write_skill(tmp_path / "modules" / "billing" / "skills" / "invoice", "invoice")
+
+        result = runner.invoke(app, ["scan", str(tmp_path), "--no-llm", "-f", "json"])
+
+        assert "--repo-scan finds 1 skill(s) here" in _unwrapped(result.stderr)
+
+
 class TestTheOutputContracts:
     """What the combined file holds. Two different shapes, chosen by ``--format``."""
 

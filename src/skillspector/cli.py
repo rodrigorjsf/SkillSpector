@@ -74,6 +74,13 @@ app = typer.Typer(
 
 console = Console()
 
+# `--format json` and `--format sarif` write the report to stdout when no
+# `--output` is given, so `skillspector scan . -f json | jq` is a real pipeline.
+# An advisory printed to stdout lands ahead of the report and breaks it. This
+# one is advice about the *shape* of the scan, not part of the report, so it goes
+# to stderr where a pipe leaves it alone and a terminal still shows it.
+advice = Console(stderr=True)
+
 _FALLTHROUGH_PREFIX = (
     "[yellow]Warning:[/yellow] no SKILL.md here, so this scans the whole tree as one "
     "unnamed skill with an empty manifest. "
@@ -95,19 +102,19 @@ def _advise_on_a_fallthrough(directory: Path, children_with_a_skill: int) -> Non
     """
     discovered = discover_skills(directory)
     if discovered:
-        console.print(
+        advice.print(
             f"{_FALLTHROUGH_PREFIX}--repo-scan finds {len(discovered)} skill(s) here and "
             "scans each on its own; use it instead."
         )
     elif children_with_a_skill:
-        console.print(
+        advice.print(
             f"{_FALLTHROUGH_PREFIX}--recursive found {children_with_a_skill} skill(s) "
             "immediately below and needs at least 2, and --repo-scan finds none under the "
             "conventional roots. Point the scan at the skill directory itself, or pass "
             "--repo-scan-root for a layout the roots do not cover."
         )
     else:
-        console.print(
+        advice.print(
             f"{_FALLTHROUGH_PREFIX}No skill was found immediately below either, nor by "
             "--repo-scan under the conventional roots. Point the scan at a skill directory, "
             "or pass --repo-scan --repo-scan-root for a layout the roots do not cover."

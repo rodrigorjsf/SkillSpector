@@ -740,9 +740,21 @@ resolved is reported rather than chased, which is the §3.6 boundary made visibl
 One thing is worth carrying forward rather than leaving in the closed issues:
 
 - **`--recursive` and `--repo-scan` now overlap.** They answer similar questions with different
-  discovery depth, different `--baseline` support and different combined output. Consolidating them
-  is worth doing and was out of scope while `--recursive` has committed behavior this increment
-  promised not to change.
+  discovery depth, different `--baseline` support and different combined output.
+
+  **Settled by issue #39, and not the way this paragraph originally assumed.** Consolidating the two
+  discovery functions was recorded here as "worth doing"; measured, it is not. `repository_scan.py`
+  already imports `_has_skill_md` and `_extract_skill_name` from `multi_skill.py`, so the leaf logic
+  is shared and the two walks have **no lines in common** — `iterdir()` at depth one with no skip
+  set and a `>= 2` threshold, against `os.walk` with `_SKIP_DIRS | JVM_BUILD_DIRECTORIES`,
+  root-suffix matching, dot-directory exceptions and a depth bound. One function serving both needs
+  parameters for depth, roots, skip-directories and dot-directory policy, each caller using a
+  disjoint subset, plus caller-side threshold and short-circuit: more code than it removes, for no
+  behavior change. The overlap is therefore **documented rather than removed** — the README carries a
+  table of every difference and a rule for when each flag fits — and `cli`'s fall-through advisory
+  now runs discovery and names the flag that would actually find something. Deprecating `--recursive`
+  outright (#39's path B) remains available and would need its own release note and a deprecation
+  window; nothing here forecloses it.
 
 This increment **overrode §5's value-to-risk order**, which recommended phase 2 first as the
 cheapest. [ADR 0004](adr/0004-langchain4j-before-deepagents.md) scheduled the Java track ahead of
