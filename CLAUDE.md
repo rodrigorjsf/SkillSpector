@@ -29,6 +29,15 @@ push to it and never open a pull request or issue against it. `gh` resolves the 
 default on a fork, so pass `--repo rodrigorjsf/SkillSpector-Polyglot` whenever the target is not
 unambiguous.
 
+## Licensing
+
+This fork inherits NVIDIA's Apache-2.0 license and is a Derivative Work under it. **§4 binds every
+commit, not just releases** — people install this fork, so the license has to be right from the
+first change, never retrofitted. `.claude/rules/license-compliance.md` is mandatory reading before
+creating a source file, modifying an inherited one, adding a dependency, or touching `LICENSE`,
+`THIRD_PARTY_NOTICES.md` or any copyright header. When the license text and the repository disagree,
+say so and ask — never guess.
+
 ## README is part of the change
 
 `README.md` opens with this fork's own documentation — mission, framework support matrix, audience,
@@ -106,7 +115,7 @@ whoever the user says. Do not manufacture an Umbrella Branch for a single PR.
 
 ## Critical Constraints
 
-- New source files need the SPDX + Apache-2.0 header block (copy from any neighbour). Convention only — nothing enforces it.
+- New source files need the SPDX + Apache-2.0 header block. **Do not copy one from a neighbour** — the copyright line depends on who wrote the file, and every neighbour carries NVIDIA's. See `.claude/rules/license-compliance.md`. Convention only; nothing enforces it.
 - `skillspector.constants` resolves the active provider and validates the model config **at import time**; importing it raises when `SKILLSPECTOR_STRICT_MODEL_VALIDATION=true` and a model is unknown.
 - This repo is a fork of NVIDIA/SkillSpector and still merges upstream. Prefer new files in new paths; where an existing file must change, keep the diff append-only.
 - Active goal: extend scanning to LangChain4j and Deep Agents skills. **Existing behavior on existing inputs must not change** — new analyzers are gated, never unconditionally wired.
