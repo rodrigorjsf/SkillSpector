@@ -177,9 +177,11 @@ declines is caught, while a change to what it would have found is not.
   key has still never ordered anything. Widening the corpus did not close this. Its shape was
   checked against `InspectionLedgerException` (`src/skillspector/inspection_ledger.py`) rather than
   against data — every field it reads is a `str` or an `int | None`.
-- **The gate costs three interpreter spawns plus 63 in-process `graph.invoke` calls** — two per
-  fixture, for the gate itself and the consecutive-run check, plus one on `malicious_skill` for the
-  pre-strip control — for about eight seconds of `make test-unit`. The out-of-process checks did **not**
+- **The gate costs three interpreter spawns plus two in-process `graph.invoke` calls per fixture** —
+  one for the gate itself and one for the consecutive-run check — plus one on `malicious_skill` for
+  the pre-strip control, for a few seconds of `make test-unit`. Written as the rule rather than as a
+  total: the total is the corpus count doubled, and a total is a corpus count that no `34` grep can
+  find when the corpus grows. The out-of-process checks did **not**
   scale with the corpus: `regenerate.py --emit-all` projects the whole corpus per spawn, so three
   child interpreters cover 35 fixtures against two hash seeds and two providers.
 - **A fixture's line endings are part of the frozen behavior.** The projection carries each
