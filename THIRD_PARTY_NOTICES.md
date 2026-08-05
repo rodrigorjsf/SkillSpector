@@ -61,6 +61,18 @@ and project URL.
 - **Copyright:** Copyright (c) 2024 LangChain, Inc.
 - **URL:** https://github.com/langchain-ai/langgraph
 
+### langchain-anthropic
+
+- **License:** MIT
+- **Copyright:** Copyright (c) 2023 LangChain, Inc.
+- **URL:** https://github.com/langchain-ai/langchain
+
+### langchain-aws
+
+- **License:** MIT
+- **Copyright:** Copyright (c) 2024 LangChain, Inc.
+- **URL:** https://github.com/langchain-ai/langchain-aws
+
 ### langchain-core
 
 - **License:** MIT
@@ -72,6 +84,18 @@ and project URL.
 - **License:** MIT
 - **Copyright:** Copyright (c) LangChain, Inc.
 - **URL:** https://github.com/langchain-ai/langchain
+
+### boto3
+
+- **License:** Apache-2.0
+- **Copyright:** Copyright 2013-2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+- **URL:** https://github.com/boto/boto3
+
+### langsmith
+
+- **License:** MIT
+- **Copyright:** Copyright (c) 2023 LangChain
+- **URL:** https://github.com/langchain-ai/langsmith-sdk
 
 ### tree-sitter
 

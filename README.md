@@ -374,6 +374,7 @@ in the *same* pull request. Concretely:
 | An exit code or an output format | [Integrating SkillSpector](#integrating-skillspector) |
 | Anything that ships a designed-but-unbuilt capability | the **Status** column above, and [`docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md`](docs/MULTI_FRAMEWORK_SKILL_ANALYSIS.md) |
 | Any detection rule, again | [`docs/OWASP-AST10-COVERAGE.md`](docs/OWASP-AST10-COVERAGE.md) — the row the rule belongs to, or the gaps list where it belongs to none |
+| A runtime dependency in `pyproject.toml`, added **or removed** | [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) — license and copyright read from the installed `dist-info`, not recalled; `tests/unit/test_third_party_notices.py` fails on a missing entry and on one that outlived its dependency |
 | An upstream spelling a framework rule matches | the framework's `vocabulary.py` — never a literal elsewhere — and, if the spelling is new, a re-measured range per [`docs/VOCABULARY_REMEASUREMENT.md`](docs/VOCABULARY_REMEASUREMENT.md) |
 
 A capability that ships without its row updated is a documentation bug — report it as one.
