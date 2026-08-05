@@ -61,7 +61,11 @@ class SkillspectorState(TypedDict, total=False):
     # build_context node populates these
     components: list[str]
     file_cache: dict[str, str]
+    # Retained for compatibility with the persisted workflow-state schema.
     ast_cache: dict[str, str]
+    # Key for the process-local parsed-AST cache.  The ASTs themselves stay
+    # outside state because they are not checkpoint-serializable.
+    python_ast_cache_key: str | None
     manifest: dict[str, object]
     # Why `manifest` holds what it holds: an empty dict alone cannot say whether
     # the Skill declared nothing, failed to parse, or was never there at all.

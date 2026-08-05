@@ -34,6 +34,14 @@ that from the legitimate prose that compares the two units side by side -- which
 is what ``README.md`` and ``input_handler.py`` now do deliberately. Guarding the
 unit is a reading, not a match.
 
+**The spelling is now a homonym.** Upstream reintroduced ``MAX_FILE_BYTES`` after
+the fork's merge-base, for a genuinely different cap: the *read* cap in
+``constants.py``, compared against ``file_path.stat().st_size`` in
+``build_context.py``. That is bytes on disk, so the name is right there. The two
+modules are therefore exempt by call site, with ``TestReadCap`` asserting the
+reason still holds -- the guard reports the retired spelling used for the
+*analysis* cap, which is what it always meant.
+
 **Scope.** Tracked ``.md`` and ``.py`` files, which is where a Python constant
 is named. A mention in a build file, a workflow or a notebook is not caught, and
 a file that cannot be read or decoded as UTF-8 is skipped rather than reported --
@@ -61,24 +69,43 @@ _CURRENT_NAME = "MAX_FILE_CHARS"
 # this module exists to catch.
 _CAP_MODULE = "src/skillspector/nodes/analyzers/static_runner.py"
 
+# Where the homonym lives: upstream's read cap, which the failure message names
+# so a reader is not told the retired spelling has no legitimate use left.
+_READ_CAP_MODULE = "src/skillspector/constants.py"
+
 _SEARCHED_SUFFIXES = (".md", ".py")
 
-# The two files that may write the retired name, and why.
+# The files that may write the retired name, in two groups with two reasons.
 #
 # ``test_static_runner_filtering.py`` holds the assertion that the skip log does
 # *not* say it -- the guard the rename shipped with. This module is the guard's
 # own home: it names the retired spelling in order to retire it, the way
-# ``vocabulary.py`` is excluded from the LangChain4j spelling guard. Every other
-# occurrence is drift.
-#
-# The exemption is per file rather than per assertion, so a *second* occurrence
-# inside one of these two would not be reported. ``TestScope`` asserts each still
-# contains the name, so an exemption that has outlived its file fails the build
-# rather than silently widening what the guard permits.
-_EXEMPT: tuple[str, ...] = (
+# ``vocabulary.py`` is excluded from the LangChain4j spelling guard.
+_GUARD_EXEMPT: tuple[str, ...] = (
     "tests/nodes/analyzers/test_static_runner_filtering.py",
     "tests/unit/test_max_file_chars_naming.py",
 )
+
+# Upstream reused the retired spelling for a different cap, so the name is now a
+# homonym rather than drift. ``MAX_FILE_BYTES`` in these two modules is the
+# *read* cap -- ``file_path.stat().st_size``, genuinely bytes on disk -- which
+# upstream introduced after the fork's merge-base and named correctly. The
+# exemption is by call site rather than by dropping the guard, which is how this
+# repository handles a homonym spelling.
+#
+# ``TestReadCap`` is the control: these modules must not also name the analysis
+# cap, because a fork edit that brought that meaning here is the drift the guard
+# exists to catch and the exemption would otherwise hide it.
+_READ_CAP_EXEMPT: tuple[str, ...] = (
+    "src/skillspector/constants.py",
+    "src/skillspector/nodes/build_context.py",
+)
+
+# The exemption is per file rather than per assertion, so a *second* occurrence
+# inside an exempt file would not be reported. ``TestScope`` asserts each still
+# contains the name, so an exemption that has outlived its file fails the build
+# rather than silently widening what the guard permits.
+_EXEMPT: tuple[str, ...] = _GUARD_EXEMPT + _READ_CAP_EXEMPT
 
 
 @cache
@@ -117,9 +144,11 @@ def naming_drift(paths: Iterable[str], root: Path = _REPO_ROOT) -> list[str]:
         for number, line in enumerate(content.splitlines(), start=1):
             if _RETIRED_NAME in line:
                 reported.append(
-                    f"{path}:{number} writes {_RETIRED_NAME}, a name that no longer exists. "
-                    f"The per-file analysis cap is {_CURRENT_NAME} in {_CAP_MODULE}, and it "
-                    "counts characters of decoded text rather than bytes on disk."
+                    f"{path}:{number} writes {_RETIRED_NAME}, which no longer names the "
+                    f"per-file analysis cap. That cap is {_CURRENT_NAME} in {_CAP_MODULE}, "
+                    "and it counts characters of decoded text. The one thing "
+                    f"{_RETIRED_NAME} still names is the read cap in {_READ_CAP_MODULE}, "
+                    "which is bytes on disk -- use that spelling only for that cap."
                 )
     return reported
 
@@ -177,6 +206,34 @@ class TestScope:
         clean = tmp_path / "README.md"
         clean.write_text(f"The per-file analysis cap is `{_CURRENT_NAME}`.\n", encoding="utf-8")
         assert naming_drift(["README.md"], root=tmp_path) == []
+
+
+class TestReadCap:
+    """The homonym exemption covers upstream's read cap and nothing wider."""
+
+    @pytest.mark.parametrize("path", _READ_CAP_EXEMPT)
+    def test_the_read_cap_modules_do_not_name_the_analysis_cap(self, path: str) -> None:
+        # The discriminator for the exemption. These modules are allowed the
+        # retired spelling because the only cap they name is the read cap. A fork
+        # edit that brought the analysis cap here would make the exemption hide
+        # exactly the drift this module exists to report.
+        content = (_REPO_ROOT / path).read_text(encoding="utf-8")
+        assert _CURRENT_NAME not in content, (
+            f"{path} now names {_CURRENT_NAME} as well, so its exemption no longer covers "
+            f"only the read cap -- move the {_CURRENT_NAME} usage out or drop the exemption."
+        )
+
+    def test_the_read_cap_is_a_byte_count_of_the_file_on_disk(self) -> None:
+        # The reason the spelling is correct there rather than merely tolerated.
+        # If upstream's cap stops measuring bytes on disk, the homonym stops
+        # being legitimate and the exemption stops being the right resolution.
+        content = (_REPO_ROOT / "src/skillspector/nodes/build_context.py").read_text(
+            encoding="utf-8"
+        )
+        assert f"file_path.stat().st_size > {_RETIRED_NAME}" in content, (
+            f"{_RETIRED_NAME} is no longer compared against a size on disk, so it is no "
+            "longer a read cap -- revisit _READ_CAP_EXEMPT."
+        )
 
 
 class TestSingleName:

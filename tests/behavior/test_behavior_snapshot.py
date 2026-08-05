@@ -137,13 +137,14 @@ def test_corrupt_snapshot_fails_rather_than_regenerating(
 def _fixture_leaves() -> set[str]:
     """Discover the leaf scan targets on disk, independently of ``CORPUS``.
 
-    A leaf is a fixture directory that is not one of the family containers. It
-    is found here by walking the tree rather than by reading ``CORPUS``, so a
-    fixture added without a snapshot fails the gate instead of joining silently.
+    A leaf is a fixture directory that is neither one of the family containers
+    nor one of the non-target directories. It is found here by walking the tree
+    rather than by reading ``CORPUS``, so a fixture added without a snapshot
+    fails the gate instead of joining silently.
     """
     leaves: set[str] = set()
     for path in proj.FIXTURES_DIR.iterdir():
-        if not path.is_dir():
+        if not path.is_dir() or path.name in proj.NON_TARGET_DIRS:
             continue
         if path.name in proj.FAMILY_PARENTS:
             leaves.update(f"{path.name}/{child.name}" for child in path.iterdir() if child.is_dir())
@@ -180,6 +181,29 @@ def test_every_family_parent_is_excluded_and_is_really_a_container() -> None:
         assert not (directory / "SKILL.md").exists()
         assert any((child / "SKILL.md").exists() for child in directory.iterdir())
         assert parent not in proj.CORPUS_NAMES
+
+
+def test_every_non_target_directory_is_excluded_and_is_really_not_a_target() -> None:
+    """The non-target directories stay out, and the reason they are out still holds.
+
+    They are excluded for holding sample inputs rather than anything scannable,
+    so the control is what every one of the 35 corpus members has and these do
+    not: a ``SKILL.md``, a Framework manifest, or child directories. A real
+    fixture dropped into one of these fails here rather than being skipped.
+    """
+    manifests = ("SKILL.md", "pyproject.toml", "pom.xml", "build.gradle", "build.gradle.kts")
+    for name in proj.NON_TARGET_DIRS:
+        directory = proj.FIXTURES_DIR / name
+        assert directory.is_dir()
+        assert not any((directory / manifest).exists() for manifest in manifests), (
+            f"{name} now carries a manifest, so it may be a scan target -- "
+            "drop it from NON_TARGET_DIRS and give it a snapshot."
+        )
+        assert not any(child.is_dir() for child in directory.iterdir()), (
+            f"{name} now holds child directories, so it may be a family parent -- "
+            "move it to FAMILY_PARENTS or give its children snapshots."
+        )
+        assert name not in proj.CORPUS_NAMES
 
 
 @CORPUS_PARAMS

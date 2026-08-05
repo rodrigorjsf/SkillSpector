@@ -28,7 +28,11 @@ Treat every change here as security-relevant, not as plumbing.
   `nodes/analyzers/static_runner.py`, and it counts **characters** of decoded text where every
   ingest cap counts bytes on disk — the two are only comparable once you assume an encoding, so
   restating one in the other's unit is how the comment beside `INGEST_MAX_BYTES` went wrong before.
-  `tests/unit/test_max_file_chars_naming.py` fails the build on the retired byte-denominated name.
+  `tests/unit/test_max_file_chars_naming.py` fails the build on the retired byte-denominated name —
+  with one exemption, because upstream reused that spelling in the 2.5.3 sync for a *third* cap,
+  defined in `constants.py` and checked against `file_path.stat().st_size` in
+  `nodes/build_context.py`. That one really is bytes on disk, so finding the retired spelling alive
+  in those two modules is not the old name coming back; it is a different cap sharing it.
   `INGEST_MAX_ZIP_MEMBERS` (10 000) is a separate axis, bounding the many-tiny-files zip bomb
   the byte cap alone cannot.
 - `IngestLimitExceededError` subclasses `ValueError` so callers already catching `ValueError` from

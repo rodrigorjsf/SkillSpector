@@ -150,15 +150,87 @@ for key, val in os.environ.items():
         assert len(findings) >= 1
         assert any(f.rule_id == "E2" for f in findings)
 
-    def test_e2_env_get_secret(self) -> None:
+    @pytest.mark.parametrize(
+        "expression",
+        [
+            'os.environ.get("OPENAI_API_KEY")',
+            'os.environ.get(key="OPENAI_API_KEY")',
+        ],
+    )
+    def test_e2_env_get_secret(self, expression: str) -> None:
         """Detection of specific secret access."""
-        content = """
-import os
-api_key = os.environ.get("OPENAI_API_KEY")
-"""
+        content = f"import os\napi_key = {expression}\n"
         findings = data_exfiltration_module.analyze(content, "script.py", "python")
         assert len(findings) >= 1
         assert any(f.rule_id == "E2" for f in findings)
+
+    def test_e2_unparseable_python_uses_regex_fallback(self) -> None:
+        """Malformed Python preserves the pre-AST E2 regex coverage."""
+        content = "import os\nsecret = os.environ.get('API_KEY')\ndef broken(\n"
+
+        findings = data_exfiltration_module.analyze(content, "script.py", "python")
+
+        assert any(finding.rule_id == "E2" for finding in findings)
+
+    @pytest.mark.parametrize(
+        "expression",
+        [
+            "os.environ.copy()",
+            "dict(os.environ)",
+            "{**os.environ}",
+            "dict(os.environ.items())",
+            '__import__("copy").copy(os.environ)',
+            "os . environ . copy ()",
+        ],
+    )
+    def test_e2_full_environment_read_forms(self, expression: str) -> None:
+        """Materializing the whole environment is detected independently of spelling."""
+        content = f"import os\nresult = {expression}\n"
+
+        findings = data_exfiltration_module.analyze(content, "script.py", "python")
+        e2 = [finding for finding in findings if finding.rule_id == "E2"]
+
+        assert len(e2) == 1
+        assert e2[0].location.start_line == 2
+
+    @pytest.mark.parametrize(
+        ("imports", "expression", "expected_line"),
+        [
+            ("import os as operating_system", "operating_system.environ.copy()", 2),
+            ("from os import environ as environment", "dict(environment)", 2),
+            ("import copy as copier\nimport os", "copier.copy(os.environ)", 3),
+        ],
+    )
+    def test_e2_full_environment_read_import_aliases(
+        self, imports: str, expression: str, expected_line: int
+    ) -> None:
+        """Import aliases cannot hide a full environment copy or enumeration."""
+        content = f"{imports}\nresult = {expression}\n"
+
+        findings = data_exfiltration_module.analyze(content, "script.py", "python")
+        e2 = [finding for finding in findings if finding.rule_id == "E2"]
+
+        assert len(e2) == 1
+        assert e2[0].location.start_line == expected_line
+
+    @pytest.mark.parametrize(
+        "expression",
+        [
+            'os.environ["PATH"]',
+            'os.environ.get("PATH")',
+            'os.environ.get(key="PATH", default="API_KEY")',
+            "os.environ.copy",
+            "2 ** os.environ",
+            "subprocess.run(command, env=os.environ, check=False)",
+        ],
+    )
+    def test_e2_does_not_flag_non_harvesting_environment_use(self, expression: str) -> None:
+        """Single-key access and process environment plumbing are not harvesting."""
+        content = f"import os\nresult = {expression}\n"
+
+        findings = data_exfiltration_module.analyze(content, "script.py", "python")
+
+        assert not any(finding.rule_id == "E2" for finding in findings)
 
 
 class TestPrivilegeEscalation:

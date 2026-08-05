@@ -24,6 +24,13 @@ and project URL.
 - **Copyright:** Copyright (c) 2019 Encode OSS Ltd
 - **URL:** https://github.com/encode/httpx
 
+### packaging
+
+- **License:** Apache-2.0 OR BSD-2-Clause — offered under either, and taken here
+  under Apache-2.0, whose text is already reproduced below
+- **Copyright:** Copyright (c) Donald Stufft and individual contributors
+- **URL:** https://github.com/pypa/packaging
+
 ### PyYAML
 
 - **License:** MIT

@@ -58,15 +58,27 @@ Each conflict is upstream's change meeting the fork's. The fork's rules decide t
   `NVIDIA/skillspector` URLs there are provenance, so they survive the merge unchanged.
 - **`pyproject.toml`** — take upstream's `version`. The fork does not fork the version number; a fork
   version *below* upstream's is drift, not a decision. Keep the fork's added dependencies.
-- **Inherited docs the fork edited** — `docs/DEVELOPMENT.md`, `docs/OWASP-AST10-COVERAGE.md`. These
-  describe upstream's own behavior, so upstream's text wins wherever the two describe the same thing,
-  and the fork's additions sit beside it. A coverage claim upstream revised is a fact about the
-  scanner, not an opinion the fork gets to keep.
+- **Inherited docs the fork edited** — `docs/DEVELOPMENT.md`. These describe upstream's own behavior,
+  so upstream's text wins wherever the two describe the same thing, and the fork's additions sit
+  beside it. A coverage claim upstream revised is a fact about the scanner, not an opinion the fork
+  gets to keep.
 - **Analyzer modules the fork extended** — upstream's fix and the fork's extension are usually
   disjoint hunks. Where they are not, upstream's logic wins and the fork's extension is re-applied on
   top, because the fork's promise is to extend upstream rather than to replace it.
 - **`CLAUDE.md`, `docs/adr/`, `.claude/rules/`, `src/skillspector/langchain4j/`,
   `src/skillspector/deepagents/`** — fork-owned. Upstream has no opinion; keep the fork's.
+- **`docs/OWASP-AST10-COVERAGE.md` — fork-held, and upstream is coming back for it.** Upstream
+  deleted the whole file in `c54967a` while the fork's crosswalk of its own Rules lived in it, so the
+  2.5.3 sync kept the file rather than lose that content. Do **not** read that as the fork owning the
+  page. Upstream's own revert says why it went, in `NVIDIA/SkillSpector#288` and `#338`: *"We will
+  bring updated wording next week with product team approval."* The deletion is a pending rewrite, not
+  an abandonment.
+
+  So the next sync that carries an upstream version of this file meets an add/add conflict, and the
+  resolution is the **inherited-doc** rule above, not this bullet: upstream's reworded text wins for
+  everything it and the fork both describe, and the fork's `L4J-*`, `DA-*` and `MCP-*` rows are
+  re-applied on top. The fork holds the file in the meantime because losing the crosswalk was the
+  worse of the two errors, not because the fork has a claim on the page.
 
 Where upstream deleted something the fork built on, that is a real design question, not a merge
 decision — stop and put it to the user with the upstream commit that did it.

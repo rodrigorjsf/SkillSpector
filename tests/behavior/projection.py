@@ -375,6 +375,17 @@ CORPUS_NAMES: tuple[str, ...] = (
 # rather than merely omitted so the exclusion is assertable.
 FAMILY_PARENTS: tuple[str, ...] = ("sdi", "sqp", "ssd")
 
+# Fixture directories that are not scan targets at all. Unlike a family parent,
+# which holds Skills, these hold sample *inputs* for a specific unit test and
+# would produce a snapshot of nothing. ``tests/fixtures/oms`` arrived with
+# upstream's OMS signature recognizer and is read by ``tests/nodes/
+# test_build_context.py`` and ``tests/integration/test_graph.py``.
+#
+# Named rather than merely omitted for the same reason as the parents: the
+# behavior suite asserts why each is out, so dropping a real Skill fixture into
+# one of these directories fails the gate instead of joining silently.
+NON_TARGET_DIRS: tuple[str, ...] = ("oms",)
+
 CORPUS: Mapping[str, Path] = {name: FIXTURES_DIR / name for name in CORPUS_NAMES}
 
 # The fixture whose measured shape the shape-specific tests are written against:

@@ -194,3 +194,5 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - Snapshot counts rot in prose; write "every committed snapshot", never a number.
 - `--repo-scan`/`--recursive` differences are a README table; update it, not just code.
 - Copyright headers: classify by `git diff --diff-filter` against the merge-base, never by path.
+- An upstream sync's test failures are the fork's own guards, not upstream's tests.
+- Upstream can add a fixture directory that is not a Skill; `NON_TARGET_DIRS` excludes it.
