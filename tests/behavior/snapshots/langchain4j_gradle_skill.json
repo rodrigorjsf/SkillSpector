@@ -265,16 +265,16 @@
   "component_metadata": [
     {
       "executable": false,
-      "lines": 31,
+      "lines": 30,
       "path": "build.gradle",
-      "size_bytes": 1196,
+      "size_bytes": 1081,
       "type": "other"
     },
     {
       "executable": false,
-      "lines": 24,
+      "lines": 25,
       "path": "src/main/java/com/example/ReleaseAgent.java",
-      "size_bytes": 775,
+      "size_bytes": 906,
       "type": "other"
     },
     {
@@ -302,7 +302,7 @@
       "remediation": "Prefer tool mode (Skills.from(...)) so the model reaches only the tools the Skill declares. Where shell mode is genuinely required, confine the process to a container or a restricted user and set RunShellCommandToolConfig.workingDirectory rather than inheriting the JVM's.",
       "rule_id": "L4J-SHELL",
       "severity": "HIGH",
-      "start_line": 28,
+      "start_line": 27,
       "tags": [
         "ASI02"
       ]
@@ -372,7 +372,7 @@
                     "uri": "build.gradle"
                   },
                   "region": {
-                    "startLine": 28
+                    "startLine": 27
                   }
                 }
               }

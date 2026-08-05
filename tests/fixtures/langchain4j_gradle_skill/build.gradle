@@ -5,10 +5,9 @@
 //
 // The shell module below is declared *and* trimmed: the coordinate is a live
 // L4J-SHELL signal, and the `exclude` inside its block names an unrelated
-// logging artifact. That pairing is the discriminating case for issue #68 --
-// whatever a later recognizer does with Gradle's `exclude` spelling, this file
-// still declares shell mode, at this line, and the Finding here is expected to
-// stay exactly where the committed snapshot records it.
+// logging artifact. Issue #68 records why that pairing is the shape this
+// fixture holds; tests/behavior/COVERAGE_LIMITS.md records what its snapshot
+// does and does not guard.
 //
 // Versions are inside OBSERVED_VERSION_RANGE in
 // src/skillspector/langchain4j/vocabulary.py, not re-measured here.

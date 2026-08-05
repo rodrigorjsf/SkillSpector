@@ -6,10 +6,11 @@ import dev.langchain4j.skill.ClassPathSkillLoader;
 import dev.langchain4j.skill.Skills;
 
 /**
- * Wires the release agent in Tool mode.
+ * Wires the release agent through registered tools, with each Skill's content preloaded.
  *
- * <p>The host code is upstream's ordinary wiring, so what this fixture measures stays
- * in the build file: the Gradle declaration is the whole of its shell signal.
+ * <p>Upstream's ordinary wiring, chosen so that what this fixture measures stays in the
+ * build file: the Gradle coordinate is the whole of its L4J-SHELL signal, and the Finding
+ * its snapshot pins is the build file's, at the build file's line.
  */
 public class ReleaseAgent {
 
