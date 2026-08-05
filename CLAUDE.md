@@ -115,7 +115,7 @@ whoever the user says. Do not manufacture an Umbrella Branch for a single PR.
 
 ## Critical Constraints
 
-- New source files need the SPDX + Apache-2.0 header block. **Do not copy one from a neighbour** — the copyright line depends on who wrote the file, and every neighbour carries NVIDIA's. See `.claude/rules/license-compliance.md`. Convention only; nothing enforces it.
+- New source files need the SPDX + Apache-2.0 header block. **Do not copy one from a neighbour** — the copyright line depends on who wrote the file, and a neighbour may be inherited, modified or fork-authored, each carrying a different line. See `.claude/rules/license-compliance.md`. Convention only; nothing enforces it.
 - `skillspector.constants` resolves the active provider and validates the model config **at import time**; importing it raises when `SKILLSPECTOR_STRICT_MODEL_VALIDATION=true` and a model is unknown.
 - This repo is a fork of NVIDIA/SkillSpector and still merges upstream. Prefer new files in new paths; where an existing file must change, keep the diff append-only.
 - Active goal: extend scanning to LangChain4j and Deep Agents skills. **Existing behavior on existing inputs must not change** — new analyzers are gated, never unconditionally wired.
@@ -193,3 +193,4 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - `sole_argument` returns `None` for zero *and* multi-argument calls alike.
 - Snapshot counts rot in prose; write "every committed snapshot", never a number.
 - `--repo-scan`/`--recursive` differences are a README table; update it, not just code.
+- Copyright headers: classify by `git diff --diff-filter` against the merge-base, never by path.

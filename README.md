@@ -332,6 +332,14 @@ The complete variable table is in [Environment Variables](#environment-variables
   this fork tracks it and merges from it. Issues with this fork belong
   [here](https://github.com/rodrigorjsf/SkillSpector-Polyglot/issues), not upstream.
 - **License unchanged.** Apache-2.0, as upstream. See [LICENSE](LICENSE).
+- **This fork has modified files it inherited from upstream, and added files of its own.** That
+  sentence is the Apache-2.0 §4(b) notice for the distribution as a whole, and it covers the build
+  and documentation files — `README.md`, `Makefile`, `pyproject.toml`, `THIRD_PARTY_NOTICES.md`,
+  `docs/` — that have no comment syntax to carry one. Every *source* file says so for itself: a file
+  this fork changed carries NVIDIA's copyright line with the fork's beneath it, and a file this fork
+  wrote carries the fork's line only. Read the header to know who wrote a source file; run
+  `git diff <merge-base> HEAD` against upstream to know exactly what changed. Dependencies this fork
+  added are recorded in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) beside upstream's.
 - **The detection rates quoted in the Overview are upstream's research**, reproduced as inherited
   documentation. This fork has not independently reproduced them.
 - **Known limits are stated, not hidden.** Static analysis matches patterns and cannot prove intent;

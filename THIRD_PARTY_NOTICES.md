@@ -66,6 +66,18 @@ and project URL.
 - **Copyright:** Copyright (c) LangChain, Inc.
 - **URL:** https://github.com/langchain-ai/langchain
 
+### tree-sitter
+
+- **License:** MIT
+- **Copyright:** Copyright (c) 2019 Max Brunsfeld, GitHub
+- **URL:** https://github.com/tree-sitter/py-tree-sitter
+
+### tree-sitter-java
+
+- **License:** MIT
+- **Copyright:** Copyright (c) 2017 Ayman Nadeem
+- **URL:** https://github.com/tree-sitter/tree-sitter-java
+
 ### yara-python
 
 - **License:** Apache-2.0

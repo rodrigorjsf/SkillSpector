@@ -21,17 +21,23 @@ Three buckets, and every source file is in exactly one:
 
 ```bash
 MB=$(git merge-base upstream/main HEAD)
-git diff --name-only --diff-filter=A $MB HEAD -- src tests contrib   # fork-authored
-git diff --name-only --diff-filter=M $MB HEAD                        # inherited, modified here
+SCOPE="src tests contrib scripts"
+git diff --name-only --diff-filter=A $MB HEAD -- $SCOPE | xargs -r grep -l SPDX-FileCopyrightText
+git diff --name-only --diff-filter=M $MB HEAD -- $SCOPE | xargs -r grep -l SPDX-FileCopyrightText
 ```
 
 Anything with a header that appears in neither list is inherited and untouched.
+
+`scripts/` belongs in the scope — `scripts/release/` carries a header and an audit scoped to
+`src tests contrib` alone would miss it. Widen `$SCOPE` rather than dropping it: an unscoped `grep`
+matches the documentation *about* headers, `.claude/rules/license-compliance.md` and this file
+included, and counts prose as source.
 
 Pin `$MB` explicitly. A file upstream added *after* the merge-base and edited here classifies
 differently depending on the ref you diff against, and getting that backwards inverts the fix.
 
 **Done when** every file carrying an `SPDX-FileCopyrightText` line sits in exactly one bucket, and the
-three counts add up to `grep -rl "SPDX-FileCopyrightText" src/ tests/ contrib/ | wc -l`.
+three counts add up to `grep -rl SPDX-FileCopyrightText $SCOPE | wc -l`.
 
 ## 2. Audit the headers against the buckets
 
@@ -40,6 +46,11 @@ three counts add up to `grep -rl "SPDX-FileCopyrightText" src/ tests/ contrib/ |
 | Inherited, untouched | NVIDIA's line, unchanged |
 | Inherited, modified here | NVIDIA's line **and** the fork's, upstream first — §4(c) retains, §4(b) notices |
 | Fork-authored | the fork's line **only** |
+
+A modified file with **no comment syntax** — `Makefile`, `pyproject.toml`, `README.md`, anything under
+`docs/` — cannot carry a per-file notice at all. §4(b) for those is the Transparency bullet in
+`README.md` stating that this fork modifies inherited files. Check that the bullet is still there;
+do not invent a per-file mechanism for a file that has nowhere to put one.
 
 Every file keeps `SPDX-License-Identifier: Apache-2.0` and the Apache boilerplate regardless: §4 offers
 no option to relicense inherited portions, and the fork is Apache-2.0 too.
