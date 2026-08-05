@@ -224,6 +224,134 @@ UNCLOSED_EXCLUSIONS_POM = f"""<project>
 """
 UNCLOSED_EXCLUSIONS_POM_LINE = 14
 
+# Gradle spells the Maven <exclusions> intent as an `exclude` call, and spells it
+# many ways: two DSLs, an optional group, positional or named arguments, wrapped
+# or not. Every entry below names the shell module in order to *refuse* it, so
+# every entry must raise nothing. The spellings and their real-world frequency
+# were measured over 262 GitHub build files in issue #88; the survey comment on
+# issue #68 keeps the counts.
+#
+# Kept as one table rather than one constant apiece: what the recognizer must
+# collapse is the *set*, and a reader comparing two spellings should not have to
+# page between them.
+GRADLE_REFUSALS: tuple[tuple[str, str], ...] = (
+    (
+        "groovy group and module",
+        "dependencies {\n"
+        "    implementation('com.example:app:1.0') {\n"
+        f"        exclude group: 'dev.langchain4j', module: '{SHELL_ARTIFACT_ID}'\n"
+        "    }\n"
+        "}\n",
+    ),
+    (
+        "kotlin named arguments",
+        "dependencies {\n"
+        '    implementation("com.example:app:1.0") {\n'
+        f'        exclude(group = "dev.langchain4j", module = "{SHELL_ARTIFACT_ID}")\n'
+        "    }\n"
+        "}\n",
+    ),
+    (
+        "groovy module with no group",
+        "dependencies {\n"
+        "    implementation('com.example:app:1.0') {\n"
+        f"        exclude module: '{SHELL_ARTIFACT_ID}'\n"
+        "    }\n"
+        "}\n",
+    ),
+    (
+        "configurations.all",
+        "configurations.all {\n"
+        f"    exclude group: 'dev.langchain4j', module: '{SHELL_ARTIFACT_ID}'\n"
+        "}\n",
+    ),
+    (
+        "groovy wrapped across two lines",
+        "dependencies {\n"
+        "    implementation('com.example:app:1.0') {\n"
+        "        exclude group: 'dev.langchain4j',\n"
+        f"                module: '{SHELL_ARTIFACT_ID}'\n"
+        "    }\n"
+        "}\n",
+    ),
+    (
+        "kotlin wrapped with a trailing comma",
+        "dependencies {\n"
+        '    implementation("com.example:app:1.0") {\n'
+        "        exclude(\n"
+        '            group = "dev.langchain4j",\n'
+        f'            module = "{SHELL_ARTIFACT_ID}",\n'
+        "        )\n"
+        "    }\n"
+        "}\n",
+    ),
+    (
+        "kotlin wrapped without a trailing comma",
+        "dependencies {\n"
+        '    implementation("com.example:app:1.0") {\n'
+        "        exclude(\n"
+        '            group = "dev.langchain4j",\n'
+        f'            module = "{SHELL_ARTIFACT_ID}"\n'
+        "        )\n"
+        "    }\n"
+        "}\n",
+    ),
+    (
+        "kotlin positional",
+        "dependencies {\n"
+        '    implementation("com.example:app:1.0") {\n'
+        f'        exclude("dev.langchain4j", "{SHELL_ARTIFACT_ID}")\n'
+        "    }\n"
+        "}\n",
+    ),
+    (
+        "kotlin positional with one argument",
+        f'configurations.all {{\n    exclude("{SHELL_ARTIFACT_ID}")\n}}\n',
+    ),
+    (
+        "shadow dependency filter",
+        "shadowJar {\n"
+        "    dependencies {\n"
+        f"        exclude(dependency('dev.langchain4j:{SHELL_ARTIFACT_ID}:1.18.1-beta28'))\n"
+        "    }\n"
+        "}\n",
+    ),
+)
+
+# The discriminating pair, and the reason the recognizer is anchored to the
+# `exclude` call rather than to the line holding it: in Gradle a real
+# declaration and an exclusion of something else fit on one line. Maven settled
+# the same question with DECLARING_AND_EXCLUDING_POM.
+DECLARING_AND_EXCLUDING_GRADLE_ONE_LINE = (
+    "dependencies {\n"
+    f"    implementation('dev.langchain4j:{SHELL_ARTIFACT_ID}:1.18.1-beta28') "
+    "{ exclude group: 'org.slf4j', module: 'slf4j-api' }\n"
+    "}\n"
+)
+DECLARING_AND_EXCLUDING_GRADLE_TWO_LINES = (
+    "dependencies {\n"
+    f"    implementation('dev.langchain4j:{SHELL_ARTIFACT_ID}:1.18.1-beta28') {{\n"
+    "        exclude group: 'org.slf4j', module: 'slf4j-api'\n"
+    "    }\n"
+    "}\n"
+)
+DECLARING_AND_EXCLUDING_GRADLE_LINE = 2
+
+# Malformed on purpose: the `exclude(` is never closed, and a real declaration
+# follows it. A recognizer that pairs the open paren with the next `)` anywhere
+# later blanks the declaration between them -- the false negative issue #45
+# existed to fix, reintroduced in the other build system. What saves the
+# declaration is refusing to let an argument list cross a brace.
+UNCLOSED_EXCLUDE_GRADLE = (
+    "dependencies {\n"
+    "    implementation('com.example:app:1.0') {\n"
+    "        exclude(group: 'dev.langchain4j'\n"
+    "    }\n"
+    f"    implementation 'dev.langchain4j:{SHELL_ARTIFACT_ID}:1.18.1-beta28'\n"
+    "}\n"
+)
+UNCLOSED_EXCLUDE_GRADLE_LINE = 5
+
 
 def make_state(
     file_cache: dict[str, str],
@@ -520,6 +648,67 @@ class TestBanningTheModuleIsNotDeclaringIt:
 
         assert len(findings) == 1, "an unclosed <exclusions> swallowed a real declaration"
         assert findings[0].start_line == UNCLOSED_EXCLUSIONS_POM_LINE
+
+
+class TestRefusingTheModuleInGradleIsNotDeclaringIt:
+    """A Gradle build file naming the shell artifact to *refuse* it raises nothing.
+
+    The Gradle half of ``TestBanningTheModuleIsNotDeclaringIt``. Maven says the
+    refusal as a subtree, Gradle as an ``exclude`` call, and the same inversion
+    follows from reading either as a declaration: the build file is flagged HIGH
+    for the one action that removes the risk. Issue #68, following #64.
+
+    ``GRADLE_REFUSALS`` is the measured set of spellings rather than a guessed
+    one -- issue #88 read them off 262 real build files. The bound on the
+    blanking is the rest of this class: a real declaration that excludes
+    something *else* must still fire, at its own line, on one line or two.
+    """
+
+    @pytest.mark.xfail(strict=True, reason="issue #68: no Gradle refusal is recognised yet")
+    @pytest.mark.parametrize(
+        "gradle", [source for _, source in GRADLE_REFUSALS], ids=[id for id, _ in GRADLE_REFUSALS]
+    )
+    def test_a_refused_shell_module_is_not_a_declaration(self, gradle: str) -> None:
+        assert shell_findings(analyzer.node(make_state({"build.gradle": gradle}))) == []
+
+    def test_declaring_it_while_excluding_something_else_on_one_line_is_reported(self) -> None:
+        """The shape Maven cannot produce: both on one line.
+
+        Any suppression anchored to "a line holding ``exclude``" turns this into
+        a false negative, which is why the recognizer is anchored to the call.
+        """
+        findings = shell_findings(
+            analyzer.node(make_state({"build.gradle": DECLARING_AND_EXCLUDING_GRADLE_ONE_LINE}))
+        )
+
+        assert len(findings) == 1, "an unrelated exclude blanked the declaration beside it"
+        assert findings[0].severity == "HIGH"
+        assert findings[0].start_line == DECLARING_AND_EXCLUDING_GRADLE_LINE
+
+    def test_declaring_it_while_excluding_something_else_below_is_reported(self) -> None:
+        """The same pair on separate lines, reported at the declaration's line."""
+        findings = shell_findings(
+            analyzer.node(make_state({"build.gradle": DECLARING_AND_EXCLUDING_GRADLE_TWO_LINES}))
+        )
+
+        assert len(findings) == 1
+        assert findings[0].severity == "HIGH"
+        assert findings[0].start_line == DECLARING_AND_EXCLUDING_GRADLE_LINE
+
+    def test_an_unclosed_exclude_call_does_not_swallow_a_declaration(self) -> None:
+        """The Gradle twin of ``UNCLOSED_EXCLUSIONS_POM``, and the same tradeoff.
+
+        An argument list that may run to the next ``)`` anywhere later in the
+        file blanks every declaration in between. Barring ``{`` and ``}`` from
+        the argument list stops the runaway at the enclosing closure: the build
+        file loses the blanking rather than losing a Finding.
+        """
+        findings = shell_findings(
+            analyzer.node(make_state({"build.gradle": UNCLOSED_EXCLUDE_GRADLE}))
+        )
+
+        assert len(findings) == 1, "an unclosed exclude( swallowed a real declaration"
+        assert findings[0].start_line == UNCLOSED_EXCLUDE_GRADLE_LINE
 
 
 class TestTheFrameworkGate:
