@@ -572,10 +572,12 @@ See the [contrib guide](contrib/batch_scan/docs/) for details.
 
 ### Scanning a Whole Repository
 
-Pointing SkillSpector at a repository root without `--repo-scan` does not fail visibly — it
+Pointing SkillSpector at a repository root without `--repo-scan` does not fail — it
 succeeds wrongly. A repository root holds no `SKILL.md`, so the entire tree is scanned as **one
 anonymous skill with an empty manifest**: its components span everything, including `target/`, and
-the risk score is computed over that mixture. The report looks complete and is not.
+the risk score is computed over that mixture. The report looks complete and is not. The scan now
+prints a warning naming the flag that would have found the skills, but the warning is advice — the
+wrong-shaped report is still what gets written.
 
 `--repo-scan` finds every skill inside the repository and scans each on its own:
 
@@ -604,6 +606,34 @@ skillspector scan . --repo-scan --repo-scan-root playbooks --repo-scan-root ops/
 `--baseline`, the SARIF output and the exit code all work as they do for a single skill. SARIF
 locations are rewritten to be relative to the repository root, so GitHub code scanning resolves them
 against the checked-out tree.
+
+#### `--repo-scan` or `--recursive`?
+
+Two flags mean "there is more than one skill under this path". **`--repo-scan` is the one to reach
+for.** `--recursive` predates it and is narrower everywhere that matters, and is kept because
+changing it would change results for anyone depending on them. It is *wider* in exactly one place,
+and not helpfully so: it walks build output that `--repo-scan` skips.
+
+| | `--repo-scan` | `--recursive` |
+|---|---|---|
+| Looks | at any depth, under the patterns above | at the immediate children only |
+| Minimum to engage | one skill | **two** — one child skill is not enough |
+| A `SKILL.md` at the path itself | irrelevant | short-circuits: the tree is scanned as that one skill |
+| `target/`, `build/`, `.gradle/` | skipped | walked, and a skill inside one counts |
+| `--baseline` | threaded through every skill | rejected, exit `2` — but **only** once the flag engages. Below the two-skill threshold it falls through to an ordinary scan and the baseline applies |
+| `--format sarif --output` | one valid SARIF log, one run per skill | several SARIF documents glued together with `--- path ---` separators — **not parseable as SARIF** |
+| `--format json --output` | per-skill bodies concatenated | one object: `multi_skill`, `skill_count`, `max_risk_score`, `execution_successful`, `skills` |
+| Discovery roots | `--repo-scan-root`, repeatable | not configurable |
+
+Use `--recursive` only for the shape it was built for: a flat directory whose immediate children are
+two or more skills, consumed through its combined-JSON contract. Anything else — a repository, a
+monorepo, one skill under `skills/`, a build tree, a shared baseline, SARIF for code scanning — is
+`--repo-scan`.
+
+When the path declares no skill of its own, the scan now says so instead of reporting the
+anonymous-skill result silently — and it runs discovery before advising, so the warning states how
+many skills `--repo-scan` would actually find here rather than listing both flags and leaving the
+choice open. Where neither flag would find anything, it says that too.
 
 #### Example CI configuration
 

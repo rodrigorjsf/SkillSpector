@@ -176,3 +176,5 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - Editing a behavior fixture's comments moves its snapshot's `size_bytes`.
 - A GitHub-population survey is refetchable: #88's comment carries the exact query and filter.
 - `sole_argument` returns `None` for zero *and* multi-argument calls alike.
+- Snapshot counts rot in prose; write "every committed snapshot", never a number.
+- `--repo-scan`/`--recursive` differences are a README table; update it, not just code.
