@@ -156,7 +156,16 @@ And it keeps a residual hole, the way the Maven patterns do. An unclosed `exclud
 with *no* brace between them still pair, and a Groovy `exclude` line whose trailing comma is followed
 by a declaration rather than by the rest of its own argument list still eats it. Both need malformed
 or unformattable input, and closing either needs brace-nesting — so, like the Maven residue above,
-they are accepted rather than fixed. Issue #91 carries the analysis and the options.
+they are accepted rather than fixed.
+
+That acceptance is measured, not assumed. Issue #91 ran the shipped `exclude` recognizer over issue
+#88's population — the 262 real build files fetched for the spelling survey — looking for the hazard
+both shapes share: a match that spans lines and swallows a line opening a dependency declaration.
+Four matches span lines, all four of them file filters, and **none** swallows a declaration. The
+detector is not vacuously silent: it fires on both shapes when they are fed to it. The population is
+filtered — build files naming both `langchain4j` and `exclude` — so the zero is evidence of rarity
+rather than of impossibility, which is what makes the residue worth recording here rather than
+closing unremarked. Issue #91 carries the analysis, the reproduction and the rejected options.
 
 ## What the report says when a Rule stops matching
 
