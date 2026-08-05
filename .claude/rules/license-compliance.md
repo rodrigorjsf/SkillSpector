@@ -24,7 +24,7 @@ The four §4 obligations, and what each means concretely here:
 | §4 | Obligation | State in this repository |
 |---|---|---|
 | (a) | Recipients get a copy of the License | `LICENSE` at the root, unmodified. **Never edit, relicense, or remove it**, and never change the NVIDIA copyright line inside it. |
-| (b) | Modified files carry prominent notices stating that You changed them | Enforced per file — see below. |
+| (b) | Modified files carry prominent notices stating that You changed them | Per file for anything carrying a comment header — see below. A build or documentation file with no comment syntax (`Makefile`, `pyproject.toml`, `README.md`, `docs/`) is covered instead by the Transparency bullet in `README.md`, which states that this fork modifies inherited files. Keep that bullet; it is the notice for everything a header cannot reach. |
 | (c) | Retain every copyright, patent, trademark and attribution notice from the Source form | Never delete an existing `SPDX-FileCopyrightText` line. Add beside it. |
 | (d) | Propagate a `NOTICE` file if the Work has one | Upstream ships **no** `NOTICE` — verified against `upstream/main`. Nothing to propagate. If upstream ever adds one, this row changes and the fork must carry it. |
 
@@ -52,16 +52,18 @@ regardless — the fork is Apache-2.0 too, and §4 offers no option to relicense
 inherited portions.
 
 **Do not copy a header "from any neighbour" without reading whose file it is.** That shortcut is how
-the current state arose: every one of the 128 files this fork authored carries NVIDIA's copyright
-line and nobody else's. `#95` carries the sweep that corrects it; until that lands, a new file still
-gets the *correct* header rather than matching its neighbours.
+the fork's headers went wrong in the first place: every file it authored carried NVIDIA's copyright
+line and nobody else's. `#95` swept the tree against `upstream/main` and corrected it — every
+fork-authored file given the fork's line alone, every inherited-and-modified file given both, every
+inherited-and-untouched file left as it is. `/license-audit` re-measures those three buckets, so ask
+it for the counts rather than reading a number here; the shortcut is what would put the tree back.
 
 ## Third-party dependencies
 
 `THIRD_PARTY_NOTICES.md` is upstream's record of the licenses the distribution pulls in. **A pull
 request that adds a runtime dependency to `pyproject.toml` adds its entry to that file in the same
-pull request.** The fork has already added `tree-sitter` and `tree-sitter-java` without doing so.
-Nothing enforces this — no CI job reads the file — so it is on the change author.
+pull request.** The fork's own additions — `tree-sitter` and `tree-sitter-java` — are recorded there
+as of `#95`. Nothing enforces this — no CI job reads the file — so it is on the change author.
 
 ## What never happens
 
