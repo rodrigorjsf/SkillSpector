@@ -21,17 +21,28 @@ Three buckets, and every source file is in exactly one:
 
 ```bash
 MB=$(git merge-base upstream/main HEAD)
-SCOPE="src tests contrib scripts"
+SCOPE="src tests contrib scripts .github"
 git diff --name-only --diff-filter=A $MB HEAD -- $SCOPE | xargs -r grep -l SPDX-FileCopyrightText
 git diff --name-only --diff-filter=M $MB HEAD -- $SCOPE | xargs -r grep -l SPDX-FileCopyrightText
 ```
 
 Anything with a header that appears in neither list is inherited and untouched.
 
-`scripts/` belongs in the scope — `scripts/release/` carries a header and an audit scoped to
-`src tests contrib` alone would miss it. Widen `$SCOPE` rather than dropping it: an unscoped `grep`
-matches the documentation *about* headers, `.claude/rules/license-compliance.md` and this file
-included, and counts prose as source.
+`scripts/` and `.github/` belong in the scope — `scripts/release/` and both workflows under
+`.github/workflows/` carry a header, and an audit scoped to `src tests contrib` alone would miss
+them. Widen `$SCOPE` rather than dropping it: an unscoped `grep` matches the documentation *about*
+headers, `.claude/rules/license-compliance.md` and this file included, and counts prose as source.
+
+The three counts only add up if `$SCOPE` reaches every header in the tree, so prove that before
+trusting them:
+
+```bash
+comm -23 <(git ls-files | xargs -r grep -l SPDX-FileCopyrightText | sort) \
+         <(git ls-files $SCOPE | xargs -r grep -l SPDX-FileCopyrightText | sort)
+```
+
+Every line is either a header `$SCOPE` misses — widen it — or prose about headers, which is the only
+acceptable residue.
 
 Pin `$MB` explicitly. A file upstream added *after* the merge-base and edited here classifies
 differently depending on the ref you diff against, and getting that backwards inverts the fix.
@@ -46,6 +57,27 @@ three counts add up to `grep -rl SPDX-FileCopyrightText $SCOPE | wc -l`.
 | Inherited, untouched | NVIDIA's line, unchanged |
 | Inherited, modified here | NVIDIA's line **and** the fork's, upstream first — §4(c) retains, §4(b) notices |
 | Fork-authored | the fork's line **only** |
+
+Check the table by set membership, not by eye. Counts cannot see a misattribution — a file can sit in
+the right bucket with the wrong line in it:
+
+```bash
+xargs -r grep -l 'SkillSpector-Polyglot contributors' < all.txt | sort > fork.txt
+xargs -r grep -l 'NVIDIA CORPORATION'                 < all.txt | sort > nv.txt
+comm -12 fork.txt inherited.txt                    # false fork attribution on an untouched file
+comm -23 <(cat added.txt mod.txt | sort) fork.txt  # fork-touched file with no §4(b) notice
+comm -23 mod.txt nv.txt                            # §4(c) violation: inherited line deleted
+comm -12 added.txt nv.txt                          # NVIDIA's line on a "fork-authored" file
+```
+
+All four must be empty, and `wc -l fork.txt` must equal `added + modified` while `wc -l nv.txt`
+equals `inherited + modified`.
+
+The last row is the one to resolve by hand, because a moved merge-base produces it two ways that want
+opposite fixes. After a sync, `$MB` is upstream's tip, so a file **upstream deleted and this fork
+kept** shows up as added — it is inherited, NVIDIA's line stays, and stripping it would be the §4(c)
+violation the rule forbids. A genuinely fork-authored file with a stale pre-sweep header wants the
+opposite. Settle which with `git log upstream/main --diff-filter=D -- <path>` before editing a header.
 
 A modified file with **no comment syntax** — `Makefile`, `pyproject.toml`, `README.md`, anything under
 `docs/` — cannot carry a per-file notice at all. §4(b) for those is the Transparency bullet in
