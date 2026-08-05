@@ -158,6 +158,7 @@ When something fails repeatedly, when User has to re-explain, or when a workarou
 - Empty `git diff` plus `M` status means `core.autocrlf`, not a real change.
 - Fork Actions need the Actions-tab enable button clicked once; only a human can.
 - Squash-merge Ticket PRs; DCO checks every merge commit inside the PR range.
+- Never squash a sync PR; `git merge -s ours upstream/main` repairs a lost merge parent.
 - `CONTEXT.md` `_Avoid_` terms bind docstrings and test names, not just prose.
 - `CONTEXT.md` entries define terms only; symbol names belong in `DEVELOPMENT.md`.
 - Link sub-issues via `gh api -F sub_issue_id=<id>`; `-f` sends a string and 422s.

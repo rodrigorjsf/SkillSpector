@@ -118,4 +118,33 @@ Open the PR against `main` with the step-5 mapping as its body, and say plainly 
 and why — a reviewer who sees a snapshot diff in this repository assumes a regression until told
 otherwise. **A human merges it.**
 
+## 7. The merge must keep the second parent
+
+**Say this in the PR body, because the default button is wrong here.** Everywhere else in this
+repository a squash merge is right — Ticket PRs are squashed on purpose, and `CLAUDE.md`'s Applied
+Learning says so. A sync PR is the one exception, and squashing it silently undoes the sync.
+
+A squash rewrites the branch as one commit with a single parent, so git keeps the merged *tree* and
+loses the record that `upstream/main` was ever merged. The merge-base does not advance, and step 1
+then measures the same drift it measured before:
+
+```bash
+git log -1 --format='%p' origin/main                     # one SHA = squashed
+git rev-list --count $(git merge-base upstream/main origin/main)..upstream/main
+```
+
+A non-zero count on a tree that already contains those commits is the signature. The next sync would
+re-merge them into a tree that already has them — conflicts on identical content, and a step-5 ledger
+with no attributable delta left in it.
+
+**If it has already been squashed**, the repair does not touch a single file:
+
+```bash
+git merge -s ours upstream/main          # records the parent, keeps main's tree
+```
+
+Verify before pushing: the tree must be byte-identical to the squash commit's
+(`git rev-parse <squash>^{tree}` equals `HEAD^{tree}`), the commit must have two parents, and the
+count above must be `0`. Landed once already, in `208cfee`, after `#104` was squashed.
+
 File whatever the sync surfaced and could not close as its own issue, per `CLAUDE.md`.
