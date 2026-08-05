@@ -58,15 +58,18 @@ Each conflict is upstream's change meeting the fork's. The fork's rules decide t
   `NVIDIA/skillspector` URLs there are provenance, so they survive the merge unchanged.
 - **`pyproject.toml`** — take upstream's `version`. The fork does not fork the version number; a fork
   version *below* upstream's is drift, not a decision. Keep the fork's added dependencies.
-- **Inherited docs the fork edited** — `docs/DEVELOPMENT.md`, `docs/OWASP-AST10-COVERAGE.md`. These
-  describe upstream's own behavior, so upstream's text wins wherever the two describe the same thing,
-  and the fork's additions sit beside it. A coverage claim upstream revised is a fact about the
-  scanner, not an opinion the fork gets to keep.
+- **Inherited docs the fork edited** — `docs/DEVELOPMENT.md`. These describe upstream's own behavior,
+  so upstream's text wins wherever the two describe the same thing, and the fork's additions sit
+  beside it. A coverage claim upstream revised is a fact about the scanner, not an opinion the fork
+  gets to keep.
 - **Analyzer modules the fork extended** — upstream's fix and the fork's extension are usually
   disjoint hunks. Where they are not, upstream's logic wins and the fork's extension is re-applied on
   top, because the fork's promise is to extend upstream rather than to replace it.
-- **`CLAUDE.md`, `docs/adr/`, `.claude/rules/`, `src/skillspector/langchain4j/`,
-  `src/skillspector/deepagents/`** — fork-owned. Upstream has no opinion; keep the fork's.
+- **`CLAUDE.md`, `docs/adr/`, `.claude/rules/`, `docs/OWASP-AST10-COVERAGE.md`,
+  `src/skillspector/langchain4j/`, `src/skillspector/deepagents/`** — fork-owned. Upstream has no
+  opinion; keep the fork's. `docs/OWASP-AST10-COVERAGE.md` became fork-owned in the 2.5.3 sync:
+  upstream deleted it in `c54967a` while the fork's crosswalk of its own Rules lived there, so the
+  fork kept the file. Upstream has no version of it left to win.
 
 Where upstream deleted something the fork built on, that is a real design question, not a merge
 decision — stop and put it to the user with the upstream commit that did it.
