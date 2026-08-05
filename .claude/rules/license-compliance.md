@@ -63,7 +63,21 @@ it for the counts rather than reading a number here; the shortcut is what would 
 `THIRD_PARTY_NOTICES.md` is upstream's record of the licenses the distribution pulls in. **A pull
 request that adds a runtime dependency to `pyproject.toml` adds its entry to that file in the same
 pull request.** The fork's own additions — `tree-sitter` and `tree-sitter-java` — are recorded there
-as of `#95`. Nothing enforces this — no CI job reads the file — so it is on the change author.
+as of `#95`; the four inherited ones the file had always omitted are recorded as of `#102`.
+
+`tests/unit/test_third_party_notices.py` enforces the rule in both directions: every name in
+`project.dependencies` has an entry, and no entry outlives its dependency. It compares normalised
+names as **sets** — a containment check would pass with `tree-sitter` deleted, because the string
+survives inside `tree-sitter-java`. It does **not** cover `project.optional-dependencies`; `mcp` is
+redistributed and remains unaudited, tracked as `#109`.
+
+The license and copyright line for a new entry are **read, never recalled** — `#95` would have
+guessed two of two wrong. Read them from the installed `dist-info`: its license file, or its
+`NOTICE` when the license file is bare Apache text (`boto3`). A `dist-info` may ship neither —
+`langsmith` 0.9.1's `RECORD` has no license row at all — in which case read the `LICENSE` at the
+**installed version's tag** in the project's own repository, and say in the commit body that you
+did. Do not normalise a line to look like its neighbours: `langsmith`'s is
+`Copyright (c) 2023 LangChain`, without the `, Inc.` its three LangChain neighbours carry.
 
 ## What never happens
 

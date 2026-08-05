@@ -95,17 +95,27 @@ Snapshot. Audit files that carry a header, and leave the ones that deliberately 
 
 ## 3. Audit the third-party notices
 
-`THIRD_PARTY_NOTICES.md` is upstream's record of what the distribution pulls in. Compare it against
-every runtime dependency the fork added:
+`THIRD_PARTY_NOTICES.md` is upstream's record of what the distribution pulls in.
 
-```bash
-git diff $MB HEAD -- pyproject.toml | grep '^+' | grep -v '^+++'
-```
+**Presence is already enforced** — `tests/unit/test_third_party_notices.py` fails when
+`project.dependencies` and the file's `## Runtime Dependencies` section disagree in either
+direction, so `make test-unit` answers "is anything missing" and this step does not re-derive it.
+Two things it does **not** cover, and this step does:
 
-For each added dependency, confirm both that it appears in the file and that its stated license is
-compatible with Apache-2.0 redistribution.
+- **`project.optional-dependencies`.** `mcp` is redistributed and unaudited — tracked as `#109`.
+  `dev` is not redistributed and stays out.
+- **License compatibility.** The test checks that an entry exists, never what it says. For each
+  dependency the fork added since the merge-base:
 
-**Done when** every fork-added runtime dependency is either present in the file or on your fix list.
+  ```bash
+  git diff $MB HEAD -- pyproject.toml | grep '^+' | grep -v '^+++'
+  ```
+
+  confirm its stated license is compatible with Apache-2.0 redistribution, reading the license and
+  copyright line from the installed `dist-info` rather than recalling either.
+
+**Done when** the test passes, every fork-added runtime dependency's license is confirmed
+compatible, and the extras' status is recorded rather than assumed.
 
 ## 4. Audit the license itself
 
