@@ -33,6 +33,16 @@ Nothing here runs unless `--repo-scan` is passed. An ordinary Scan does not call
 into this module, which is what lets the JVM build directories below be skipped:
 adding them to the ordinary walk's skip set would change `components` and the
 Inspection Ledger's excluded-directory events for Scans that exist today.
+
+One narrow exception, added by issue #39. `cli` calls `discover_skills` on a Scan
+of a directory that declares no `SKILL.md` -- the fall-through that is about to
+report the whole tree as one anonymous Skill -- purely to say how many Skills
+`--repo-scan` would find, instead of naming both flags and leaving the reader to
+guess which discovery rule matches their layout. It reads the tree and returns a
+list; it does not touch `components`, the Ledger, the Manifest, the Findings or
+the Risk Score, so the reason the paragraph above exists is untouched. A Scan of
+a directory that *does* declare a Skill -- the overwhelmingly common input --
+still never reaches this module.
 """
 
 from __future__ import annotations

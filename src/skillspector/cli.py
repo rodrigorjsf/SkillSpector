@@ -74,6 +74,45 @@ app = typer.Typer(
 
 console = Console()
 
+_FALLTHROUGH_PREFIX = (
+    "[yellow]Warning:[/yellow] no SKILL.md here, so this scans the whole tree as one "
+    "unnamed skill with an empty manifest. "
+)
+
+
+def _advise_on_a_fallthrough(directory: Path, children_with_a_skill: int) -> None:
+    """Name the flag that would have found the skills, at the moment it is needed.
+
+    Reached when *directory* declares no skill of its own, so the Scan about to
+    run is the wrong-shaped one: an empty manifest, components spanning the whole
+    tree, and a risk score computed over that mixture.
+
+    Determinate rather than a menu. Discovery is actually run, so the advice names
+    the flag that finds something *here* and says how much, instead of listing both
+    flags and handing the choice back to a reader who does not know which of two
+    discovery rules matches their layout. It costs one walk, on a path that is
+    about to walk the whole tree anyway.
+    """
+    discovered = discover_skills(directory)
+    if discovered:
+        console.print(
+            f"{_FALLTHROUGH_PREFIX}--repo-scan finds {len(discovered)} skill(s) here and "
+            "scans each on its own; use it instead."
+        )
+    elif children_with_a_skill:
+        console.print(
+            f"{_FALLTHROUGH_PREFIX}--recursive found {children_with_a_skill} skill(s) "
+            "immediately below and needs at least 2, and --repo-scan finds none under the "
+            "conventional roots. Point the scan at the skill directory itself, or pass "
+            "--repo-scan-root for a layout the roots do not cover."
+        )
+    else:
+        console.print(
+            f"{_FALLTHROUGH_PREFIX}No skill was found immediately below either, nor by "
+            "--repo-scan under the conventional roots. Point the scan at a skill directory, "
+            "or pass --repo-scan --repo-scan-root for a layout the roots do not cover."
+        )
+
 
 class FormatChoice(StrEnum):
     """Output format choices for the CLI."""
@@ -375,11 +414,12 @@ def scan(
                 raise typer.Exit(code=2)
             _scan_multi_skill(detection, format, output, no_llm, yara_rules_dir, verbose)
             return
-        if not detection.has_root_skill and len(detection.skills) == 0:
-            console.print(
-                "[yellow]Warning:[/yellow] --recursive specified but no sub-skills "
-                "detected. Scanning as single skill."
-            )
+        if not detection.has_root_skill:
+            # Guarded on the *outcome*, not on an empty list. The old guard was
+            # `len(detection.skills) == 0`, which is false for a directory with
+            # exactly one child Skill -- the case that most needs saying, since
+            # --recursive needs two and silently scans the parent instead.
+            _advise_on_a_fallthrough(resolved_path, len(detection.skills))
     elif resolved_path.is_dir():
         detection = detect_skills(resolved_path)
         if detection.is_multi_skill:
@@ -387,6 +427,11 @@ def scan(
                 f"[yellow]Warning:[/yellow] Found {len(detection.skills)} skills in "
                 f"this directory. Use --recursive to scan each independently."
             )
+        elif not detection.has_root_skill:
+            # The trap #39 names, at the moment it is sprung: no Skill is
+            # declared here and none was found one level down, so this Scan is
+            # about to report the whole tree as one anonymous Skill.
+            _advise_on_a_fallthrough(resolved_path, len(detection.skills))
 
     result = None
     try:

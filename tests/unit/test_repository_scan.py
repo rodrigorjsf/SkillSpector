@@ -327,16 +327,22 @@ class TestTheOutputsCiNeeds:
 
 
 class TestNothingHappensWithoutTheFlag:
-    """The flag is off by default, and an ordinary Scan never reaches discovery."""
+    """The flag is off by default, and a Scan of a Skill never reaches discovery.
 
-    def test_an_ordinary_directory_scan_does_not_discover(
-        self, tmp_path: Path, monkeypatch
-    ) -> None:
-        from typer.testing import CliRunner
+    Issue #39 narrowed this from "an ordinary Scan never reaches discovery". A
+    directory that declares no ``SKILL.md`` is about to be reported as one
+    anonymous Skill spanning the whole tree, and ``cli`` now runs discovery there
+    so its warning can say how many Skills ``--repo-scan`` would find rather than
+    naming both flags and leaving the reader to guess.
 
-        from skillspector.cli import app
+    The contract that matters is unchanged, and it is narrower than the old test
+    asserted: discovery must not influence a Scan's *result*. It reads the tree
+    and returns a list -- ``components``, the Inspection Ledger, the Manifest,
+    the Findings and the Risk Score are all untouched, which is what the
+    ``repository_scan`` module docstring is protecting. Both halves are below.
+    """
 
-        make_skill(tmp_path, "skills/one")
+    def _record_discovery(self, monkeypatch) -> list[Path]:
         called: list[Path] = []
         monkeypatch.setattr(
             "skillspector.cli.discover_skills", lambda *args, **kwargs: called.append(args[0]) or []
@@ -347,7 +353,37 @@ class TestNothingHappensWithoutTheFlag:
                 invoke=lambda state, config=None: {"risk_score": 0, "report_body": "{}"}
             ),
         )
+        return called
+
+    def test_a_scan_of_a_declared_skill_does_not_discover(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        """The common input, and the half of the old contract that still holds."""
+        from typer.testing import CliRunner
+
+        from skillspector.cli import app
+
+        make_skill(tmp_path, ".")
+        called = self._record_discovery(monkeypatch)
 
         CliRunner().invoke(app, ["scan", str(tmp_path), "--no-llm"])
 
         assert called == []
+
+    def test_a_scan_of_a_directory_declaring_nothing_discovers_only_to_advise(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        """The exception, and the bound on it: discovery runs, the result does not move."""
+        from typer.testing import CliRunner
+
+        from skillspector.cli import app
+
+        make_skill(tmp_path, "skills/one")
+        called = self._record_discovery(monkeypatch)
+
+        result = CliRunner().invoke(app, ["scan", str(tmp_path), "--no-llm"])
+
+        assert called == [tmp_path.resolve()]
+        # Discovery advised and nothing else: the Scan still ran on the tree it
+        # was given, not on the Skill discovery found.
+        assert result.exit_code == 0, result.output

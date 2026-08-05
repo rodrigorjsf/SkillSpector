@@ -17,9 +17,9 @@
 
 Every other behavior in this project is fenced by the Behavior Snapshot gate.
 This flag is not: ``tests/behavior/projection.py`` Scans by calling
-``graph.invoke({"skill_path": ...})`` directly and never imports ``cli``, so all
-27 committed snapshots stay green through any change to ``--recursive``,
-including one that breaks it outright.
+``graph.invoke({"skill_path": ...})`` directly and never imports ``cli``, so every
+committed snapshot stays green through any change to ``--recursive``, including
+one that breaks it outright.
 
 These tests are therefore not assertions that the recorded behavior is *right*.
 Several of them record shapes that read as defects and are decisions -- the
@@ -31,7 +31,11 @@ observed behavior rather than an argument about what the flag used to do.
 The unit-level companion is ``tests/test_multi_skill.py``, which tests
 ``detect_skills`` in isolation. What is here is the CLI, driven end to end over
 a real directory tree, because the flag's behavior is the composition of
-detection with what ``cli`` then chooses to do about it.
+detection with what ``cli`` then chooses to do about it. Two contracts #39 names
+are recorded in ``tests/unit/test_cli.py`` rather than here and are not repeated:
+the ``--baseline`` rejection (``test_recursive_multi_skill_scan_rejects_shared_baseline``,
+and the single-root-skill case that still accepts one) and the per-skill payload
+inside the combined JSON.
 """
 
 from __future__ import annotations
@@ -57,6 +61,15 @@ def _write_skill(directory: Path, name: str) -> Path:
     return directory
 
 
+def _unwrapped(output: str) -> str:
+    """*output* with rich's line wrapping collapsed, so a phrase can be matched.
+
+    The console wraps at its own width, and a fragment asserted here would
+    otherwise fail the day a message grows by a word and wraps somewhere new.
+    """
+    return " ".join(output.split())
+
+
 class TestWhenRecursiveEngagesAtAll:
     """The detection half, observed through the CLI rather than through the API."""
 
@@ -75,20 +88,20 @@ class TestWhenRecursiveEngagesAtAll:
         combined = json.loads(output.read_text(encoding="utf-8"))
         assert [entry["name"] for entry in combined["skills"]] == ["alpha", "beta"]
 
-    def test_one_child_skill_is_below_the_threshold_and_says_nothing(self, tmp_path: Path) -> None:
+    def test_one_child_skill_is_below_the_threshold(self, tmp_path: Path) -> None:
         """``detect_skills`` requires two, so a lone child Skill does not engage.
 
         It falls through to Scanning *the parent* as one anonymous Skill: the
         parent holds no ``SKILL.md``, so the Manifest is ``absent``, the name is
         ``unknown``, and the Risk Score is computed over the child's files as
         though they were the parent's own. Under ``--repo-scan`` the same tree
-        reports the one Skill it holds.
+        reports the one Skill it holds. The fall-through itself is unchanged --
+        the threshold is a decision, not a defect.
 
-        And it is silent about it. ``cli`` guards its "no sub-skills detected"
-        warning on ``len(detection.skills) == 0``, which is false here -- one
-        Skill *was* detected, it was just below the threshold -- so the case the
-        warning exists for is the one case it does not cover. Recorded because
-        #39 describes this fall-through as warned; measured, it is not.
+        What changed with #39 is that it is no longer *silent*. The advisory used
+        to be guarded on ``len(detection.skills) == 0``, false here because one
+        Skill was found and merely fell short of two, so the case the warning
+        exists for was the one case it never covered.
         """
         _write_skill(tmp_path / "only", "only")
         output = tmp_path / "report.json"
@@ -99,7 +112,10 @@ class TestWhenRecursiveEngagesAtAll:
         )
 
         assert result.exit_code == 0, result.output
-        assert "sub-skill" not in result.output
+        # A lone child under no conventional root: --repo-scan finds nothing here
+        # either, so the advice is to point the scan at the skill itself.
+        assert "--recursive found 1 skill(s) immediately below" in _unwrapped(result.output)
+        assert "--repo-scan finds none" in _unwrapped(result.output)
         report = json.loads(output.read_text(encoding="utf-8"))
         assert report["skill"]["name"] == "unknown"
         assert report["skill"]["manifest_status"] == "absent"
@@ -117,14 +133,20 @@ class TestWhenRecursiveEngagesAtAll:
         result = runner.invoke(app, ["scan", str(tmp_path), "--recursive", "--no-llm"])
 
         assert result.exit_code == 0, result.output
-        assert "Multi-skill directory detected" not in result.output
+        unwrapped = _unwrapped(result.output)
+        assert "Multi-skill directory detected" not in unwrapped
+        # The positive half: a negative match alone would pass on any output at
+        # all, including an error. The root Skill is what was scanned.
+        assert "root" in unwrapped
 
     def test_only_immediate_children_are_looked_at(self, tmp_path: Path) -> None:
         """Depth one. A monorepo layout finds nothing and Scans the tree as one Skill.
 
         This is the trap #39 names: ``skills/`` one level down is invisible to
         ``--recursive``, which is precisely the wrong-shaped Scan ``--repo-scan``
-        was built to prevent.
+        was built to prevent. Discovery is unchanged; the advisory now runs
+        ``discover_skills`` and reports what the other flag would have found,
+        rather than offering both flags and leaving the choice to the reader.
         """
         _write_skill(tmp_path / "modules" / "billing" / "skills" / "invoice", "invoice")
         _write_skill(tmp_path / "modules" / "shipping" / "skills" / "label", "label")
@@ -132,7 +154,7 @@ class TestWhenRecursiveEngagesAtAll:
         result = runner.invoke(app, ["scan", str(tmp_path), "--recursive", "--no-llm"])
 
         assert result.exit_code == 0, result.output
-        assert "no sub-skills detected" in result.output
+        assert "--repo-scan finds 2 skill(s) here" in _unwrapped(result.output)
 
     def test_a_jvm_build_directory_is_not_skipped(self, tmp_path: Path) -> None:
         """``target/`` holding a ``SKILL.md`` counts toward the threshold.
@@ -166,7 +188,64 @@ class TestTheAdvisoryOnAnOrdinaryScan:
         result = runner.invoke(app, ["scan", str(tmp_path), "--no-llm"])
 
         assert result.exit_code == 0, result.output
-        assert "Found 2 skills" in result.output
+        unwrapped = _unwrapped(result.output)
+        assert "Found 2 skills" in unwrapped
+        # Unchanged by #39: for two or more immediate children, `--recursive` is
+        # the flag that fits, so this advisory was already determinate.
+        assert "--recursive" in unwrapped
+
+    def test_a_repository_root_is_now_warned_instead_of_scanned_silently(
+        self, tmp_path: Path
+    ) -> None:
+        """The trap, sprung with no flag at all -- and previously not mentioned.
+
+        Pointing an ordinary Scan at a repository root produced the wrong-shaped
+        report #29 exists to prevent, and said nothing: ``detect_skills`` finds
+        no immediate child Skill, ``is_multi_skill`` is false, and the advisory
+        only fired when it was true. Added by #39.
+        """
+        _write_skill(tmp_path / "modules" / "billing" / "skills" / "invoice", "invoice")
+
+        result = runner.invoke(app, ["scan", str(tmp_path), "--no-llm"])
+
+        assert result.exit_code == 0, result.output
+        unwrapped = _unwrapped(result.output)
+        assert "--repo-scan finds 1 skill(s) here" in unwrapped
+        # No `--recursive` threshold explained on a path where the flag was never
+        # passed: the advice is about the layout, not about a flag's internals.
+        assert "--recursive" not in unwrapped
+
+    def test_a_tree_holding_no_skill_at_all_says_which_flags_found_nothing(
+        self, tmp_path: Path
+    ) -> None:
+        """The third branch: neither discovery rule matches, so neither is offered.
+
+        Recommending ``--repo-scan`` here would send the reader to a flag that
+        reports nothing, which is the failure this advisory exists to prevent in
+        the other direction.
+        """
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "main.py").write_text("print('hi')\n", encoding="utf-8")
+
+        result = runner.invoke(app, ["scan", str(tmp_path), "--no-llm"])
+
+        assert result.exit_code == 0, result.output
+        unwrapped = _unwrapped(result.output)
+        assert "No skill was found immediately below either" in unwrapped
+        assert "--repo-scan-root" in unwrapped
+
+    def test_a_directory_that_declares_a_skill_is_left_alone(self, tmp_path: Path) -> None:
+        """The bound on the new advisory: it must not fire on an ordinary Scan.
+
+        A Skill directory is the overwhelmingly common input. Warning there would
+        make the message noise, and noise is how a real warning stops being read.
+        """
+        _write_skill(tmp_path, "solo")
+
+        result = runner.invoke(app, ["scan", str(tmp_path), "--no-llm"])
+
+        assert result.exit_code == 0, result.output
+        assert "--repo-scan" not in _unwrapped(result.output)
 
 
 class TestTheOutputContracts:
@@ -186,13 +265,16 @@ class TestTheOutputContracts:
 
         assert combined["multi_skill"] is True
         assert combined["skill_count"] == 2
-        assert set(combined) == {
+        # Containment, not equality: a key added to the summary is not a break
+        # for a consumer reading these five, and an exact set would fail on it.
+        # Removing or renaming one is the break, and that this catches.
+        assert {
             "multi_skill",
             "skill_count",
             "max_risk_score",
             "execution_successful",
             "skills",
-        }
+        } <= set(combined)
         assert {"name", "path", "risk_score", "risk_severity", "finding_count"} <= set(
             combined["skills"][0]
         )
